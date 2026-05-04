@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.2.2-patch.171] - 2026-05-04
+### Fixed
+- **VyOS Engine**: 🐛 Fixed a bug where `allow-traffic` (simple-unblock) failed with "not blocked (tag 999 not found)" because the REST API parser was incorrectly looking for the `tag` attribute nested inside the `blackhole` presence node instead of as a sibling route attribute.
+- **Web Dashboard**: 🧹 Fixed visual clutter in the Sequence Timeline where impairment parameters (latency, loss, rate) were incorrectly rendered for non-QoS actions like `deny-traffic`.
+- **Web Dashboard**: 🧹 Fixed the Sequence Editor so that switching an action command (e.g. from `set-qos` to `deny-traffic`) automatically scrubs incompatible parameters from the configuration payload.
+
 ## [v1.2.2-patch.170] - 2026-04-30
 ### Changed
 - **Web Dashboard**: 🔎 Enhanced history search. The sequence history search bar now comprehensively filters through human-readable router names, executed commands, target interfaces, parameters, and execution results (errors & status) simultaneously.

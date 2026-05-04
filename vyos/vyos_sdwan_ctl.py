@@ -315,9 +315,8 @@ def get_blackhole_routes(config):
         if isinstance(route_data, dict):
             # Check if blackhole exists
             if "blackhole" in route_data:
-                blackhole_data = route_data["blackhole"]
-                # Check for tag 999
-                if isinstance(blackhole_data, dict) and blackhole_data.get("tag") == "999":
+                # Check for tag 999 (it is a sibling of blackhole, child of route)
+                if str(route_data.get("tag")) == "999":
                     routes.append(prefix)
     
     routes.sort()
@@ -346,7 +345,8 @@ def op_simple_block(host, api_key, ip_input, verify=False):
         
         # Add blackhole route with tag 999
         ops = [
-            {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole", "tag", "999"]}
+            {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole"]},
+            {"op": "set", "path": ["protocols", "static", "route", prefix, "tag", "999"]}
         ]
         
         api_call(host, api_key, ops, verify)

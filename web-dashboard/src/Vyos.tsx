@@ -1912,6 +1912,17 @@ export default function Vyos(props: VyosProps) {
                                                         onChange={(val) => {
                                                             const newActions = [...editingSeq.actions];
                                                             newActions[idx].command = val;
+                                                            
+                                                            // Clean up incompatible parameters
+                                                            if (val !== 'set-qos') {
+                                                                delete newActions[idx].parameters.latency;
+                                                                delete newActions[idx].parameters.loss;
+                                                                delete newActions[idx].parameters.rate;
+                                                            }
+                                                            if (val !== 'deny-traffic' && val !== 'allow-traffic') {
+                                                                delete newActions[idx].parameters.ip;
+                                                            }
+                                                            
                                                             setEditingSeq({ ...editingSeq, actions: newActions });
                                                         }}
                                                     />
@@ -2594,21 +2605,25 @@ function ExecutionTimeline({
 
                                 {/* Impairment Parameters */}
                                 {action.parameters && Object.keys(action.parameters).length > 0 && (
-                                    <div className="flex items-center gap-2 mt-2 opacity-80">
-                                        {action.parameters.latency && (
-                                            <span className="text-[9px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded border border-blue-500/20 font-bold">
-                                                {action.parameters.latency}ms latency
-                                            </span>
-                                        )}
-                                        {action.parameters.loss && (
-                                            <span className="text-[9px] bg-orange-500/10 text-orange-400 px-2 py-0.5 rounded border border-orange-500/20 font-bold">
-                                                {action.parameters.loss}% loss
-                                            </span>
-                                        )}
-                                        {action.parameters.rate && (
-                                            <span className="text-[9px] bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded border border-purple-500/20 font-bold">
-                                                {action.parameters.rate} rate
-                                            </span>
+                                    <div className="flex flex-col gap-2 mt-2 opacity-80">
+                                        {action.command === 'set-qos' && (
+                                            <div className="flex items-center gap-2">
+                                                {action.parameters.latency && (
+                                                    <span className="text-[9px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded border border-blue-500/20 font-bold">
+                                                        {action.parameters.latency}ms latency
+                                                    </span>
+                                                )}
+                                                {action.parameters.loss && (
+                                                    <span className="text-[9px] bg-orange-500/10 text-orange-400 px-2 py-0.5 rounded border border-orange-500/20 font-bold">
+                                                        {action.parameters.loss}% loss
+                                                    </span>
+                                                )}
+                                                {action.parameters.rate && (
+                                                    <span className="text-[9px] bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded border border-purple-500/20 font-bold">
+                                                        {action.parameters.rate} rate
+                                                    </span>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                 )}
