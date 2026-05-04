@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.0] - 2026-05-04
+### Changed
+- **Version Bump**: 🚀 Milestone release bumping the version to 1.3.0. This release consolidates all recent feature additions, VyOS orchestration integrations, and UI enhancements into a stable minor version.
+
 ## [v1.2.2-patch.172] - 2026-05-04
 ### Fixed
 - **Web Dashboard**: 🐛 Fixed an issue in the Failover Monitoring (Convergence Lab) view where the stop button for an individual target in the "Stigix Targets" list remained greyed out and unclickable while a test was actively running.
