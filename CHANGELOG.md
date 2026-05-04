@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.2.2-patch.172] - 2026-05-04
+### Fixed
+- **Web Dashboard**: 🐛 Fixed an issue in the Failover Monitoring (Convergence Lab) view where the stop button for an individual target in the "Stigix Targets" list remained greyed out and unclickable while a test was actively running.
+
 ## [v1.2.2-patch.171] - 2026-05-04
 ### Fixed
 - **VyOS Engine**: 🐛 Fixed a bug where `allow-traffic` (simple-unblock) failed with "not blocked (tag 999 not found)" because the REST API parser was incorrectly looking for the `tag` attribute nested inside the `blackhole` presence node instead of as a sibling route attribute.

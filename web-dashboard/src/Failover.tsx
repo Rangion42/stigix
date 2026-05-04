@@ -455,7 +455,7 @@ export default function Failover(props: FailoverProps) {
                                         </button>
                                     )}
                                     {(() => {
-                                        const activeTestForTarget = activeTests.find(t => t.target.id === e.id);
+                                        const activeTestForTarget = activeTests.find(t => t.target === e.target && String(t.port || 6100) === String(e.port || 6100));
                                         const isTesting = !!activeTestForTarget;
 
                                         return (
