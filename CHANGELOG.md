@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.0-patch.1] - 2026-05-05
+### Fixed
+- **Web Dashboard**: 🐛 Fixed an issue where the `PORT` environment variable specified in `docker-compose.yml` was ignored. The dashboard port is no longer hardcoded to `8080` in `supervisord.conf`, allowing custom port bindings like `- PORT=8085` to work correctly.
+
 ## [v1.3.0] - 2026-05-04
 ### Changed
 - **Version Bump**: 🚀 Milestone release bumping the version to 1.3.0. This release consolidates all recent feature additions, VyOS orchestration integrations, and UI enhancements into a stable minor version.
