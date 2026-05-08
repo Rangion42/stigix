@@ -408,21 +408,37 @@ export default function Security({ token }: SecurityProps) {
                 limit: '50',
                 offset: offset.toString(),
                 ...(searchQuery && { search: searchQuery }),
-                ...(testTypeFilter !== 'all' && { type: testTypeFilter })
+                ...(testTypeFilter !== 'all' && { type: testTypeFilter === 'c2_scenario' ? 'c2' : testTypeFilter })
             });
 
             const res = await fetch(`/api/security/results?${params}`, { headers: authHeaders() });
             const data = await res.json();
 
             // Map id to testId for frontend compatibility
-            const mappedResults = (data.results || []).map((r: any) => ({
-                ...r,
-                testId: r.id,
-                testType: r.type,
-                testName: r.name,
-                previousStatus: r.previousStatus ?? null,
-                result: { status: r.status } // For getStatusBadge compatibility
-            }));
+            // Note: backend now uses type='c2' for c2_scenario entries
+            const mappedResults = (data.results || []).map((r: any) => {
+                const isC2 = r.type === 'c2';
+                return {
+                    ...r,
+                    testId: r.id,
+                    testType: isC2 ? 'c2_scenario' : r.type,
+                    testName: r.name,
+                    previousStatus: r.previousStatus ?? null,
+                    // Reconstruct result object with all available data
+                    result: isC2 ? {
+                        status: r.status, // 'enforced' | 'bypass' | 'inconclusive'
+                        output: r.details?.output,
+                        command: r.details?.command,
+                        verdict_reason: r.details?.verdict_reason,
+                        domain: r.details?.domain,
+                        url: r.details?.url,
+                        http_code: r.details?.http_code,
+                        dns_ip: r.details?.dns_ip,
+                        attackType: r.details?.attackType,
+                        scenarioId: r.details?.scenarioId,
+                    } : { status: r.status, ...r.details } // For getStatusBadge compatibility
+                };
+            });
 
             if (append) {
                 setTestResults(prev => [...prev, ...mappedResults]);
@@ -1633,6 +1649,29 @@ export default function Security({ token }: SecurityProps) {
                                     </div>
                                     <span className="text-[10px] font-black uppercase tracking-widest text-text-muted group-hover:text-text-primary transition-colors">Select All</span>
                                 </label>
+
+                                {/* C2 Scheduler — same pattern as DNS/URL */}
+                                <SchedulerControl
+                                    type="c2"
+                                    title="C2"
+                                    config={config}
+                                    onUpdate={(type, enabled, interval) => {
+                                        if (!config) return;
+                                        const updated = {
+                                            ...config,
+                                            scheduled_execution: {
+                                                ...config.scheduled_execution,
+                                                [type]: { ...(config.scheduled_execution as any)[type], enabled, interval_minutes: interval }
+                                            }
+                                        };
+                                        setConfig(updated as any);
+                                        fetch('/api/security/config', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+                                            body: JSON.stringify({ scheduled_execution: updated.scheduled_execution })
+                                        }).catch(console.error);
+                                    }}
+                                />
                             </div>
                             <button
                                 onClick={runC2BatchTest}

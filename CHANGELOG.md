@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.0-patch.4] - 2026-05-08
+### Fixed
+- **Security Log** 🐛 C2 entries now show badge `C2S` (was incorrectly showing `THREAT`) — root cause: `TestLogger` was receiving `type:'threat'` instead of `type:'c2'` for all c2_scenario entries
+- **Security Log** 🐛 C2 disposition now shows `Enforced` / `Bypass` / `Inconclusive` (was showing `Unknown`) — root cause: `TestResult.status` type union didn't include C2 verdict values, and `result` object wasn't reconstructed with full details from logger
+- **Test Logger** Extended `TestResult` interface to support `type:'c2'` and status values `'enforced' | 'bypass' | 'inconclusive'`; updated `LogStats` accordingly
+
+### Added
+- **C2 Panel** ⏰ C2 Scheduler — configurable interval (5/10/15/30/45/60m) + enable toggle + next run time display, identical to DNS and URL scheduler controls
+- **Backend** Scheduled C2 runner (`runScheduledC2Tests`) fires all 7 scenarios sequentially on the configured interval; integrated into `startSchedulers()` with 800ms inter-test delay
+- **Backend** `scheduled_execution.c2` added to `DEFAULT_SECURITY_CONFIG` and auto-migration guard for existing configs
+
 ## [v1.3.0-patch.3] - 2026-05-08
 ### Added
 - **Security Dashboard** 📋 C2 scenario cards now show the last verdict badge inline (Enforced/Bypass/Inconclusive) — same behavior as DNS and URL cards in the screenshot.

@@ -5027,7 +5027,8 @@ const DEFAULT_SECURITY_CONFIG = {
     scheduled_execution: {
         url: { enabled: false, interval_minutes: 60, last_run_time: null, next_run_time: null },
         dns: { enabled: false, interval_minutes: 60, last_run_time: null, next_run_time: null },
-        threat: { enabled: false, interval_minutes: 120, last_run_time: null, next_run_time: null }
+        threat: { enabled: false, interval_minutes: 120, last_run_time: null, next_run_time: null },
+        c2: { enabled: false, interval_minutes: 30, last_run_time: null, next_run_time: null }
     },
     statistics: { total_tests_run: 0, url_tests_blocked: 0, url_tests_allowed: 0, dns_tests_blocked: 0, dns_tests_sinkholed: 0, dns_tests_allowed: 0, threat_tests_blocked: 0, threat_tests_allowed: 0, last_test_time: null },
     scoreBaseline: {
@@ -5069,6 +5070,8 @@ const getSecurityConfig = () => {
         if (!config.dns_security) { config.dns_security = { ...DEFAULT_SECURITY_CONFIG.dns_security }; migrated = true; }
         if (!config.threat_prevention) { config.threat_prevention = { ...DEFAULT_SECURITY_CONFIG.threat_prevention }; migrated = true; }
         if (!config.scheduled_execution) { config.scheduled_execution = { ...DEFAULT_SECURITY_CONFIG.scheduled_execution }; migrated = true; }
+        // Migrate: add c2 scheduler if missing
+        if (!config.scheduled_execution.c2) { (config.scheduled_execution as any).c2 = { enabled: false, interval_minutes: 30, last_run_time: null, next_run_time: null }; migrated = true; }
         if (!config.edlTesting) { config.edlTesting = { ...DEFAULT_SECURITY_CONFIG.edlTesting }; migrated = true; }
         if (!config.statistics) { config.statistics = { ...DEFAULT_SECURITY_CONFIG.statistics }; migrated = true; }
         if (!config.sls_config) { config.sls_config = { ...DEFAULT_SECURITY_CONFIG.sls_config }; migrated = true; }
@@ -5425,10 +5428,27 @@ const addTestResult = async (testType: string, testName: string, result: any, te
     const testResult: TestResult = {
         id,
         timestamp: Date.now(),
-        type: testType === 'url_filtering' ? 'url' : testType === 'dns_security' ? 'dns' : 'threat',
+        type: testType === 'url_filtering' ? 'url'
+            : testType === 'dns_security' ? 'dns'
+            : testType === 'c2_scenario' ? 'c2'
+            : 'threat',
         name: testName,
-        status: result.status || 'error',
-        details: details || { ...result },
+        status: (result.status || 'error') as any,
+        details: details ? {
+            url: details.url || result.url,
+            domain: details.domain || result.domain,
+            endpoint: details.endpoint || result.endpoint,
+            command: details.command || result.command,
+            output: details.output || result.output,
+            resolvedIp: details.resolvedIp || details.dns_ip || result.resolvedIp,
+            // C2 extra fields
+            attackType: details.attackType || result.attackType,
+            scenarioId: details.scenarioId || result.scenarioId,
+            verdict_reason: details.verdict_reason || result.verdict_reason,
+            http_code: details.http_code ?? result.http_code,
+            dns_ip: details.dns_ip ?? result.dns_ip,
+            resolved_count: details.resolved_count ?? result.resolved_count,
+        } : { ...result },
         runId
     };
 
@@ -5652,6 +5672,7 @@ const generateRunScore = async (runId: string, testType: 'url'|'dns'|'threat', t
 let urlTestInterval: NodeJS.Timeout | null = null;
 let dnsTestInterval: NodeJS.Timeout | null = null;
 let threatTestInterval: NodeJS.Timeout | null = null;
+let c2TestInterval: NodeJS.Timeout | null = null;
 
 const runScheduledUrlTests = async () => {
     const config = getSecurityConfig();
@@ -5826,6 +5847,50 @@ const runScheduledThreatTests = async () => {
     await generateRunScore(runId, 'threat', 'scheduled');
 };
 
+// =============================================================================
+// Scheduled C2 Attack Scenarios
+// =============================================================================
+const runScheduledC2Tests = async () => {
+    const config = getSecurityConfig();
+    const c2Sched = (config as any)?.scheduled_execution?.c2;
+    if (!config || !c2Sched?.enabled) return;
+
+    const runId = `scheduled-c2-${Date.now()}`;
+    logTest(`[C2-SCHED] Starting scheduled C2 batch (runId: ${runId})`);
+
+    // Update next run time
+    c2Sched.last_run_time = Date.now();
+    c2Sched.next_run_time = Date.now() + (c2Sched.interval_minutes * 60 * 1000);
+    saveSecurityConfig(config);
+
+    // Import C2_SCENARIOS from shared module or use inline list
+    const { C2_SCENARIOS } = await import('./shared/security-categories.js');
+
+    for (const scenario of C2_SCENARIOS) {
+        try {
+            logTest(`[C2-SCHED] Running: ${scenario.name} (${scenario.attackType})`);
+            await fetch(`http://localhost:${PORT}/api/security/c2-test`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.JWT_SECRET || ''}`
+                },
+                body: JSON.stringify({
+                    scenarioId: scenario.id,
+                    scenarioName: scenario.name,
+                    attackType: scenario.attackType,
+                    target: scenario.target
+                })
+            });
+        } catch (e: any) {
+            logTest(`[C2-SCHED] Error running ${scenario.name}: ${e.message}`);
+        }
+        await new Promise(r => setTimeout(r, 800)); // 800ms between scheduled tests
+    }
+
+    logTest(`[C2-SCHED] Batch completed`);
+};
+
 const startSchedulers = () => {
     const config = getSecurityConfig();
     if (!config || !config.scheduled_execution) return;
@@ -5860,6 +5925,17 @@ const startSchedulers = () => {
         config.scheduled_execution.threat.next_run_time = Date.now() + interval;
         modified = true;
         console.log(`Threat prevention scheduler enabled (every ${config.scheduled_execution.threat.interval_minutes} minutes)`);
+    }
+
+    // C2 Scheduler
+    if (c2TestInterval) clearInterval(c2TestInterval);
+    const c2Sched = (config.scheduled_execution as any).c2;
+    if (c2Sched?.enabled) {
+        const interval = (c2Sched.interval_minutes || 30) * 60 * 1000;
+        c2TestInterval = setInterval(runScheduledC2Tests, interval);
+        c2Sched.next_run_time = Date.now() + interval;
+        modified = true;
+        console.log(`C2 attack scenario scheduler enabled (every ${c2Sched.interval_minutes} minutes)`);
     }
 
     if (modified) saveSecurityConfig(config);
