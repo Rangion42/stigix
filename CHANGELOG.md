@@ -5,9 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.0-patch.2] - 2026-05-08
+### Added
+- **Security Dashboard** 🎯 New **C2 Attack Scenarios** panel in the Security page, reproducing the exact 7-step Prisma Access security simulation script (SQL Injection, DNS C2 Infiltration, Greyware DNS, Compromised DNS, Sliver C2 Emulation, EICAR over HTTPS, DNS Tunneling Burst).
+- **Backend** 🔌 Two new API routes: `POST /api/security/c2-test` (individual scenario) and `POST /api/security/c2-test-batch` (batch). Each scenario mirrors the PowerShell reference script: `nslookup ... 8.8.8.8` for DNS scenarios, `curl` for HTTP/HTTPS ones.
+- **Verdict System** 🚦 Inverted verdict logic for C2 tests: `Enforced` (green) = threat was blocked/sinkholed, `Bypass` (red) = policy gap detected, `Inconclusive` = timeout/error.
+- **Security Test Log** 📋 New `C2S` badge type in the log table, dedicated filter option "C2 Scenarios" in the dropdown, and correct "C2 Simulation" label in the Telemetry Diagnostic modal.
+- **shared/security-categories.ts** 📦 New `C2_SCENARIOS` export with `C2Scenario` interface including CLI hint commands for each scenario.
+
 ## [v1.3.0-patch.1] - 2026-05-05
 ### Fixed
 - **Web Dashboard**: 🐛 Fixed an issue where the `PORT` environment variable specified in `docker-compose.yml` was ignored. The dashboard port is no longer hardcoded to `8080` in `supervisord.conf`, allowing custom port bindings like `- PORT=8085` to work correctly.
+
 
 ## [v1.3.0] - 2026-05-04
 ### Changed
