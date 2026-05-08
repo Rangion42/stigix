@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Play, AlertTriangle, CheckCircle, XCircle, Clock, Download, Trash2, ChevronDown, ChevronUp, Copy, Filter, Link, Upload, RefreshCcw, ShieldAlert, Globe, ListTree, RefreshCw, MoreVertical, Settings, Database, Server, Info, Search, History as HistoryIcon, Zap, ChevronRight, Activity } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 import { clsx, type ClassValue } from 'clsx';
-import { URL_CATEGORIES, DNS_TEST_DOMAINS, C2_SCENARIOS } from '../shared/security-categories';
+import { URL_CATEGORIES, DNS_TEST_DOMAINS, C2_SCENARIOS, AI_SECURITY_SCENARIOS, type AISecurityScenario } from '../shared/security-categories';
 
 import { ScoreDashboard } from './components/ScoreDashboard';
 import { useSecurityScores } from './hooks/useSecurityScores';
@@ -73,10 +73,10 @@ const SchedulerSettings = ({
     config,
     onUpdate
 }: {
-    type: 'url' | 'dns' | 'threat' | 'c2',
+    type: 'url' | 'dns' | 'threat' | 'c2' | 'ai',
     title: string,
     config: SecurityConfig | null,
-    onUpdate: (type: 'url' | 'dns' | 'threat' | 'c2', enabled: boolean, minutes: number) => Promise<void>
+    onUpdate: (type: 'url' | 'dns' | 'threat' | 'c2' | 'ai', enabled: boolean, minutes: number) => Promise<void>
 }) => {
     if (!config?.scheduled_execution) return null;
 
@@ -147,6 +147,7 @@ export default function Security({ token }: SecurityProps) {
     const [dnsExpanded, setDnsExpanded] = useState(true);
     const [threatExpanded, setThreatExpanded] = useState(true);
     const [c2Expanded, setC2Expanded] = useState(true);
+    const [aiExpanded, setAIExpanded] = useState(true);
     const [edlExpanded, setEdlExpanded] = useState(true);
     const [resultsExpanded, setResultsExpanded] = useState(true);
 
@@ -154,6 +155,9 @@ export default function Security({ token }: SecurityProps) {
     const [c2SelectedScenarios, setC2SelectedScenarios] = useState<string[]>(C2_SCENARIOS.map(s => s.id));
     const [batchProcessingC2, setBatchProcessingC2] = useState(false);
 
+    // AI Security scenario state
+    const [aiSelectedScenarios, setAISelectedScenarios] = useState<string[]>(AI_SECURITY_SCENARIOS.map(s => s.id));
+    const [batchProcessingAI, setBatchProcessingAI] = useState(false);
 
     const [edlResults, setEdlResults] = useState<{ [key: string]: { results: any[], summary?: any } }>({
         ip: { results: [] },
@@ -164,7 +168,7 @@ export default function Security({ token }: SecurityProps) {
     const [edlTestingState, setEdlTestingState] = useState<{ [key: string]: boolean }>({});
 
     // Test results filter
-    const [testTypeFilter, setTestTypeFilter] = useState<'all' | 'url_filtering' | 'dns_security' | 'threat_prevention' | 'c2_scenario'>('all');
+    const [testTypeFilter, setTestTypeFilter] = useState<'all' | 'url_filtering' | 'dns_security' | 'threat_prevention' | 'c2_scenario' | 'ai_security'>('all');
 
     const [showChangesOnly, setShowChangesOnly] = useState(false);
 
@@ -371,7 +375,7 @@ export default function Security({ token }: SecurityProps) {
         }
     };
 
-    const updateSchedule = async (type: 'url' | 'dns' | 'threat' | 'c2', enabled: boolean, minutes: number) => {
+    const updateSchedule = async (type: 'url' | 'dns' | 'threat' | 'c2' | 'ai', enabled: boolean, minutes: number) => {
         if (!config) return;
 
         const newConfig = { ...config };
@@ -408,7 +412,7 @@ export default function Security({ token }: SecurityProps) {
                 limit: '50',
                 offset: offset.toString(),
                 ...(searchQuery && { search: searchQuery }),
-                ...(testTypeFilter !== 'all' && { type: testTypeFilter === 'c2_scenario' ? 'c2' : testTypeFilter })
+                ...(testTypeFilter !== 'all' && { type: testTypeFilter === 'c2_scenario' ? 'c2' : testTypeFilter === 'ai_security' ? 'ai' : testTypeFilter })
             });
 
             const res = await fetch(`/api/security/results?${params}`, { headers: authHeaders() });
@@ -418,15 +422,15 @@ export default function Security({ token }: SecurityProps) {
             // Note: backend now uses type='c2' for c2_scenario entries
             const mappedResults = (data.results || []).map((r: any) => {
                 const isC2 = r.type === 'c2';
+                const isAI = r.type === 'ai';
                 return {
                     ...r,
                     testId: r.id,
-                    testType: isC2 ? 'c2_scenario' : r.type,
+                    testType: isC2 ? 'c2_scenario' : isAI ? 'ai_security' : r.type,
                     testName: r.name,
                     previousStatus: r.previousStatus ?? null,
-                    // Reconstruct result object with all available data
-                    result: isC2 ? {
-                        status: r.status, // 'enforced' | 'bypass' | 'inconclusive'
+                    result: (isC2 || isAI) ? {
+                        status: r.status,
                         output: r.details?.output,
                         command: r.details?.command,
                         verdict_reason: r.details?.verdict_reason,
@@ -436,7 +440,10 @@ export default function Security({ token }: SecurityProps) {
                         dns_ip: r.details?.dns_ip,
                         attackType: r.details?.attackType,
                         scenarioId: r.details?.scenarioId,
-                    } : { status: r.status, ...r.details } // For getStatusBadge compatibility
+                        app_results: r.details?.app_results,
+                        reached_count: r.details?.reached_count,
+                        total_count: r.details?.total_count,
+                    } : { status: r.status, ...r.details }
                 };
             });
 
@@ -662,20 +669,23 @@ export default function Security({ token }: SecurityProps) {
     };
 
     // ── C2 Attack Scenarios ───────────────────────────────────────────────────
-    const getC2VerdictBadge = (result: any) => {
+    // ── AI Security verdict badge (also used for C2 — shared logic) ──────────
+    const getAIVerdictBadge = (result: any) => {
         if (!result) return null;
         const status = result.status;
         if (status === 'enforced') {
             return <span className="flex items-center gap-1 text-green-400 text-sm"><CheckCircle size={14} /> Enforced</span>;
         } else if (status === 'bypass') {
             return <span className="flex items-center gap-1 text-red-400 text-sm"><XCircle size={14} /> Bypass</span>;
-        } else if (status === 'sinkholed') {
-            return <span className="flex items-center gap-1 text-yellow-400 text-sm"><AlertTriangle size={14} /> Sinkholed</span>;
+        } else if (status === 'completed') {
+            return <span className="flex items-center gap-1 text-cyan-400 text-sm"><CheckCircle size={14} /> Completed{result.reached_count != null ? ` ${result.reached_count}/${result.total_count}` : ''}</span>;
         } else if (status === 'inconclusive') {
             return <span className="flex items-center gap-1 text-orange-400 text-sm"><AlertTriangle size={14} /> Inconclusive</span>;
         }
         return <span className="text-text-muted text-sm">—</span>;
     };
+
+    const getC2VerdictBadge = getAIVerdictBadge; // alias for backward compat
 
     const runC2Test = async (scenario: typeof C2_SCENARIOS[0]) => {
         setTesting(prev => ({ ...prev, [`c2-${scenario.id}`]: true }));
@@ -735,6 +745,68 @@ export default function Security({ token }: SecurityProps) {
             setC2SelectedScenarios([]);
         } else {
             setC2SelectedScenarios(C2_SCENARIOS.map(s => s.id));
+        }
+    };
+
+    // ── AI Security Test Functions ────────────────────────────────────────────
+    const runAITest = async (scenario: AISecurityScenario) => {
+        setTesting(prev => ({ ...prev, [`ai-${scenario.id}`]: true }));
+        try {
+            const res = await fetch('/api/security/ai-test', {
+                method: 'POST',
+                headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    scenarioId: scenario.id,
+                    scenarioName: scenario.name,
+                    attackType: scenario.attack_type,
+                    targets: scenario.targets
+                })
+            });
+            const data = await res.json();
+            if (data.result?.status) {
+                const s = data.result.status;
+                const label = s === 'enforced' ? '✓ Enforced' : s === 'bypass' ? '⊗ Bypass' : s === 'completed' ? '✓ Completed' : '⚠ Inconclusive';
+                showToast(`${scenario.name}: ${label}`, s === 'enforced' || s === 'completed' ? 'success' : s === 'bypass' ? 'error' : 'info');
+            }
+            await fetchResults();
+        } catch (e) {
+            console.error('AI test failed:', e);
+            showToast('AI Security test failed', 'error');
+        } finally {
+            setTesting(prev => ({ ...prev, [`ai-${scenario.id}`]: false }));
+        }
+    };
+
+    const runAIBatchTest = async () => {
+        if (batchProcessingAI || aiSelectedScenarios.length === 0) return;
+        setBatchProcessingAI(true);
+        showToast(`Running ${aiSelectedScenarios.length} AI Security scenarios...`, 'info');
+        try {
+            const selectedScenarios = AI_SECURITY_SCENARIOS
+                .filter(s => aiSelectedScenarios.includes(s.id))
+                .map(s => ({ scenarioId: s.id, scenarioName: s.name, attackType: s.attack_type, targets: s.targets }));
+            await fetch('/api/security/ai-test-batch', {
+                method: 'POST',
+                headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scenarios: selectedScenarios })
+            });
+            setTimeout(async () => {
+                await fetchResults();
+                showToast('AI Security batch completed!', 'success');
+                setBatchProcessingAI(false);
+            }, selectedScenarios.length * 6000 + 2000); // volume test takes longer
+        } catch (e) {
+            console.error('AI batch failed:', e);
+            showToast('AI Security batch failed', 'error');
+            setBatchProcessingAI(false);
+        }
+    };
+
+    const toggleAllAIScenarios = () => {
+        if (aiSelectedScenarios.length === AI_SECURITY_SCENARIOS.length) {
+            setAISelectedScenarios([]);
+        } else {
+            setAISelectedScenarios(AI_SECURITY_SCENARIOS.map(s => s.id));
         }
     };
 
@@ -1737,6 +1809,143 @@ export default function Security({ token }: SecurityProps) {
                 )}
             </div>
 
+            {/* AI Security Tests */}
+
+            <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+                <button
+                    onClick={() => setAIExpanded(!aiExpanded)}
+                    className="w-full px-6 py-4 flex items-center justify-between bg-card-secondary/50 hover:bg-card-hover transition-all border-b border-border"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-cyan-600/10 rounded-lg text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                            <Zap size={18} />
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-black text-text-primary tracking-tight">AI Security Tests</h3>
+                            <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest opacity-70">
+                                {aiSelectedScenarios.length} / {AI_SECURITY_SCENARIOS.length} Scenarios Active · Palo Alto AI Security (AISA)
+                            </p>
+                        </div>
+                    </div>
+                    {aiExpanded ? <ChevronUp size={20} className="text-text-muted" /> : <ChevronDown size={20} className="text-text-muted" />}
+                </button>
+
+                {aiExpanded && (
+                    <div className="p-6 space-y-6">
+                        {/* Controls row */}
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                            <div className="flex flex-wrap items-center gap-6">
+                                <label className="flex items-center gap-2 cursor-pointer group">
+                                    <input
+                                        type="checkbox"
+                                        checked={aiSelectedScenarios.length === AI_SECURITY_SCENARIOS.length}
+                                        onChange={toggleAllAIScenarios}
+                                        className="w-4 h-4 rounded border-border bg-card-secondary text-cyan-600 focus:ring-1 focus:ring-cyan-500 outline-none transition-all"
+                                    />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-text-muted group-hover:text-text-primary transition-colors">Select All</span>
+                                </label>
+
+                                {/* AI Scheduler */}
+                                <SchedulerSettings type="ai" title="AI" config={config} onUpdate={updateSchedule} />
+                            </div>
+                            <button
+                                onClick={runAIBatchTest}
+                                disabled={batchProcessingAI || aiSelectedScenarios.length === 0}
+                                className={cn(
+                                    "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2",
+                                    batchProcessingAI
+                                        ? "bg-card-secondary text-text-muted border border-border cursor-not-allowed"
+                                        : "bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-900/40"
+                                )}
+                            >
+                                {batchProcessingAI ? (
+                                    <><RefreshCcw size={16} className="animate-spin" /> Testing...</>
+                                ) : (
+                                    <><Play size={16} fill="currentColor" /> Run Selected Scenarios</>
+                                )}
+                            </button>
+                        </div>
+
+                        <div>
+                            <h4 className="text-[10px] font-black text-text-muted tracking-[0.2em] mb-4 border-l-2 border-cyan-600 dark:border-cyan-400 pl-2">AI Security Attack Scenarios</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {AI_SECURITY_SCENARIOS.map(scenario => {
+                                    const isEnabled = aiSelectedScenarios.includes(scenario.id);
+                                    const isTesting = testing[`ai-${scenario.id}`];
+                                    const lastResult = testResults.find(r =>
+                                        r.testType === 'ai_security' && r.testName === scenario.name
+                                    );
+                                    const isVolumeTest = scenario.attack_type === 'ai_volume_traffic';
+
+                                    return (
+                                        <div
+                                            key={scenario.id}
+                                            className={cn(
+                                                "relative p-4 rounded-xl border transition-all",
+                                                isEnabled
+                                                    ? "bg-card border-cyan-500/30 shadow-sm"
+                                                    : "bg-card-secondary/30 border-border opacity-60"
+                                            )}
+                                        >
+                                            {/* Header */}
+                                            <div className="flex items-start justify-between gap-2 mb-2">
+                                                <div className="flex items-start gap-2 flex-1 min-w-0">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isEnabled}
+                                                        onChange={() => {
+                                                            if (isEnabled) setAISelectedScenarios(prev => prev.filter(id => id !== scenario.id));
+                                                            else setAISelectedScenarios(prev => [...prev, scenario.id]);
+                                                        }}
+                                                        className="mt-0.5 w-3.5 h-3.5 rounded border-border bg-card-secondary text-cyan-600 focus:ring-1 focus:ring-cyan-500 outline-none flex-shrink-0"
+                                                    />
+                                                    <div className="min-w-0">
+                                                        <p className="text-[11px] font-black text-text-primary leading-tight truncate">{scenario.name}</p>
+                                                        <p className="text-[9px] text-cyan-600 dark:text-cyan-400 font-bold tracking-widest uppercase mt-0.5">{scenario.policy_engine}</p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => runAITest(scenario)}
+                                                    disabled={isTesting}
+                                                    className={cn(
+                                                        "flex-shrink-0 p-1.5 rounded-lg transition-all",
+                                                        isTesting
+                                                            ? "bg-card-secondary text-text-muted"
+                                                            : "bg-cyan-600/10 hover:bg-cyan-600/20 text-cyan-600 dark:text-cyan-400"
+                                                    )}
+                                                    title="Run this scenario"
+                                                >
+                                                    {isTesting ? <RefreshCcw size={12} className="animate-spin" /> : <Play size={12} fill="currentColor" />}
+                                                </button>
+                                            </div>
+
+                                            {/* Description */}
+                                            <p className="text-[9px] text-text-muted leading-relaxed mb-2 line-clamp-2">{scenario.description}</p>
+
+                                            {/* Targets */}
+                                            <div className="text-[8px] text-text-muted font-mono mb-2 opacity-70 truncate">
+                                                {isVolumeTest
+                                                    ? `${scenario.targets.length} AI apps`
+                                                    : scenario.targets.slice(0, 2).join(', ') + (scenario.targets.length > 2 ? ` +${scenario.targets.length - 2}` : '')
+                                                }
+                                            </div>
+
+                                            {/* Last result badge */}
+                                            {lastResult && (
+                                                <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-between">
+                                                    <span className="text-[8px] text-text-muted">Last result:</span>
+                                                    <div className="scale-75 origin-right">{getAIVerdictBadge(lastResult.result)}</div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
             {/* EDL Lists (IP / URL / DNS) */}
 
             <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
@@ -2034,6 +2243,7 @@ export default function Security({ token }: SecurityProps) {
                                         <option value="dns">DNS Lists</option>
                                         <option value="threat">Threat Lists</option>
                                         <option value="c2_scenario">C2 Scenarios</option>
+                                        <option value="ai_security">AI Security</option>
 
                                     </select>
                                     <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
@@ -2128,12 +2338,14 @@ export default function Security({ token }: SecurityProps) {
                                                                 result.testType === 'url_filtering' || result.testType === 'url' ? 'bg-blue-600/5 text-blue-600 dark:text-blue-400 border-blue-500/20' :
                                                                     result.testType === 'dns_security' || result.testType === 'dns' ? 'bg-purple-600/5 text-purple-600 dark:text-purple-400 border-purple-500/20' :
                                                                         result.testType === 'c2_scenario' ? 'bg-red-900/10 text-red-400 border-red-500/20' :
-                                                                            'bg-red-600/5 text-red-600 dark:text-red-400 border-red-500/20'
+                                                                            result.testType === 'ai_security' ? 'bg-cyan-600/10 text-cyan-500 dark:text-cyan-400 border-cyan-500/20' :
+                                                                                'bg-red-600/5 text-red-600 dark:text-red-400 border-red-500/20'
                                                             )}>
                                                                 {result.testType === 'url_filtering' || result.testType === 'url' ? 'URL' :
                                                                     result.testType === 'dns_security' || result.testType === 'dns' ? 'DNS' :
                                                                         result.testType === 'c2_scenario' ? 'C2S' :
-                                                                            'Threat'}
+                                                                            result.testType === 'ai_security' ? 'AIS' :
+                                                                                'Threat'}
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-4 text-[11px] text-text-primary font-bold tracking-tight truncate max-w-xs group-hover:text-blue-500 transition-colors">
@@ -2163,7 +2375,7 @@ export default function Security({ token }: SecurityProps) {
                                                         </td>
                                                         <td className="px-4 py-4 text-right">
                                                             <div className="flex justify-end">
-                                                                {result.testType === 'c2_scenario' ? getC2VerdictBadge(result.result) : getStatusBadge(result.result)}
+                                                                {result.testType === 'c2_scenario' || result.testType === 'ai_security' ? getAIVerdictBadge(result.result) : getStatusBadge(result.result)}
                                                             </div>
                                                         </td>
                                                     </tr>

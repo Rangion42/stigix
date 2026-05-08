@@ -14,9 +14,9 @@ const unlink = promisify(fs.unlink);
 export interface TestResult {
     id: number;
     timestamp: number;
-    type: 'url' | 'dns' | 'threat' | 'c2';
+    type: 'url' | 'dns' | 'threat' | 'c2' | 'ai';
     name: string;
-    status: 'allowed' | 'blocked' | 'sinkholed' | 'unreachable' | 'error' | 'enforced' | 'bypass' | 'inconclusive';
+    status: 'allowed' | 'blocked' | 'sinkholed' | 'unreachable' | 'error' | 'enforced' | 'bypass' | 'inconclusive' | 'completed';
     details?: {
         url?: string;
         domain?: string;
@@ -37,13 +37,13 @@ export interface TestResult {
     };
     slsDiagnostic?: any;
     runId?: string;
-    previousStatus?: 'allowed' | 'blocked' | 'sinkholed' | 'unreachable' | 'error' | 'enforced' | 'bypass' | 'inconclusive' | null;
+    previousStatus?: 'allowed' | 'blocked' | 'sinkholed' | 'unreachable' | 'error' | 'enforced' | 'bypass' | 'inconclusive' | 'completed' | null;
 }
 
 export interface LogStats {
     totalTests: number;
-    testsByType: { url: number; dns: number; threat: number; c2: number };
-    testsByStatus: { blocked: number; allowed: number; sinkholed: number; error: number; enforced: number; bypass: number; inconclusive: number };
+    testsByType: { url: number; dns: number; threat: number; c2: number; ai: number };
+    testsByStatus: { blocked: number; allowed: number; sinkholed: number; error: number; enforced: number; bypass: number; inconclusive: number; completed: number };
     diskUsageBytes: number;
     oldestTest: number | null;
     newestTest: number | null;
@@ -256,8 +256,8 @@ export class TestLogger {
 
             const stats: LogStats = {
                 totalTests: allResults.length,
-                testsByType: { url: 0, dns: 0, threat: 0, c2: 0 },
-                testsByStatus: { blocked: 0, allowed: 0, sinkholed: 0, error: 0, enforced: 0, bypass: 0, inconclusive: 0 },
+                testsByType: { url: 0, dns: 0, threat: 0, c2: 0, ai: 0 },
+                testsByStatus: { blocked: 0, allowed: 0, sinkholed: 0, error: 0, enforced: 0, bypass: 0, inconclusive: 0, completed: 0 },
                 diskUsageBytes: 0,
                 oldestTest: null,
                 newestTest: null
@@ -268,6 +268,7 @@ export class TestLogger {
                 if (r.type === 'url') stats.testsByType.url++;
                 else if (r.type === 'dns') stats.testsByType.dns++;
                 else if (r.type === 'c2') stats.testsByType.c2++;
+                else if (r.type === 'ai') stats.testsByType.ai++;
                 else stats.testsByType.threat++;
 
                 const s = r.status as string;

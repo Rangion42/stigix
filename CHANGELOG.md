@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.0-patch.6] - 2026-05-08
+### Added
+- **AI Security Tests** 🤖 New dedicated **AI Security** panel in the Security dashboard mirroring the Palo Alto AISA PowerShell simulation script. Includes 5 scenarios: DLP Credit Card extraction, Prompt Injection/Jailbreak, Misfortune Cookie (CVE-2014-9222), EICAR Malware Upload to AI apps, and Volume Traffic Generator (24 AI apps across 6 categories). 🚀
+- **AI Security Backend** `POST /api/security/ai-test` and `POST /api/security/ai-test-batch` routes — each scenario runs `curl` against live AI app endpoints (ChatGPT, Grok, Gemini, Perplexity) and aggregates verdicts across all targets.
+- **AI Security Scheduler** ⏰ Configurable periodic scheduler for AI Security scenarios — identical to DNS/URL/C2 scheduler controls. Config key: `scheduled_execution.ai`.
+- **Verdict System** `Enforced` (green) / `Bypass` (red) / `Completed` (cyan, volume test only) / `Inconclusive` (orange) — inverted logic consistent with C2 module.
+- **Security Log** 🏷️ `AIS` badge type (cyan) in the Security Test Log; `AI Security` filter option in the history dropdown.
+- **shared/security-categories.ts** `AI_SECURITY_SCENARIOS`, `AI_PRIORITY_APPS`, `AI_VOLUME_APPS` exports with `AISecurityScenario` interface.
+- **test-logger.ts** Extended `TestResult` to support `type:'ai'` and status `'completed'`; updated `LogStats` stats counters.
+### Documentation
+- **docs/SECURITY_TESTING.md** (v3.1) Comprehensive **AI Security Tests** section documenting all 5 scenarios with exact execution sequences, PowerShell script equivalents, verdict rules, troubleshooting guides, and SSL Inspection requirements. 📖
+
+## [v1.3.0-patch.5] - 2026-05-08
+### Fixed
+- **Build** 🐛 Docker build failed with `TS2304: Cannot find name 'SchedulerControl'` — renamed to the correct `SchedulerSettings` component and widened its `type` prop union to include `'c2'`. Previously the C2 scheduler panel referenced a non-existent component name.
+- **Security.tsx** Widened `updateSchedule` function type from `'url' | 'dns' | 'threat'` to `'url' | 'dns' | 'threat' | 'c2'` to resolve implicit `any` TypeScript errors on C2 scheduler callbacks.
+
 ## [v1.3.0-patch.4] - 2026-05-08
 ### Fixed
 - **Security Log** 🐛 C2 entries now show badge `C2S` (was incorrectly showing `THREAT`) — root cause: `TestLogger` was receiving `type:'threat'` instead of `type:'c2'` for all c2_scenario entries
