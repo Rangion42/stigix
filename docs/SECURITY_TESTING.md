@@ -4,8 +4,8 @@
 
 The Security Testing feature enables controlled testing of Palo Alto Networks / Prisma Access security policies for demos and POCs. It provides automated testing of URL Filtering, DNS Security, and Threat Prevention capabilities.
 
-**Version:** 1.2.2  
-**Last Updated:** 2026-04-21
+**Version:** 1.3.0
+**Last Updated:** 2026-05-08
 
 ---
 
@@ -41,6 +41,25 @@ The Security Testing feature enables controlled testing of Palo Alto Networks / 
 ![Test Results](screenshots/03-security/12.png)
 
 *Persistent logging with search, filtering, pagination, and export capabilities*
+
+### C2 Attack Scenarios
+![C2 Attack Scenarios](screenshots/03-security/14-c2-attack-scenarios.png)
+
+*7 attack simulation scenarios — SQL Injection, DNS C2, Greyware DNS, Compromised DNS, Sliver C2, EICAR over HTTPS, DNS Tunneling Burst — with real-time Enforced / Bypass / Inconclusive verdicts and C2 scheduler controls*
+
+### AI Security Tests
+![AI Security Tests](screenshots/03-security/13-ai-security-panel.png)
+
+*5 Palo Alto AISA simulation scenarios (DLP, Prompt Injection, CVE-2014-9222, EICAR Upload, Volume Traffic) with AIS scheduler controls and inline verdict badges*
+
+### Security Test Log — AIS & C2S Badges
+![AI Security Log](screenshots/03-security/15-ai-security-log.png)
+
+*Security Test History showing AIS (cyan) badges for AI Security results — Completed (volume), Enforced, Bypass, and Inconclusive dispositions*
+
+![C2 Security Log](screenshots/03-security/16-c2-security-log.png)
+
+*Security Test History showing C2S (red) badges for C2 scenario results — Enforced, Bypass, and Inconclusive dispositions*
 
 ---
 
@@ -966,6 +985,16 @@ docker-compose restart stigix
 
 > **Purpose:** Validate that Prisma Access / PAN-OS security policies correctly block Command & Control (C2) attack traffic before it can reach a real attacker infrastructure. This section is based on a proven PowerShell simulation script used in production POC environments.
 
+### Dashboard
+
+![C2 Attack Scenarios](screenshots/03-security/14-c2-attack-scenarios.png)
+
+*7 active scenarios with real-time Enforced / Bypass / Inconclusive verdicts. The C2 scheduler (30m shown) triggers automatic periodic execution. Results appear with the `C2S` red badge in the Security Test Log.*
+
+![C2 Security Log](screenshots/03-security/16-c2-security-log.png)
+
+*C2S badge (red) in the Security Test Log — each row shows the scenario name, timestamp, and disposition. Bypass entries highlight policy gaps requiring immediate attention.*
+
 The C2 module fires **real network traffic** from the Stigix container. Whether the firewall intercepts it determines the verdict. This is intentional — if your policies are correct, all 7 scenarios should return **Enforced**.
 
 ### Verdict Logic (Inverted from standard tests)
@@ -1402,6 +1431,16 @@ For issues or questions:
 ## AI Security Tests (v1.3.0-patch.6)
 
 > **Purpose:** Validate that Palo Alto AI Security (AISA) and associated security engines correctly inspect, detect, and block threats targeting AI applications (ChatGPT, Grok, Gemini, Perplexity, and 24 other AI SaaS tools). Based on a PowerShell simulation script used in production POC environments.
+
+### Dashboard
+
+![AI Security Tests](screenshots/03-security/13-ai-security-panel.png)
+
+*5 active scenarios with Select All, AI Scheduler (30m), and Run Selected Scenarios button. Each scenario card shows the policy engine tag (AI_SECURITY_PROMPT, VULN_PROTECTION, THREAT_PREVENTION, AI_SECURITY_VISIBILITY), target apps, and the last result badge inline.*
+
+![AI Security Log](screenshots/03-security/15-ai-security-log.png)
+
+*AIS badge (cyan) in the Security Test Log — results include Completed (volume traffic, blue), Enforced (green), Bypass (red), and Inconclusive (orange) dispositions.*
 
 The AI Security module fires **real network traffic** from the Stigix container toward live AI application endpoints. Whether the firewall intercepts the payload determines the verdict. If your policies are correctly configured, security scenarios 1–4 should return **Enforced** and scenario 5 (Volume Traffic) should return **Completed**.
 
