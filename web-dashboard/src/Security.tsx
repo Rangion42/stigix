@@ -73,10 +73,10 @@ const SchedulerSettings = ({
     config,
     onUpdate
 }: {
-    type: 'url' | 'dns' | 'threat',
+    type: 'url' | 'dns' | 'threat' | 'c2',
     title: string,
     config: SecurityConfig | null,
-    onUpdate: (type: 'url' | 'dns' | 'threat', enabled: boolean, minutes: number) => Promise<void>
+    onUpdate: (type: 'url' | 'dns' | 'threat' | 'c2', enabled: boolean, minutes: number) => Promise<void>
 }) => {
     if (!config?.scheduled_execution) return null;
 
@@ -371,7 +371,7 @@ export default function Security({ token }: SecurityProps) {
         }
     };
 
-    const updateSchedule = async (type: 'url' | 'dns' | 'threat', enabled: boolean, minutes: number) => {
+    const updateSchedule = async (type: 'url' | 'dns' | 'threat' | 'c2', enabled: boolean, minutes: number) => {
         if (!config) return;
 
         const newConfig = { ...config };
@@ -383,7 +383,7 @@ export default function Security({ token }: SecurityProps) {
             };
         }
 
-        newConfig.scheduled_execution[type] = { enabled, interval_minutes: minutes };
+        (newConfig.scheduled_execution as any)[type] = { enabled, interval_minutes: minutes };
 
         try {
             const res = await fetch('/api/security/config', {
@@ -1651,27 +1651,7 @@ export default function Security({ token }: SecurityProps) {
                                 </label>
 
                                 {/* C2 Scheduler — same pattern as DNS/URL */}
-                                <SchedulerControl
-                                    type="c2"
-                                    title="C2"
-                                    config={config}
-                                    onUpdate={(type, enabled, interval) => {
-                                        if (!config) return;
-                                        const updated = {
-                                            ...config,
-                                            scheduled_execution: {
-                                                ...config.scheduled_execution,
-                                                [type]: { ...(config.scheduled_execution as any)[type], enabled, interval_minutes: interval }
-                                            }
-                                        };
-                                        setConfig(updated as any);
-                                        fetch('/api/security/config', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json', ...authHeaders() },
-                                            body: JSON.stringify({ scheduled_execution: updated.scheduled_execution })
-                                        }).catch(console.error);
-                                    }}
-                                />
+                                <SchedulerSettings type="c2" title="C2" config={config} onUpdate={updateSchedule} />
                             </div>
                             <button
                                 onClick={runC2BatchTest}
