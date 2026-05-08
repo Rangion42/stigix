@@ -962,15 +962,430 @@ docker-compose restart stigix
 
 ---
 
-## Future Enhancements
+## C2 Attack Scenarios (v1.3.0)
 
-- [x] ~~Test result comparison (before/after policy changes)~~ → Implemented as Security Score Tracking v2
-- [ ] HTTPS URL filtering support (requires SSL decryption)
-- [ ] Custom test profiles (save favorite combinations)
-- [ ] Email notifications for score regressions
-- [ ] Advanced reporting and PDF export
-- [ ] Multi-firewall / multi-node score aggregation
-- [ ] Database persistence for unlimited history
+> **Purpose:** Validate that Prisma Access / PAN-OS security policies correctly block Command & Control (C2) attack traffic before it can reach a real attacker infrastructure. This section is based on a proven PowerShell simulation script used in production POC environments.
+
+The C2 module fires **real network traffic** from the Stigix container. Whether the firewall intercepts it determines the verdict. This is intentional — if your policies are correct, all 7 scenarios should return **Enforced**.
+
+### Verdict Logic (Inverted from standard tests)
+
+| Verdict | Meaning | Color |
+|---------|---------|-------|
+| 🟢 **Enforced** | Threat was blocked/sinkholed by the firewall | Green |
+| 🔴 **Bypass** | Threat was NOT blocked — policy gap detected | Red |
+| 🟠 **Inconclusive** | Network/tool error, result undetermined | Orange |
+
+> **Important:** Unlike URL/DNS tests where "allowed" is neutral, for C2 scenarios **Bypass is bad** — it means the attack payload reached its destination.
+
+---
+
+### Scenario 1 — SQL Injection
+
+**PAN-OS Engine:** Vulnerability Protection  
+**Log badge:** `C2S`  
+**Policy requirement:** Vulnerability Protection profile applied to internet-bound security rules
+
+#### What is tested
+A classic SQL injection string (`' OR '1'='1`) is embedded in a GET request parameter and sent to `google.com`. While Google itself would not be vulnerable, the firewall inspects the payload in transit and should trigger a Vulnerability Protection signature match before the packet leaves the network.
+
+#### Exact sequence
+```
+[STEP 1/1] SQL Injection payload delivery
+  Command : curl -s -o /dev/null -w '%{http_code}' --max-time 5
+            "http://www.google.com/?id=1' OR '1'='1"
+  Intent  : Deliver a classic SQL injection string in a GET parameter
+  Engine  : Vulnerability Protection (PAN-OS App-ID + signature match)
+  Result  : HTTP <code>
+```
+
+Equivalent PowerShell (original script):
+```powershell
+Invoke-WebRequest -Uri "http://www.google.com/?id=1' OR '1'='1" -Method Get -TimeoutSec 5
+```
+
+#### Verdict rules
+| HTTP Code | Verdict | Reason |
+|-----------|---------|--------|
+| `0` (connection reset) | **Enforced** ✓ | Firewall sent TCP RST — inline block |
+| `403` | **Enforced** ✓ | Firewall block page served |
+| `200` | **Bypass** ⊗ | Payload passed — Vuln Protection not triggered |
+| Other | **Inconclusive** | Unexpected response, check connectivity |
+
+#### Common false Bypass cause
+- Vulnerability Protection profile not attached to the egress security rule
+- Profile in alert-only mode instead of block
+
+---
+
+### Scenario 2 — DNS C2 Infiltration
+
+**PAN-OS Engine:** DNS Security  
+**Domain:** `test-dns-infiltration.testpanw.com`  
+**Log badge:** `C2S`  
+**Policy requirement:** DNS Security license + DNS Security profile applied
+
+#### What is tested
+Resolves a Palo Alto Networks official C2 test domain via Google's DNS server (`8.8.8.8`). A properly configured firewall intercepts the DNS query inline and either:
+- Returns `NXDOMAIN` (sink the query), or
+- Redirects to the sinkhole IP (`198.135.184.22` / `72.5.65.111`)
+
+Then fires an HTTP probe to the same domain to validate layer-7 blocking.
+
+#### Exact sequence
+```
+[STEP 1/2] DNS resolution via external resolver
+  Command : nslookup test-dns-infiltration.testpanw.com 8.8.8.8
+  Intent  : Query Google DNS — firewall intercepts inline
+
+[STEP 2/2] HTTP probe
+  Command : curl -s -o /dev/null -w '%{http_code}' --max-time 5
+            "http://test-dns-infiltration.testpanw.com"
+  Intent  : Attempt HTTP connection to C2 server (secondary)
+```
+
+Equivalent PowerShell:
+```powershell
+nslookup test-dns-infiltration.testpanw.com 8.8.8.8
+Invoke-WebRequest -Uri "http://test-dns-infiltration.testpanw.com" -TimeoutSec 5 -SilentlyContinue
+```
+
+#### Verdict rules (DNS step drives the verdict)
+| DNS Result | Verdict | Reason |
+|------------|---------|--------|
+| NXDOMAIN | **Enforced** ✓ | Firewall blocked the query |
+| Sinkhole IP (`198.135.184.22`) | **Enforced** ✓ | Firewall redirected to PAN sinkhole |
+| Real IP resolved | **Bypass** ⊗ | DNS query was not intercepted |
+| Tool error | **Inconclusive** | `nslookup` unavailable or DNS timeout |
+
+---
+
+### Scenario 3 — Greyware DNS
+
+**PAN-OS Engine:** DNS Security  
+**Domain:** `test-grayware.testpanw.com`  
+**Log badge:** `C2S`
+
+#### What is tested
+Same 2-step sequence as Scenario 2, targeting the Grayware DNS test domain. Validates that PAN-OS DNS Security is classifying grayware (potentially unwanted applications communicating with C2-like patterns) as a threat category to block.
+
+#### Exact sequence
+```
+[STEP 1/2] nslookup test-grayware.testpanw.com 8.8.8.8
+[STEP 2/2] curl http://test-grayware.testpanw.com --max-time 5
+```
+
+Equivalent PowerShell:
+```powershell
+nslookup test-grayware.testpanw.com 8.8.8.8
+Invoke-WebRequest -Uri "http://test-grayware.testpanw.com" -TimeoutSec 5 -SilentlyContinue
+```
+
+#### Verdict rules
+Same as Scenario 2. DNS resolution result is the primary verdict driver.
+
+---
+
+### Scenario 4 — Compromised DNS
+
+**PAN-OS Engine:** DNS Security (Advanced — Compromised category)  
+**Domain:** `test-dns-infiltration.testpanw.com` (same as Scenario 2)  
+**Log badge:** `C2S`
+
+#### What is tested
+This scenario tests the **"Compromised DNS"** classification specifically — distinct from "C2 Infiltration" in that the Compromised category covers domains that have been hijacked or taken over by an attacker. In the PowerShell script, only the DNS query is performed (no HTTP follow-up).
+
+#### Exact sequence
+```
+[STEP 1/2] nslookup test-dns-infiltration.testpanw.com 8.8.8.8
+[STEP 2/2] curl http://test-dns-infiltration.testpanw.com --max-time 5
+           (HTTP probe for secondary validation)
+```
+
+Equivalent PowerShell:
+```powershell
+nslookup "test-dns-infiltration.testpanw.com" 8.8.8.8
+```
+
+#### Verdict rules
+Same as Scenario 2.
+
+> **Note:** Scenarios 2 and 4 use the same domain intentionally — the PowerShell script does too. They validate that the domain is blocked under two different threat categories in the DNS Security profile.
+
+---
+
+### Scenario 5 — Sliver C2 Emulation
+
+**PAN-OS Engine:** URL Filtering + Cloud Inline Analysis (WildFire/AI)  
+**Target:** `http://example.com/api/v1/session`  
+**Log badge:** `C2S`  
+**Policy requirement:** URL Filtering profile + Advanced URL Filtering (AURL) for AI-based C2 detection
+
+#### What is tested
+Emulates a **Sliver** C2 framework beacon. Sliver is an open-source adversarial C2 framework (similar to Cobalt Strike). The beacon sends a POST request with a base64-encoded payload to a session management endpoint, simulating the initial C2 check-in.
+
+The firewall's Cloud Inline Analysis engine detects the C2 communication pattern based on:
+- POST to a bare domain `/api/v1/session` path
+- JSON payload with session ID and base64 data
+- User-Agent and header anomalies
+
+#### Exact sequence
+```
+[STEP 1/1] Sliver C2 beacon POST
+  Command : curl -s -o /dev/null -w '%{http_code}' --max-time 5
+            -X POST http://example.com/api/v1/session
+            -H 'Content-Type: application/json'
+            -d '{"session_id":"sl-<random>","data":"c2xpdmVyLWJlYWNvbi10ZXN0"}'
+  Payload : data = "c2xpdmVyLWJlYWNvbi10ZXN0" (base64 for "sliver-beacon-test")
+  Session : sl-<random 6-digit ID> (changes every run)
+```
+
+Equivalent PowerShell:
+```powershell
+$sliverBody = @{ session_id = "sl-$(Get-Random)"; data = "c2xpdmVyLWJlYWNvbi10ZXN0" } | ConvertTo-Json
+Invoke-WebRequest -Uri "http://example.com/api/v1/session" -Method Post -Body $sliverBody -ContentType "application/json" -TimeoutSec 5
+```
+
+#### Verdict rules
+| HTTP Code | Verdict | Reason |
+|-----------|---------|--------|
+| `0` (connection reset/refused) | **Enforced** ✓ | Firewall blocked the C2 beacon |
+| `403` | **Enforced** ✓ | URL Filtering block page |
+| `200` | **Bypass** ⊗ | Beacon reached the server, no policy match |
+| Other | **Inconclusive** | Unexpected response |
+
+#### Common false Bypass cause
+- `example.com` is not in a malicious URL category by default — this test relies on **Advanced URL Filtering (AI-based C2 detection)** or a custom block list containing `example.com/api/`
+- Without AURL license, this scenario will frequently show Bypass
+
+---
+
+### Scenario 6 — EICAR over HTTPS
+
+**PAN-OS Engine:** Threat Prevention (Antivirus) + SSL/TLS Inspection  
+**Target:** `https://secure.eicar.org/eicar.com.txt`  
+**Log badge:** `C2S`  
+**Policy requirement:** AV profile attached to security rules + SSL Decryption profile on HTTPS traffic
+
+#### What is tested
+Downloads the industry-standard EICAR test file over HTTPS. The EICAR string is a harmless, universally recognized AV test signature:
+```
+X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+```
+
+The key challenge: the download is over **HTTPS (TLS)**. Without SSL inspection, the firewall cannot see the payload and cannot block it — the AV engine only works on decrypted traffic.
+
+#### Exact sequence
+```
+[STEP 1/1] EICAR test file download via HTTPS
+  Command : curl -s -o /dev/null -w '%{http_code}' --max-time 5
+            "https://secure.eicar.org/eicar.com.txt"
+  Engine  : Threat Prevention (AV) + SSL/TLS Inspection
+  Note    : Requires SSL decrypt profile — without it, result will be BYPASS
+```
+
+Equivalent PowerShell:
+```powershell
+Invoke-WebRequest -Uri "https://secure.eicar.org/eicar.com.txt" -TimeoutSec 5
+```
+
+#### Verdict rules
+| HTTP Code | Verdict | Reason |
+|-----------|---------|--------|
+| `0` (connection reset) | **Enforced** ✓ | TLS + AV blocked the download |
+| `403` | **Enforced** ✓ | Block page served after SSL inspection |
+| `200` | **Bypass** ⊗ | EICAR served — check SSL inspection or AV profile |
+| Tool error | **Inconclusive** | Network unreachable or DNS failure |
+
+#### SSL Inspection requirement
+If this scenario returns **Bypass** even though your AV profile is configured, the most likely cause is missing SSL decryption:
+1. Go to **Policies > Decryption** in your firewall
+2. Ensure a Decryption profile applies to `secure.eicar.org` (port 443)
+3. Re-run the test
+
+---
+
+### Scenario 7 — DNS Tunneling Burst
+
+**PAN-OS Engine:** DNS Security — Behavioral Analysis  
+**Target:** `*.tunnel-demo.com` (15 random queries)  
+**Log badge:** `C2S`  
+**Policy requirement:** DNS Security license + Advanced DNS Security (behavioral analysis feature)
+
+#### What is tested
+Fires a burst of **15 DNS queries** using randomly generated 32-character subdomains under `tunnel-demo.com`. This mimics DNS tunneling exfiltration traffic where:
+- An attacker encodes stolen data as high-entropy subdomains
+- The DNS response channel carries the C2 response
+- High query frequency to the same parent domain is a behavioral anomaly
+
+Each subdomain is random on every run, preventing caching effects.
+
+#### Exact sequence
+```
+[STEP 1/1] DNS Tunneling burst — 15 queries
+  Pattern : nslookup <random32chars>.tunnel-demo.com 8.8.8.8
+  Example : nslookup xkqtmwopvjhdcbzlreyaiufgsnopqrst.tunnel-demo.com 8.8.8.8
+
+  [01/15] ✓ xkqtmwopvjhdcbzlreyaiufgsnopqrst.tunnel-demo.com → NXDOMAIN (ENFORCED)
+  [02/15] ✓ ablmcqrsdxthvfypkwozneiujgbqrstu.tunnel-demo.com → NXDOMAIN (ENFORCED)
+  ...
+  [15/15] ✓ vwxyzabcdefghijklmnopqrstuvwxyzab.tunnel-demo.com → NXDOMAIN (ENFORCED)
+
+  [SUMMARY] 15/15 blocked, 0/15 bypassed
+  [VERDICT] ENFORCED
+```
+
+Equivalent PowerShell:
+```powershell
+for ($i=1; $i -le 15; $i++) {
+    $rand = -join ((97..122) | Get-Random -Count 32 | ForEach-Object {[char]$_})
+    nslookup "$($rand).tunnel-demo.com" 8.8.8.8 > $null 2>&1
+}
+```
+
+#### Verdict rules
+| Result | Verdict | Threshold |
+|--------|---------|-----------|
+| 0/15 bypassed (all NXDOMAIN) | **Enforced** ✓ | ALL queries blocked |
+| ≥1/15 bypassed (any resolved) | **Bypass** ⊗ | Any single resolved = fail |
+| Tool error | **Inconclusive** | `nslookup` unavailable |
+
+> **Strict mode:** The verdict is binary — if even **one** of the 15 subdomains resolves to a real IP, the scenario is **Bypass**. DNS tunneling protection is only effective if 100% of queries are intercepted.
+
+#### Common false Bypass cause
+- DNS Security behavioral analysis requires **Advanced DNS Security** (subscription add-on)
+- Without it, only signature-based detection works; behavioral anomaly detection is disabled
+- Verify under **Device > Licenses** that "Advanced DNS Security" is active
+
+---
+
+### Running C2 Scenarios
+
+#### Individual test
+Click the **▶** (play) button on any scenario card. Results appear immediately:
+- Verdict badge updates in the card (Enforced / Bypass / Inconclusive)
+- Entry added to Security Test Log with `C2S` tag
+- Full sequence log visible in the Telemetry Diagnostic modal
+
+#### Batch test
+1. Check the scenarios you want to run (or use **Select All**)
+2. Click **Run Selected Scenarios**
+3. Scenarios run sequentially with 600ms delay between each to avoid firewall rate limiting
+4. Results populate in the log as each test completes
+
+#### Sequence log in Test Details modal
+Click any `C2S` row in the Security Test Log to open the Telemetry Diagnostic modal. The **Raw Output** field shows the full step-by-step sequence log:
+
+```
+[STEP 1/2] DNS resolution via external resolver
+  Command : nslookup test-dns-infiltration.testpanw.com 8.8.8.8
+  Intent  : Query Google DNS for C2/malicious domain — firewall intercepts and blocks
+  Engine  : DNS Security (Prisma Access / PA inline DNS)
+  Raw DNS : Server:  8.8.8.8 Address:  8.8.8.8#53 ** server can't find test-dns-infiltration...
+  Resolved: NXDOMAIN / no IP
+  DNS step: ENFORCED — domain blocked (IP: NXDOMAIN)
+
+[STEP 2/2] HTTP probe
+  Command : curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://test-dns-infiltration.testpanw.com"
+  Intent  : Attempt HTTP connection to C2 server (secondary validation)
+  Result  : HTTP 0
+
+[VERDICT] ENFORCED — Primary: DNS resolution blocked ✓
+```
+
+---
+
+### API Reference
+
+#### POST `/api/security/c2-test`
+Run a single C2 scenario.
+
+**Request:**
+```json
+{
+  "scenarioId": "dns-c2-infiltration",
+  "scenarioName": "DNS C2 Infiltration",
+  "attackType": "dns_c2",
+  "target": "test-dns-infiltration.testpanw.com"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "status": "enforced",
+  "scenarioId": "dns-c2-infiltration",
+  "scenarioName": "DNS C2 Infiltration",
+  "attackType": "dns_c2",
+  "domain": "test-dns-infiltration.testpanw.com",
+  "dns_ip": null,
+  "http_code": 0,
+  "output": "[STEP 1/2] DNS resolution...\n  Command: ...\n  Resolved: NXDOMAIN\n[VERDICT] ENFORCED",
+  "command": "nslookup test-dns-infiltration.testpanw.com 8.8.8.8",
+  "verdict_reason": "DNS blocked/sinkholed (IP: NXDOMAIN)",
+  "testId": 42,
+  "previousStatus": null
+}
+```
+
+**`attackType` values:**
+
+| Value | Used by scenarios | Method |
+|-------|-------------------|--------|
+| `http_payload` | SQL Injection | `curl GET` |
+| `dns_c2` | DNS C2, Greyware, Compromised DNS | `nslookup ... 8.8.8.8` + HTTP |
+| `http_c2_beacon` | Sliver C2 | `curl POST JSON` |
+| `eicar_https` | EICAR over HTTPS | `curl GET HTTPS` |
+| `dns_tunneling` | DNS Tunneling Burst | 15× `nslookup` |
+
+#### POST `/api/security/c2-test-batch`
+Run multiple scenarios sequentially in the background.
+
+**Request:**
+```json
+{
+  "scenarios": [
+    { "scenarioId": "sqli", "scenarioName": "SQL Injection", "attackType": "http_payload", "target": "google.com/?id=1' OR '1'='1" },
+    { "scenarioId": "dns-c2-infiltration", "scenarioName": "DNS C2 Infiltration", "attackType": "dns_c2", "target": "test-dns-infiltration.testpanw.com" }
+  ]
+}
+```
+
+**Behavior:**
+- Returns immediately with `{ "success": true, "message": "Batch of N C2 scenarios started" }`
+- Scenarios run sequentially in the background with 600ms delay between each
+- Each result is persisted to the Security Test Log as it completes
+- The JWT token from the original request is forwarded to each sub-request
+
+---
+
+### Troubleshooting C2 Scenarios
+
+**All scenarios return Bypass:**
+- Check that the container has internet access: `curl -I http://google.com`
+- Verify that traffic from the Stigix container passes through the Prisma Access tunnel
+- Check that security rules apply the correct profiles to internet-bound traffic
+
+**DNS C2 scenarios return Bypass (domain resolves):**
+- Verify DNS Security license is active: **Device > Licenses**
+- Check that the DNS Security profile is applied to your tunnel interface
+- Ensure DNS traffic from the container uses the firewall as a resolver (check `/etc/resolv.conf` in container)
+
+**EICAR returns Bypass:**
+- SSL Inspection is likely not configured for `secure.eicar.org:443`
+- Add a Decryption policy rule and attach a Decryption profile
+- Re-test after policy push
+
+**DNS Tunneling returns Bypass:**
+- Requires **Advanced DNS Security** subscription (behavioral analysis)
+- Without it, only known-bad domain signatures are checked
+- Verify under **Device > Licenses > Advanced DNS Security**
+
+**Sliver C2 returns Bypass:**
+- This scenario relies on **Advanced URL Filtering** (AI-based C2 classification)
+- `example.com` is not inherently blocked — AURL detects the C2 behavioral pattern
+- Without AURL license, configure a custom URL category blocking `example.com/api/`
 
 ---
 
@@ -984,6 +1399,6 @@ For issues or questions:
 
 ---
 
-**Document Version:** 2.0  
-**Feature Version:** 1.2.2-patch.75  
-**Last Updated:** 2026-04-21
+**Document Version:** 3.0  
+**Feature Version:** 1.3.0-patch.2  
+**Last Updated:** 2026-05-08

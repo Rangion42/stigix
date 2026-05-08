@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.0-patch.3] - 2026-05-08
+### Added
+- **Security Dashboard** 📋 C2 scenario cards now show the last verdict badge inline (Enforced/Bypass/Inconclusive) — same behavior as DNS and URL cards in the screenshot.
+- **Backend** 🔍 Each C2 scenario now produces a detailed step-by-step sequence log in `details.output`, visible in the Telemetry Diagnostic modal. Includes exact command, intent, engine, raw output, and verdict decision per step.
+- **Documentation** 📖 New comprehensive `C2 Attack Scenarios` section in `docs/SECURITY_TESTING.md` (v3.0): exact test sequence, PowerShell equivalents, verdict rules tables, per-scenario firewall engine requirements, and full troubleshooting guide for each of the 7 scenarios.
+
 ## [v1.3.0-patch.2] - 2026-05-08
 ### Added
 - **Security Dashboard** 🎯 New **C2 Attack Scenarios** panel in the Security page, reproducing the exact 7-step Prisma Access security simulation script (SQL Injection, DNS C2 Infiltration, Greyware DNS, Compromised DNS, Sliver C2 Emulation, EICAR over HTTPS, DNS Tunneling Burst).
