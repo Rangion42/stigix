@@ -2423,7 +2423,7 @@ export default function Security({ token }: SecurityProps) {
                                     <ShieldAlert size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="text-xl font-black text-text-primary tracking-tight">Telemetry Diagnostic</h3>
+                                    <h3 className="text-xl font-black text-text-primary tracking-tight">Security Test Details</h3>
                                     <div className="flex items-center gap-2 mt-0.5">
                                         <span className="text-[10px] font-black font-mono text-text-muted bg-card px-2 py-0.5 rounded border border-border">ID #{selectedTest.id}</span>
                                         <span className="text-[10px] font-black text-text-muted tracking-widest opacity-60">
@@ -2476,7 +2476,7 @@ export default function Security({ token }: SecurityProps) {
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-2">
                                         <div className="h-4 w-1 bg-blue-500 rounded-full" />
-                                        <h4 className="text-[10px] font-black text-text-primary uppercase tracking-widest">Detailed Observation Log</h4>
+                                        <h4 className="text-sm font-black text-text-primary uppercase tracking-widest">Detailed Execution Log</h4>
                                     </div>
 
                                     <div className="grid grid-cols-1 gap-4">
@@ -2520,7 +2520,7 @@ export default function Security({ token }: SecurityProps) {
                                         )}
                                         {selectedTest.details.error && (
                                             <div className="bg-red-500/5 rounded-xl p-4 border border-red-500/20">
-                                                <span className="text-[9px] font-black text-red-500 uppercase tracking-widest block mb-2">Diagnostic Error Signature</span>
+                                                <span className="text-[9px] font-black text-red-500 uppercase tracking-widest block mb-2">Test Error Signature</span>
                                                 <pre className="text-[10px] font-mono text-red-400 bg-black/20 p-3 rounded-lg overflow-x-auto border border-red-500/10 uppercase tracking-tighter">{selectedTest.details.error}</pre>
                                             </div>
                                         )}
@@ -2603,7 +2603,7 @@ export default function Security({ token }: SecurityProps) {
                                                         <Zap size={18} className="text-blue-500" />
                                                     </div>
                                                     <div>
-                                                        <span className="text-blue-500 font-black uppercase text-[10px] tracking-widest block">Cloud Diagnostic</span>
+                                                        <span className="text-blue-500 font-black uppercase text-[10px] tracking-widest block">Cloud Execution Context</span>
                                                         <h4 className="text-sm font-black text-text-primary uppercase tracking-tight">Strata Logging Service (SLS)</h4>
                                                     </div>
                                                 </div>
@@ -2682,7 +2682,7 @@ export default function Security({ token }: SecurityProps) {
                                 onClick={() => setShowDetailModal(false)}
                                 className="px-6 py-2.5 bg-card hover:bg-card-hover border border-border text-text-primary rounded-xl text-[10px] font-black tracking-widest transition-all shadow-sm"
                             >
-                                Close Diagnostic
+                                Close Details
                             </button>
                         </div>
                     </div>

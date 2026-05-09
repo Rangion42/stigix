@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.0-patch.7] - 2026-05-09
+### Changed
+- **Security Dashboard** 🎨 Refined the detailed test result modal:
+    - Renamed **Telemetry Diagnostic** to **Security Test Details** for better clarity.
+    - Renamed **Detailed Observation Log** to **Detailed Execution Log**.
+    - Renamed **Diagnostic Error Signature** to **Test Error Signature**.
+    - Renamed **Cloud Diagnostic** to **Cloud Execution Context**.
+    - Renamed the footer button to **Close Details**.
+- **Security Dashboard** 🧹 Cleaned up typography and spacing in the detail modal headers.
+
 ## [v1.3.0-patch.6] - 2026-05-08
 ### Added
 - **AI Security Tests** 🤖 New dedicated **AI Security** panel in the Security dashboard mirroring the Palo Alto AISA PowerShell simulation script. Includes 5 scenarios: DLP Credit Card extraction, Prompt Injection/Jailbreak, Misfortune Cookie (CVE-2014-9222), EICAR Malware Upload to AI apps, and Volume Traffic Generator (24 AI apps across 6 categories). 🚀
