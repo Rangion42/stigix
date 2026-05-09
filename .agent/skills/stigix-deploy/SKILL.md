@@ -26,7 +26,7 @@ cat /Users/jsuzanne/Github/stigix/VERSION
 ```
 The format is `vX.Y.Z-patch.NNN`. You MUST strictly increment NNN by exactly +1 (e.g., from 140 to 141). Do not skip numbers or round to tens unless the USER explicitly requests it.
 
-### 2 — Bump all three VERSION files
+### 2 — Bump VERSION files and README badge
 
 ```bash
 NEW_VER="v1.2.1-patch.NNN"   # replace NNN
@@ -36,6 +36,12 @@ echo "$NEW_VER" > engines/VERSION
 ```
 
 All three files must always stay in sync.
+
+**Also update the Version badge in `README.md`** (usually around line 5) to match the new version:
+```markdown
+[![Version](https://img.shields.io/badge/Version-1.2.1--patch.NNN-blue.svg)](https://github.com/jsuzanne/stigix/releases)
+```
+*(Note the double dash `--` before `patch` in the shields.io URL format)*
 
 ### 2bis — Update CHANGELOG.md
 
