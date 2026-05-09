@@ -2,7 +2,7 @@
 
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/jsuzanne/sdwan-traffic-gen)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.2.1--patch.246-blue.svg)](https://github.com/jsuzanne/stigix/releases)
+[![Version](https://img.shields.io/badge/Version-1.3.0--patch.7-blue.svg)](https://github.com/jsuzanne/stigix/releases)
 
 A modern web-based SD-WAN traffic generator with real-time monitoring, customizable traffic patterns, and comprehensive security testing. Perfect for testing SD-WAN deployments, network QoS policies, and application performance.
 
@@ -72,17 +72,22 @@ This project is my way to turn all that lab and demo experience into an open-sou
 - **URL Filtering Tests** - Validate 66 different URL categories (malware, phishing, gambling, adult content, etc.)
 - **DNS Security Tests** - Test DNS security policies with 24 domains (malware, phishing, DGA, etc.)
 - **Threat Prevention** - EICAR file download testing for IPS validation
-- **Scheduled Testing** - Automated security tests at configurable intervals
+- **C2 Attack Scenarios** - 7 real-traffic attack simulations (SQL Injection, DNS C2, Greyware DNS, Compromised DNS, Sliver C2, EICAR over HTTPS, DNS Tunneling) with Enforced / Bypass / Inconclusive verdicts. [Read more](docs/SECURITY_TESTING.md)
+- **AI Security Tests (AISA)** - 5 Palo Alto AI Security simulation scenarios targeting live AI apps (ChatGPT, Grok, Gemini, Perplexity): DLP, Prompt Injection, CVE-2014-9222, EICAR Upload, and AI Volume Traffic (24 apps). [Read more](docs/SECURITY_TESTING.md)
+- **Security Score Dashboard** - Per-module security scoring (URL, DNS, Threat, C2) with trend charts, baseline pinning, gap analysis, and Latest Changes diff view. 📊
+- **Scheduled Testing** - Automated security tests at configurable intervals per module (URL, DNS, C2, AI Security)
 - **EDL** - IP, URL, DNS urls with sequential or random execution
-- **Test Results History** - Persistent logging with search, filtering, and export
+- **Test Results History** - Persistent logging with search, filtering, export, and per-type badge filtering (URL / DNS / THREAT / C2S / AIS)
 
 ### 📊 Monitoring & Analytics
 - **Real-time Logs** - Live log streaming with WebSocket updates
 - **Statistics Dashboard** - Success/failure rates, latency metrics, bandwidth tracking
+- **Security Score Dashboard** - Multi-module security posture scoring with 24h trend charts, min/max tracking, and run markers
 - **Live VPN Topology Overlay** - Real-time visualization of SD-WAN tunnels with path status (Active/Backup/Down) and HUB-specific filtering. Directly from Prisma SASE API.
-- **Persistent Logging** - JSONL storage with 7-day retention and auto-rotation
+- **Persistent Logging** - JSONL storage with 10,000 lines retention and auto-rotation
 - **Search & Filter** - Find specific tests quickly with powerful search
 - **Export Capabilities** - Download results in JSON, CSV, or JSONL format
+- **Traffic Density Scaling** - Multi-client parallel traffic generation (1–10 concurrent workers) with dynamic scaling
 
 ### 🔧 Zero-Config Deployment
 - **Auto-detection** - Automatically detects network interfaces on first start
@@ -105,16 +110,14 @@ This project is my way to turn all that lab and demo experience into an open-sou
 
 The project is evolving rapidly with new features and refinements added in every release.
 
-### Highlights in v1.2.1
-- **Favicon System**: Automated discovery and caching of SaaS application icons with intelligent fallback UI for enhanced dashboard visibility. 🌐✨
-- **Speedtest (XFR)**: High-performance throughput and latency validation with real-time telemetry and searchable history.
-- **IoT Security Testing**: Bad behavior simulation for IoT devices (DNS Flood, C2 Beacon, Port Scan).
-- **Live VPN Topology**: Real-time visualization of SD-WAN overlay paths with intelligent peer device mapping and HUB filtering.
-- **Site Discovery**: Automatic discovery of Prisma SD-WAN LAN interfaces for path validation.
-- **Traffic Volume History**: Persistent metrics storage and historical visualization in the dashboard.
-- **Probe Management Modal**: Streamlined UI for adding/editing synthetic probes with improved validation and a functional Export button. 🛠️
-- **Cloud Egress Context**: Enhanced "System Info" tab with real-time public IP, geolocation, and ASN data for Cloud probes. 🌍
-- **MCP Bridge Setup**: New `setup-bridge.sh` script for automated local installation of the Claude MCP bridge. 🤖
+### Highlights in v1.3.0
+- **C2 Attack Scenarios** 🎯 — 7 real-traffic attack simulation tests (SQL Injection, DNS C2 Infiltration, Greyware DNS, Compromised DNS, Sliver C2 Emulation, EICAR over HTTPS, DNS Tunneling Burst) with inverted verdict logic, inline badges, and a dedicated C2 scheduler. [Read docs](docs/SECURITY_TESTING.md)
+- **AI Security Tests (AISA)** 🤖 — 5 Palo Alto AI Security simulation scenarios based on a real-world PowerShell POC script. Targets ChatGPT, Grok, Gemini, Perplexity + 24 AI apps for volume telemetry. Includes a dedicated AI scheduler. [Read docs](docs/SECURITY_TESTING.md)
+- **Security Score Dashboard** 📊 — Per-module security posture scoring (URL, DNS, Threat Prevention) with 24h trend charts, baseline pinning, gap analysis, and Latest Changes diff between consecutive runs.
+- **IoT Daemon Architecture** ⚡ — Migrated from N-processes to a single threaded Python daemon. RAM drops from ~600MB to ~50MB for 30 devices. Supports 100+ devices. New Global Bad Behavior toggle, BPF kernel filter for DHCP, and gratuitous ARP for IoT classification.
+- **VyOS Orchestration** 🔌 — Full sequence management with Clone-to-Reverse, intelligent sorting, dynamic search/filter, and comprehensive history.
+- **Multi-Client Traffic Scaling** 📈 — Dynamically spawn 1–10 parallel traffic workers. Live density slider in the Traffic Control panel.
+- **Configurable Port** 🔧 — `PORT` environment variable now correctly overrides the default 8080 port across all internal services.
 
 [View full changelog with all version details →](CHANGELOG.md)
 
@@ -152,11 +155,15 @@ Traffic volume charts, success rates, and performance metrics.
 ---
 
 ### 🛡️ Security Testing
-URL filtering, DNS security, threat prevention validation, and test results history.
+URL filtering, DNS security, threat prevention, C2 attack simulations, AI Security (AISA) tests, and security posture scoring.
 
 <img src="docs/screenshots/03-security/06.png" alt="Security Testing" width="800">
 
-**[View all Security screenshots →](docs/screenshots/03-security)** (7 images)
+<img src="docs/screenshots/03-security/14-c2-attack-scenarios.png" alt="C2 Attack Scenarios" width="800">
+
+<img src="docs/screenshots/03-security/13-ai-security-panel.png" alt="AI Security Tests" width="800">
+
+**[View all Security screenshots →](docs/screenshots/03-security)** (11 images)
 
 ---
 
@@ -803,14 +810,14 @@ npm run build
 
 - [ ] Multi-region deployment support
 - [ ] Advanced traffic patterns (burst, gradual ramp-up)
-- [ ] Custom protocol support (DNS, FTP, SMTP, etc.)
+- [ ] Custom protocol support (FTP, SMTP, etc.)
 - [ ] Grafana/Prometheus integration
-- [ ] API for programmatic control
 - [ ] Traffic replay from PCAP files
 - [ ] Cloud provider integrations (AWS, Azure, GCP)
 - [ ] WebRTC and video streaming simulation
-- [ ] Custom security test categories
 - [ ] PowerShell installation script for Windows
+- [ ] Additional AI Security scenario targets (Copilot, Bard, Claude)
+- [ ] SLS / Prisma SASE log enrichment re-integration for security test verdicts
 
 ---
 
