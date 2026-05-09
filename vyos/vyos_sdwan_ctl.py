@@ -345,13 +345,21 @@ def op_simple_block(host, api_key, ip_input, verify=False):
             }
         
         # Add blackhole route with tag 999
-        # In newer VyOS (1.4+), 'tag' is a child of 'blackhole'
-        ops = [
+        # Try modern syntax first (VyOS 1.4/1.5: 'tag' is a child of 'blackhole')
+        ops_modern = [
             {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole"]},
             {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole", "tag", "999"]}
         ]
         
-        api_call(host, api_key, ops, verify)
+        try:
+            api_call(host, api_key, ops_modern, verify)
+        except RuntimeError as e:
+            # Fallback to legacy syntax (tag is sibling of blackhole) if modern fails
+            ops_legacy = [
+                {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole"]},
+                {"op": "set", "path": ["protocols", "static", "route", prefix, "tag", "999"]}
+            ]
+            api_call(host, api_key, ops_legacy, verify)
         
         # Fetch updated list
         config_after = api_retrieve(host, api_key, verify)
