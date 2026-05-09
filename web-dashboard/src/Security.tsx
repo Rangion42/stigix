@@ -1695,8 +1695,11 @@ export default function Security({ token }: SecurityProps) {
                         <div className="p-2 bg-purple-600/10 rounded-lg text-purple-600 dark:text-purple-400 border border-purple-500/20">
                             <ShieldAlert size={18} />
                         </div>
-                        <div>
-                            <h3 className="text-sm font-black text-text-primary tracking-tight">C2 Attack Scenarios</h3>
+                        <div className="text-left">
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-sm font-black text-text-primary tracking-tight">C2 Attack Scenarios</h3>
+                                <span className="px-1.5 py-0.5 text-[8px] font-black tracking-widest uppercase bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-500/20 rounded-md">Beta</span>
+                            </div>
                             <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest opacity-70">
                                 {c2SelectedScenarios.length} / {C2_SCENARIOS.length} Scenarios Active
                             </p>
@@ -1820,8 +1823,11 @@ export default function Security({ token }: SecurityProps) {
                         <div className="p-2 bg-cyan-600/10 rounded-lg text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
                             <Zap size={18} />
                         </div>
-                        <div>
-                            <h3 className="text-sm font-black text-text-primary tracking-tight">AI Security Tests</h3>
+                        <div className="text-left">
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-sm font-black text-text-primary tracking-tight">AI Security Tests</h3>
+                                <span className="px-1.5 py-0.5 text-[8px] font-black tracking-widest uppercase bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-500/20 rounded-md">Beta</span>
+                            </div>
                             <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest opacity-70">
                                 {aiSelectedScenarios.length} / {AI_SECURITY_SCENARIOS.length} Scenarios Active · Palo Alto AI Security (AISA)
                             </p>

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.0-patch.8] - 2026-05-09
+### Changed
+- **Security Dashboard** 🎨 Added a "BETA" badge to the **C2 Attack Scenarios** and **AI Security Tests** panels to indicate their new status.
+- **Security Dashboard** 📏 Fixed header alignment in the AI Security Tests and C2 Attack Scenarios panels for better visual consistency.
+
 ## [v1.3.0-patch.7] - 2026-05-09
 ### Changed
 - **Security Dashboard** 🎨 Refined the detailed test result modal:
