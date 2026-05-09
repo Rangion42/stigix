@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.0-patch.9] - 2026-05-09
+### Fixed
+- **VyOS Engine** 🐛 Fixed an issue where `deny-traffic` (simple-block) failed on newer VyOS versions (1.4/1.5) with a `400 Bad Request`. The API payload now correctly places the `tag` node as a child of the `blackhole` node instead of a sibling, aligning with the updated VyOS CLI syntax.
+
 ## [v1.3.0-patch.8] - 2026-05-09
 ### Changed
 - **Security Dashboard** 🎨 Added a "BETA" badge to the **C2 Attack Scenarios** and **AI Security Tests** panels to indicate their new status.

@@ -315,8 +315,9 @@ def get_blackhole_routes(config):
         if isinstance(route_data, dict):
             # Check if blackhole exists
             if "blackhole" in route_data:
-                # Check for tag 999 (it is a sibling of blackhole, child of route)
-                if str(route_data.get("tag")) == "999":
+                bh_data = route_data.get("blackhole", {})
+                # Check for tag 999 (it could be a sibling of blackhole, or a child of blackhole)
+                if str(route_data.get("tag")) == "999" or (isinstance(bh_data, dict) and str(bh_data.get("tag")) == "999"):
                     routes.append(prefix)
     
     routes.sort()
@@ -344,9 +345,10 @@ def op_simple_block(host, api_key, ip_input, verify=False):
             }
         
         # Add blackhole route with tag 999
+        # In newer VyOS (1.4+), 'tag' is a child of 'blackhole'
         ops = [
             {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole"]},
-            {"op": "set", "path": ["protocols", "static", "route", prefix, "tag", "999"]}
+            {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole", "tag", "999"]}
         ]
         
         api_call(host, api_key, ops, verify)
