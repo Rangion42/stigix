@@ -140,7 +140,7 @@ cd C:\sdwan-traffic-gen
 
 ```powershell
 # Note: Use curl.exe (not curl alias in PowerShell)
-curl.exe -L https://raw.githubusercontent.com/jsuzanne/stigix/main/docker-compose.example.yml -o docker-compose.yml
+curl.exe -L https://raw.githubusercontent.com/jsuzanne/stigix/main/docker-compose.yml -o docker-compose.yml
 ```
 
 ### 3.3 Verify Download
@@ -311,11 +311,25 @@ docker compose exec sdwan-traffic-gen sh
 error during connect: ... pipe/dockerDesktopLinuxEngine: The system cannot find the file specified
 ```
 
+**Cause:** Docker Desktop is either not running or its engine hasn't fully initialized yet. This is the most common issue on Windows — the Docker Desktop GUI may appear open, but the backend engine takes 1-2 extra minutes to be ready.
+
 **Solution:**
-1. Launch **Docker Desktop** from Start menu
-2. Wait 1-2 minutes until 🐳 icon in system tray is stable
-3. Verify: `docker ps` (should work without error)
-4. Try again: `docker compose up -d`
+1. Make sure **Docker Desktop** is launched from the Start menu
+2. Wait until the 🐳 icon in the system tray (bottom-right) **stops animating** and turns solid blue/white
+3. Open a **new** PowerShell window (important: existing windows may cache the old state)
+4. Verify the daemon is responding:
+   ```powershell
+   docker ps
+   ```
+   Expected output: an empty table (no errors)
+5. If it still fails, try restarting the Docker engine from the tray icon:
+   - Right-click 🐳 → **"Restart"**
+   - Wait 1-2 minutes
+   - Run `docker ps` again
+6. Try again: `docker compose up -d`
+
+> [!TIP]
+> On some Windows 11 machines, Docker Desktop requires **administrator privileges** to start correctly. Try right-clicking Docker Desktop and selecting **"Run as administrator"**.
 
 ---
 
