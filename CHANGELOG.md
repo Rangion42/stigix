@@ -5,9 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.0-patch.16] - 2026-05-10
+### Added
+- **Documentation Overhaul** 📖 Massive visual update across all core modules:
+    - **Convergence Lab**: Added 5 high-fidelity screenshots documenting live failover monitoring and historical timeline deep-dives.
+    - **IoT Simulation**: Added 4 screenshots covering the new device gallery, bad behavior configuration, and real-time Scapy logs.
+    - **VoIP Simulation**: Added 4 screenshots illustrating the deterministic source port mapping (31000+) and per-target QoS statistics.
+    - **VyOS Control**: Added 6 screenshots showcasing automated impairment missions, sequence editing, and live mission timelines.
+- **Documentation Style** 🎨 Harmonized all visual assets with descriptive, premium-style captions for improved technical clarity.
+- **README** 📊 Updated Statistics and VoIP counts in the main project gallery to reflect the new documentation depth.
+
 ## [v1.3.0-patch.12] - 2026-05-10
 ### Changed
 - **Connectivity Dashboard** 📈 Displayed the `Avg`, `Min`, and `Max` scores directly under the `Last Score` column in the main probes table for immediate visibility.
+
 
 ## [v1.3.0-patch.11] - 2026-05-10
 ### Changed

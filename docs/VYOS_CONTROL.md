@@ -2,6 +2,10 @@
 
 The **VyOS Control** module is a specialized subsystem of the SD-WAN Traffic Generator designed to simulate network-level impairments on VyOS routers. It allows for highly orchestrated "missions" that can automate latency, packet loss, and rate-limiting across multiple SD-WAN paths.
 
+*Central dashboard for discovering and managing VyOS nodes across the network:*
+![VyOS Routers Dashboard](screenshots/08-VyOS-Control/01-vyos-control-routers-dashboard.png)
+
+
 ```mermaid
 graph TD
     User["User Browser (React UI)"] -- "JSON API (JWT Auth)" --> Server["Express Server (Node.js)"]
@@ -23,6 +27,10 @@ graph TD
 - **Scheduled Cycles**: Run missions manually or in cyclic loops (e.g., every 60 minutes) to create predictable network instability.
 - **Audit Trails**: Detailed VoIP-style console logging and persistent JSONL history for post-mortem analysis.
 
+*Library of pre-defined impairment sequences for automated lab testing:*
+![VyOS Sequence Gallery](screenshots/08-VyOS-Control/02-vyos-control-sequence-gallery.png)
+
+
 ## 🛠️ Operational Workflow
 
 ### 1. Router Management
@@ -30,11 +38,19 @@ Add your VyOS nodes in the **Routers** tab.
 - **Requirements**: VyOS 1.3+ with `service https` enabled and an API key.
 - **Discovery**: The system automatically pulls interface data. You can then add a "Tactical Location" (e.g., "Branch 206") to organize your view.
 
+*Comprehensive set of network control operations including interface flapping and QoS manipulation:*
+![VyOS Action Types](screenshots/08-VyOS-Control/04-vyos-control-action-types-dropdown.png)
+
+
 ### 2. Building Sequences
 Create a "Sequence" to define your impairment mission.
 - **Actions**: Each step in a sequence targets a specific router and interface.
 - **Command**: Currently supports `SET-QOS` (latency, loss, rate) and `CLEAR-QOS`.
 - **Offsets**: Define when an action happens relative to the start of the cycle (T+0, T+10, etc.).
+
+*Advanced sequence editor for chaining complex impairment events with precise timing offsets:*
+![VyOS Sequence Editor](screenshots/08-VyOS-Control/03-vyos-control-edit-sequence-timeline.png)
+
 
 ```mermaid
 sequenceDiagram
@@ -65,6 +81,10 @@ sequenceDiagram
 - **Live Metrics**: Track total executions, success rates, and last-executed nodes.
 - **Audit Logs**: Monitor the server console for structured run data.
 
+*Real-time visualization of an active impairment mission loop tracking current progress and status:*
+![VyOS Live Timeline Loop](screenshots/08-VyOS-Control/06-vyos-control-live-timeline-loop.png)
+
+
 ## 📜 Technical Deep-Dive
 
 ### Data Integrity & Constraints
@@ -85,6 +105,10 @@ The system uses unique **Run IDs** for every execution:
 ### API & Performance
 - **Scrubbing**: API keys are automatically scrubbed from all console logs and history files.
 - **Duration Tracking**: The backend measures high-precision execution time (`performance.now()`) to help diagnose API latency issues on the router side.
+
+*Searchable audit trail of every automated and manual action performed on the infrastructure:*
+![VyOS Execution History](screenshots/08-VyOS-Control/05-vyos-control-execution-history-audit.png)
+
 
 ## ⚠️ Limitations & Notes
 - **Exclusive Command**: The impairment logic uses a unified `set-qos` command on the back-end Python controller for stability.
