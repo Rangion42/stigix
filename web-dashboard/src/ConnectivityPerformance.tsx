@@ -724,11 +724,16 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-center">
-                                    <div className={cn(
-                                        "inline-flex items-center justify-center w-12 h-8 rounded-lg border font-black text-sm shadow-sm",
-                                        getScoreColor(e.lastScore)
-                                    )}>
-                                        {e.lastScore}
+                                    <div className="flex flex-col items-center gap-1.5">
+                                        <div className={cn(
+                                            "inline-flex items-center justify-center w-12 h-8 rounded-lg border font-black text-sm shadow-sm",
+                                            getScoreColor(e.lastScore)
+                                        )}>
+                                            {e.lastScore}
+                                        </div>
+                                        <div className="text-[9px] text-text-muted font-bold opacity-70 uppercase tracking-tighter">
+                                            Avg: {e.avgScore} • Min: {e.minScore} • Max: {e.maxScore}
+                                        </div>
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-center">

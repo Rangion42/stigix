@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.0-patch.12] - 2026-05-10
+### Changed
+- **Connectivity Dashboard** 📈 Displayed the `Avg`, `Min`, and `Max` scores directly under the `Last Score` column in the main probes table for immediate visibility.
+
 ## [v1.3.0-patch.11] - 2026-05-10
 ### Changed
 - **Connectivity Dashboard** 🎨 Improved the Probe detail modal:
