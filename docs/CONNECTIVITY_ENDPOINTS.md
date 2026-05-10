@@ -41,7 +41,7 @@ The platform supports three primary probe types, each measuring different aspect
 
 ## 🏆 Scoring Methodology
 
-All probes return a score from **0 to 100**.
+All probes return a score from **0 to 100**. The system stores the **Minimum**, **Maximum**, and **Average** score of each probe over time to facilitate long-term performance tracking and future alerting capabilities.
 
 | Score | Rating | Meaning |
 | :--- | :--- | :--- |
@@ -96,6 +96,11 @@ Shared probes are hosted on the **Stigix Cloudflare infrastructure**. They provi
 | **Large Download** | `/download/large` | 10MB payload download. | **Score 100** if < 1s; reaches **0** at 10s. |
 | **Security (EICAR)** | `/security/eicar` | Downloads the EICAR test string. | Success Reachable = **100** |
 | **Error (500/503)** | `/saas/error/*` | Simulates server-side failures (5xx). | Failure = **0** |
+
+### 📊 Deep Telemetry & Metrics
+Since `v1.2.2-patch.132`, all Cloud Probes leverage a robust native `curl` execution backend instead of the simplistic Node.js fetch interface.
+- This unlocks **Military-grade timing metrics** for Cloud Probes: DNS Resolution, TCP Handshake, TLS Handshake, and TTFB.
+- The UI features a dedicated **Timing Analysis Stacked Area Chart** inside the Probe detail modal, explicitly mapping these 4 timing layers over time for rapid bottleneck identification.
 
 ### 🛠️ Configuration
 The Cloud base URL is automatically derived from your **Stigix Registry** domain (e.g., `stigix-target.stigix.io`).
