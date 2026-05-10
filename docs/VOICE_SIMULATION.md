@@ -4,7 +4,9 @@ The SD-WAN Traffic Generator includes a sophisticated Voice over IP (VoIP) simul
 
 ## 🚀 Overview
 
+*Main VoIP simulation dashboard showing active streams, aggregated MOS, and target list:*
 ![VoIP Simulation Dashboard](screenshots/06-Voice/01-voip-simulation-dashboard.png)
+
 
 The system consists of two main components:
 
@@ -56,7 +58,9 @@ Accessible via the **Voice** tab in the Web UI:
 *   **Sleep Between Calls**: Delay before starting a new call after one ends.
 *   **Source Interface**: The network interface to use (e.g. `eth0`, `eth1`). Note: In `host` networking mode, it sees all physical interfaces of the machine.
 
+*Target configuration menu for selecting codecs (G.711, G.729, OPUS) and call weights:*
 ![VoIP Target Configuration](screenshots/06-Voice/02-voip-target-configuration.png)
+
 
 
 ## 📡 Echo Server Setup (Targets)
@@ -88,7 +92,9 @@ To provide realistic SD-WAN testing and easy flow correlation, each call now use
 - **Graceful Fallback**: If a deterministic port is already in use by the OS, the engine automatically falls back to a random port in the **40000-65535** range.
 - **Echo Logic**: The Echo server identifies call completion using a **5-second silence timeout** per flow.
 
+*Call history table with source port mapping, essential for SD-WAN path correlation:*
 ![VoIP Call History and Source Ports](screenshots/06-Voice/03-voip-call-history-src-ports.png)
+
 
 
 ### 🧹 Clean Slate Architecture
@@ -147,7 +153,9 @@ If you are testing the generator or the echo server on Windows, keep these three
 
 ## 📊 Monitoring & Performance Analysis
 
+*Aggregated QoS statistics per target including average loss, RTT, Jitter, and MOS scores:*
 ![VoIP Per-Target QoS Statistics](screenshots/06-Voice/04-voip-per-target-qos-stats.png)
+
 
 ### Web UI
 
