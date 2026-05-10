@@ -146,12 +146,13 @@ Network interfaces, traffic distribution, synthetic probes, and application mana
 
 ---
 
-### 📊 Statistics
-Traffic volume charts, success rates, and performance metrics.
+### 📊 Convergence Lab & Statistics
+Detailed analytics, historical data, and sub-second convergence measurement.
 
-<img src="docs/screenshots/02-Statistics/03.png" alt="Statistics Dashboard" width="800">
+<img src="docs/screenshots/07-Convergence/02-convergence-live-test-hero.png" alt="Convergence Lab" width="800">
 
-**[View all Statistics screenshots →](docs/screenshots/02-Statistics)** (1 image)
+**[View all Statistics & Convergence screenshots →](docs/screenshots/02-Statistics)** (8 images)
+
 
 ---
 

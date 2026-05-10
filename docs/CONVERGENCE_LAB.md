@@ -4,6 +4,10 @@ The **Convergence Lab** is a high-precision diagnostic tool designed to measure 
 
 ---
 
+*Main interface to manage multiple failover targets and precision rates:*
+![Convergence Lab Overview](screenshots/07-Convergence/01-convergence-lab-overview.png)
+
+
 ## 🔬 How it Works
 
 The tool uses a **High-Frequency UDP Probe** strategy to identify sub-second network interruptions that traditional monitoring tools (like standard ICMP) often miss.
@@ -39,6 +43,10 @@ sequenceDiagram
     RA-->>S: Sequence & Loss Analysis
 ```
 
+*Real-time dashboard showing latency, jitter, and packet sequence bars:*
+![Live Convergence Monitoring](screenshots/07-Convergence/02-convergence-live-test-hero.png)
+
+
 ### 3. Sequence Gap Analysis
 The core logic resides in the `convergence_orchestrator.py`. It detects "Blackouts" by monitoring gaps in the received sequence numbers:
 - When a packet arrives, the orchestrator calculates the difference between the current sequence and the last received sequence.
@@ -59,6 +67,10 @@ The history view shows comprehensive packet statistics for each test:
 - **TX Loss**: Percentage and color-coded indicator (Red) for uplink packet loss.
 - **RX Loss**: Percentage and color-coded indicator (Blue) for downlink packet loss.
 
+*Comprehensive test history with color-coded verdicts and failover thresholds:*
+![Convergence Test History](screenshots/07-Convergence/04-convergence-test-history-thresholds.png)
+
+
 ---
 
 ## 📊 Visual Indicators
@@ -70,10 +82,18 @@ During active tests, a live timeline displays the last 100 packets:
   - If the echo arrives late (within the 100-packet window), the bar will turn from red to blue.
   - Persistent red bars indicate confirmed packet loss or a blackout period.
 
+*Visualizing path failover: Red bars indicate packet drops during an active circuit switch:*
+![Multi-test Outage Visualization](screenshots/07-Convergence/03-convergence-multi-test-outage.png)
+
+
 ### Historical Failover Timeline
 Expanded test results show a compact 100-packet history:
 - **Blue**: Successful round-trip.
 - **Red**: Confirmed drop or timeout.
+
+*Expanded diagnostic view showing directional loss and historical timeline:*
+![Historical Timeline Deep Dive](screenshots/07-Convergence/05-convergence-historical-timeline-deep-dive.png)
+
 
 ### Directional Loss Analysis
 The history view provides detailed directional metrics:
