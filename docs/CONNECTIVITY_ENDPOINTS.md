@@ -2,6 +2,9 @@
 
 The **Connectivity Probes** (formerly Synthetic Endpoints) provide real-time visibility into the health and performance of critical application targets by simulating user traffic patterns.
 
+![Connectivity Dashboard](assets/dashboard-main.png)
+> **Connectivity Dashboard Overview**: The main dashboard provides a consolidated view of all active probes. Notice the aggregated scoring display which shows Average, Minimum, and Maximum scores directly beneath the latest metric, providing instant historical stability context at a glance without needing to drill down.
+
 ---
 
 ## 📡 Available Probe Types
@@ -15,6 +18,9 @@ The platform supports three primary probe types, each measuring different aspect
   - **Latency (ms)**: Total Time to first byte breakdown.
   - **Status**: Success (2xx/3xx) or Failure (4xx/5xx/Timeout).
 - **Scoring**: Weighted calculation: `100 - (30% Latency + 35% TTFB + 25% TLS)`. Penalized heavily if Latency > 2s, TTFB > 1s, or TLS Handshake > 800ms.
+
+![HTTPS Timing Analysis](assets/probe-timing-https.png)
+> **Detailed HTTPS Telemetry**: For standard HTTPS endpoints, the timing analysis chart accurately captures the complex handshake overhead. The recent captures table dynamically hides irrelevant protocol columns (like DNS or TLS for PING probes) to maintain a clean UI, while displaying the full breakdown for HTTP traffic. A spike in the TLS layer (purple) often indicates SASE inspection delays, whereas a TTFB spike (orange) reflects origin server slowness.
 
 ### 2. PING (Network Reachability)
 - **Mechanism**: Executes the native OS `ping` binary to dispatch ICMP Echo Requests.
@@ -72,7 +78,15 @@ The UI (`Dashboard.tsx`) receives these updates in real-time via the `/api/statu
 
 ## 🛠️ Configuration
 
-You can add custom probes via the **Connectivity Settings** UI (Advanced Diagnostics > Add Custom Probe):
+The **Active Monitoring Probes** settings panel allows for intuitive management of all endpoint tests. Probes are visually categorized by protocol (HTTP, HTTPS, PING) and execution engine (Cloud Scenario, Prisma SD-WAN Peer, Manual Probe). The interface features quick actions to toggle status, edit, or remove probes.
+
+![Probe Management Settings](assets/settings-probe-list.png)
+
+You can add custom probes via the **Configure New Probe** modal (Settings > Synthetic Probes > Configure New Probe):
+
+![Configure New Probe Modal](assets/settings-probe-modal.png)
+> **Probe Builder Interface**: The creation modal provides precise control over test hooks. You explicitly select the network protocol from a dropdown and must define an absolute execution timeout (strictly bounded between 1000ms and 60000ms) to ensure hanging queries do not block the background execution engine.
+
 - **Probe Name**: A short, uppercase tracking label (e.g., "HQ-GATEWAY", "OFFICE365-UDP").
 - **Protocol**: Select from HTTP, HTTPS, ICMP (Ping), TCP, DNS, UDP Stream, or Stigix Cloud.
 - **Timeout (ms)**: Max execution ceiling before the probe is marked failed. Tunable between `1000ms` (1s) and `60000ms` (60s). Default is typically `5000` (or `2000` for ping).
@@ -101,6 +115,9 @@ Shared probes are hosted on the **Stigix Cloudflare infrastructure**. They provi
 Since `v1.2.2-patch.132`, all Cloud Probes leverage a robust native `curl` execution backend instead of the simplistic Node.js fetch interface.
 - This unlocks **Military-grade timing metrics** for Cloud Probes: DNS Resolution, TCP Handshake, TLS Handshake, and TTFB.
 - The UI features a dedicated **Timing Analysis Stacked Area Chart** inside the Probe detail modal, explicitly mapping these 4 timing layers over time for rapid bottleneck identification.
+
+![Cloud Probe Timing Analysis](assets/probe-timing-cloud.png)
+> **Cloud Probe Diagnostics**: The stacked area chart visually separates DNS (blue), TCP (teal), TLS (purple), and TTFB (orange) latencies. This granular breakdown allows engineers to instantly isolate whether an application slowdown is caused by network routing/DNS, SSL handshake overhead, or backend server processing. Notice the prominent badge `[CLOUD]` in the title header, instantly identifying the probe type context.
 
 ### 🛠️ Configuration
 The Cloud base URL is automatically derived from your **Stigix Registry** domain (e.g., `stigix-target.stigix.io`).
