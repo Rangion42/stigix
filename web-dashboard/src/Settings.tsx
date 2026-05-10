@@ -2148,7 +2148,14 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig }: { token:
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
                                     <div className="bg-card-secondary/40 border border-border/50 rounded-xl p-4 space-y-1">
                                         <div className="text-[8px] font-black text-text-muted uppercase tracking-widest">Public IP</div>
-                                        <div className="text-sm font-black text-blue-500 font-mono tracking-tight">{latestEgressResult.data?.ip || '---'}</div>
+                                        <div className="text-sm font-black text-blue-500 font-mono tracking-tight flex items-center gap-1.5">
+                                            {latestEgressResult.data?.country && (
+                                                <span className="text-base leading-none" title={latestEgressResult.data.country}>
+                                                    {String.fromCodePoint(...[...latestEgressResult.data.country.toUpperCase()].map((c: string) => 0x1F1E6 - 65 + c.charCodeAt(0)))}
+                                                </span>
+                                            )}
+                                            {latestEgressResult.data?.ip || '---'}
+                                        </div>
                                     </div>
                                     <div className="bg-card-secondary/40 border border-border/50 rounded-xl p-4 space-y-1">
                                         <div className="text-[8px] font-black text-text-muted uppercase tracking-widest text-center">Location</div>
