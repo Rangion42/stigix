@@ -193,7 +193,8 @@ RTP packet generation, QoS analytics, and MOS scoring.
 
 <img src="docs/screenshots/06-Voice/22.png" alt="Voice Simulation" width="800">
 
-**[View all Voice screenshots →](docs/screenshots/06-Voice)** (3 images)
+**[View all VoIP screenshots →](docs/screenshots/06-Voice)** (7 images)
+
 
 ---
 

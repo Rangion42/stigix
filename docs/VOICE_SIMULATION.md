@@ -4,7 +4,10 @@ The SD-WAN Traffic Generator includes a sophisticated Voice over IP (VoIP) simul
 
 ## 🚀 Overview
 
+![VoIP Simulation Dashboard](screenshots/06-Voice/01-voip-simulation-dashboard.png)
+
 The system consists of two main components:
+
 1.  **Voice Orchestrator**: Manages multiple simultaneous calls, handles timing between calls, and logs start/end events.
 2.  **RTP Engine (`rtp.py`)**: A Scapy-based engine that forges raw Ethernet/IP/UDP/RTP packets to simulate specific audio codecs.
 
@@ -53,6 +56,9 @@ Accessible via the **Voice** tab in the Web UI:
 *   **Sleep Between Calls**: Delay before starting a new call after one ends.
 *   **Source Interface**: The network interface to use (e.g. `eth0`, `eth1`). Note: In `host` networking mode, it sees all physical interfaces of the machine.
 
+![VoIP Target Configuration](screenshots/06-Voice/02-voip-target-configuration.png)
+
+
 ## 📡 Echo Server Setup (Targets)
 
 Deploy the **Voice Echo Server** on your target sites. It tracks incoming calls and bounces back the RTP traffic for end-to-end path validation.
@@ -81,6 +87,9 @@ To provide realistic SD-WAN testing and easy flow correlation, each call now use
 - **SD-WAN Benefit**: You can search for `src-port 31015` in your SD-WAN Orchestrator flow browser to isolate and trace exactly which tunnels/circuits a specific call utilized.
 - **Graceful Fallback**: If a deterministic port is already in use by the OS, the engine automatically falls back to a random port in the **40000-65535** range.
 - **Echo Logic**: The Echo server identifies call completion using a **5-second silence timeout** per flow.
+
+![VoIP Call History and Source Ports](screenshots/06-Voice/03-voip-call-history-src-ports.png)
+
 
 ### 🧹 Clean Slate Architecture
 On every restart of the `voice-gen` container:
@@ -136,9 +145,12 @@ If you are testing the generator or the echo server on Windows, keep these three
 
 ---
 
-## 📊 Monitoring & Logs
+## 📊 Monitoring & Performance Analysis
+
+![VoIP Per-Target QoS Statistics](screenshots/06-Voice/04-voip-per-target-qos-stats.png)
 
 ### Web UI
+
 The **Voice Monitoring** tab shows calls in real-time. 
 - **Active Calls**: Shows currently running streams.
 - **Recent History**: Shows the last 500 events (Newest First).
