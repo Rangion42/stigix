@@ -139,9 +139,10 @@ Real-time monitoring, traffic control, and system health overview.
 ### ⚙️ Configuration
 Network interfaces, traffic distribution, synthetic probes, and application management.
 
-<img src="docs/screenshots/01-Configuration/04.png" alt="Configuration Management" width="800">
+<img src="docs/screenshots/01-Configuration/01-synthetic-probes-settings.png" alt="Configuration Management" width="800">
 
-**[View all Configuration screenshots →](docs/screenshots/01-Configuration)** (2 images)
+**[View all Configuration screenshots →](docs/screenshots/01-Configuration)** (5 images)
+
 
 ---
 
@@ -170,9 +171,10 @@ URL filtering, DNS security, threat prevention, C2 attack simulations, AI Securi
 ### 🎯 Performance Monitoring
 Connectivity performance, synthetic probes, and endpoint health tracking.
 
-<img src="docs/screenshots/04-Performance/13a.png" alt="Performance Monitoring" width="800">
+<img src="docs/screenshots/04-Performance/01-digital-experience-dashboard.png" alt="Performance Monitoring" width="800">
 
-**[View all Performance screenshots →](docs/screenshots/04-Performance)** (5 images)
+**[View all Performance screenshots →](docs/screenshots/04-Performance)** (11 images)
+
 
 ---
 

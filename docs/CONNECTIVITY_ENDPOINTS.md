@@ -2,6 +2,8 @@
 
 The **Connectivity Probes** (formerly Synthetic Endpoints) provide real-time visibility into the health and performance of critical application targets by simulating user traffic patterns.
 
+![Digital Experience Dashboard](screenshots/04-Performance/01-digital-experience-dashboard.png)
+
 ---
 
 ## 📡 Available Probe Types
@@ -43,6 +45,8 @@ The platform supports three primary probe types, each measuring different aspect
 
 All probes return a score from **0 to 100**. The system stores the **Minimum**, **Maximum**, and **Average** score of each probe over time to facilitate long-term performance tracking and future alerting capabilities.
 
+![Endpoints Status and Reliability](screenshots/04-Performance/02-endpoints-status-table.png)
+
 | Score | Rating | Meaning |
 | :--- | :--- | :--- |
 | **80 - 100** | **Excellent** | Optimal performance, no user impact. |
@@ -72,15 +76,29 @@ The UI (`Dashboard.tsx`) receives these updates in real-time via the `/api/statu
 
 ## 🛠️ Configuration
 
-You can add custom probes via the **Connectivity Settings** UI (Advanced Diagnostics > Add Custom Probe):
+You can manage monitoring probes via the **Settings > Synthetic Probes** UI:
+
+![Synthetic Probes Configuration](screenshots/01-Configuration/01-synthetic-probes-settings.png)
+
+### Adding a Custom Probe
+1. Navigate to **Advanced Diagnostics > Add Custom Probe**.
+2. Fill in the probe details in the configuration modal.
+3. Click **Save Configuration**.
+
+![Add New Probe Modal](screenshots/01-Configuration/03-add-probe-modal.png)
+
+**Fields:**
 - **Probe Name**: A short, uppercase tracking label (e.g., "HQ-GATEWAY", "OFFICE365-UDP").
 - **Protocol**: Select from HTTP, HTTPS, ICMP (Ping), TCP, DNS, UDP Stream, or Stigix Cloud.
-- **Timeout (ms)**: Max execution ceiling before the probe is marked failed. Tunable between `1000ms` (1s) and `60000ms` (60s). Default is typically `5000` (or `2000` for ping).
+- **Timeout (ms)**: Max execution ceiling before the probe is marked failed. Tunable between `1000ms` (1s) and `60000ms` (60s). Default is typically `5000`.
 - **Freq (s)**: The polling cycle loop time for the background engine. Tunable between `30s` and `3600s`.
 - **Target**: The FQDN (google.com), socket (1.1.1.1:53), or IP address.
 
+![Active Monitoring Probes List](screenshots/01-Configuration/02-active-monitoring-probes.png)
+
 > [!TIP]
 > Use the **HTTP (Scoring)** type for public SaaS applications to get a realistic measure of application-level latency.
+
 ---
 
 ## ☁️ Stigix Cloud (Shared Probes)
@@ -99,8 +117,16 @@ Shared probes are hosted on the **Stigix Cloudflare infrastructure**. They provi
 
 ### 📊 Deep Telemetry & Metrics
 Since `v1.2.2-patch.132`, all Cloud Probes leverage a robust native `curl` execution backend instead of the simplistic Node.js fetch interface.
+
+![Timing Analysis Stacked Chart](screenshots/04-Performance/03-timing-analysis-modal.png)
+
 - This unlocks **Military-grade timing metrics** for Cloud Probes: DNS Resolution, TCP Handshake, TLS Handshake, and TTFB.
 - The UI features a dedicated **Timing Analysis Stacked Area Chart** inside the Probe detail modal, explicitly mapping these 4 timing layers over time for rapid bottleneck identification.
+
+#### Timing Breakdown Examples:
+![Salesforce Performance](screenshots/04-Performance/04-timing-analysis-salesforce.png)
+![Slow Application Analysis](screenshots/04-Performance/06-timing-analysis-slow-app.png)
+![Wave (Sine) Pattern](screenshots/04-Performance/05-timing-analysis-wave.png)
 
 ### 🛠️ Configuration
 The Cloud base URL is automatically derived from your **Stigix Registry** domain (e.g., `stigix-target.stigix.io`).
