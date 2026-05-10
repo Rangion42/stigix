@@ -3588,10 +3588,18 @@ app.get('/api/connectivity/test', authenticateToken, async (req, res) => {
 
 app.get('/api/connectivity/public-ip', authenticateToken, async (req, res) => {
     try {
-        const response = await fetch('https://ifconfig.me/ip');
+        // ipapi.co returns JSON with ip, country_code, city — free, no key required (1k req/day)
+        const response = await fetch('https://ipapi.co/json/', {
+            headers: { 'User-Agent': 'stigix-dem-monitor/1.0' }
+        });
         if (response.ok) {
-            const ip = await response.text();
-            res.json({ ip: ip.trim() });
+            const data = await response.json() as any;
+            res.json({
+                ip: data.ip,
+                countryCode: data.country_code || null,
+                country: data.country_name || null,
+                city: data.city || null
+            });
         } else {
             res.status(500).json({ error: 'Failed to fetch public IP' });
         }

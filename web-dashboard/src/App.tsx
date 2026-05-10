@@ -121,6 +121,7 @@ export default function App() {
   const [iperfTarget, setIperfTarget] = useState('');
   const [iperfServerInfo, setIperfServerInfo] = useState<any>(null);
   const [publicIp, setPublicIp] = useState<string | null>(null);
+  const [publicIpCountry, setPublicIpCountry] = useState<string | null>(null);
   const [gatewayIp, setGatewayIp] = useState<string | null>(null);
 
   // Maintenance State
@@ -561,6 +562,7 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setPublicIp(data.ip);
+        if (data.countryCode) setPublicIpCountry(data.countryCode);
       }
     } catch (e) {
       console.error('Failed to fetch public IP');
@@ -1112,7 +1114,14 @@ export default function App() {
                       <Globe size={10} />
                       {siteInfo?.local_ip && <span className="mr-1 border-r border-blue-500/30 pr-2">IP: {siteInfo.local_ip}</span>}
                       {gatewayIp && <span className="mr-1 border-r border-blue-500/30 pr-2">GW: {gatewayIp}</span>}
-                      <span>Public IP: {publicIp}</span>
+                      <span className="flex items-center gap-1">
+                        {publicIpCountry && (
+                          <span className="text-sm leading-none" title={publicIpCountry}>
+                            {String.fromCodePoint(...[...publicIpCountry.toUpperCase()].map(c => 0x1F1E6 - 65 + c.charCodeAt(0)))}
+                          </span>
+                        )}
+                        Public IP: {publicIp}
+                      </span>
                     </div>
                   )}
 
