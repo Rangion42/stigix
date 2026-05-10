@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.0-patch.11] - 2026-05-10
+### Changed
+- **Connectivity Dashboard** 🎨 Improved the Probe detail modal:
+  - Hidden HTTP-specific timing columns (DNS, TCP, TLS, TTFB, HTTP Code) for non-HTTP/CLOUD probes (e.g., PING, UDP) for a cleaner UI.
+  - Added a distinct probe type badge directly in the modal title.
+  - The entire row in the main dashboard table is now clickable to open probe details.
+  - Renamed "Manage Endpoints" button to "Manage Probes".
+- **Connectivity Dashboard** 📊 Added underlying data model tracking for minimum and maximum probe scores to support future notification triggers.
+
 ## [v1.3.0-patch.10] - 2026-05-09
 ### Fixed
 - **VyOS Engine** 🛡️ Added a fallback mechanism for `deny-traffic` (simple-block) to automatically support mixed fleets of VyOS devices. If a router rejects the modern VyOS 1.4/1.5 syntax (tag as a child of blackhole), the engine will seamlessly catch the 400 error and retry with the legacy syntax (tag as a sibling of blackhole).

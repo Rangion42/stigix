@@ -310,6 +310,8 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                 type: last?.endpointType || 'HTTP',
                 lastScore: last?.score || 0,
                 avgScore: reachable.length > 0 ? Math.round(reachable.reduce((acc, r) => acc + r.score, 0) / reachable.length) : 0,
+                minScore: reachable.length > 0 ? Math.min(...reachable.map(r => r.score)) : 0,
+                maxScore: reachable.length > 0 ? Math.max(...reachable.map(r => r.score)) : 0,
                 avgLatency: reachable.length > 0 ? Math.round(reachable.reduce((acc, r) => acc + r.metrics.total_ms, 0) / reachable.length) : 0,
                 maxLatency: reachable.length > 0 ? reachable.reduce((max, r) => Math.max(max, r.metrics.total_ms), reachable[0].metrics.total_ms) : 0,
                 checks: endpointResults.length,
@@ -615,7 +617,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                             onClick={onManage}
                             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-lg shadow-blue-900/20"
                         >
-                            <Plus size={14} /> Manage Endpoints
+                            <Plus size={14} /> Manage Probes
                         </button>
                     )}
                 </div>
@@ -673,8 +675,10 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                     </thead>
                     <tbody className="divide-y divide-border">
                         {endpoints.map(e => (
-                            <tr key={e.id} className={cn(
-                                "hover:bg-card-secondary transition-colors group",
+                            <tr key={e.id} 
+                                onClick={(ev) => { ev.stopPropagation(); setSelectedEndpoint(e); setShowDetailModal(true); }}
+                                className={cn(
+                                "hover:bg-card-secondary transition-colors group cursor-pointer",
                                 !e.enabled && "opacity-40"
                             )}>
                                 <td className="px-6 py-4">
@@ -792,7 +796,18 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                     <Gauge size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="text-xl font-black text-text-primary tracking-tight">{selectedEndpoint.name}</h3>
+                                    <h3 className="text-xl font-black text-text-primary tracking-tight flex items-center gap-3">
+                                        {selectedEndpoint.name}
+                                        <span className={cn(
+                                            "px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-tighter align-middle",
+                                            selectedEndpoint.type === 'HTTPS' ? "text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/20" :
+                                                selectedEndpoint.type === 'HTTP' ? "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20" :
+                                                    selectedEndpoint.type === 'CLOUD' ? "text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border-indigo-500/20" :
+                                                        "text-orange-500 bg-orange-500/10 border-orange-500/20"
+                                        )}>
+                                            {selectedEndpoint.type}
+                                        </span>
+                                    </h3>
                                     <p className="text-[10px] text-text-muted font-mono font-bold break-all max-w-[700px] mt-1">{formatDisplayUrl(selectedEndpoint)}</p>
                                 </div>
                             </div>
@@ -879,13 +894,19 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                             <tr>
                                                 <th className="px-4 py-3 text-text-muted font-bold tracking-tight">Time</th>
                                                 <th className="px-4 py-3 text-text-muted font-bold tracking-tight text-center">Score</th>
-                                                <th className="px-4 py-3 text-text-muted font-bold tracking-tight text-center hidden lg:table-cell">DNS</th>
-                                                <th className="px-4 py-3 text-text-muted font-bold tracking-tight text-center hidden lg:table-cell">TCP</th>
-                                                <th className="px-4 py-3 text-text-muted font-bold tracking-tight text-center hidden lg:table-cell">TLS</th>
-                                                <th className="px-4 py-3 text-text-muted font-bold tracking-tight text-center hidden lg:table-cell">TTFB</th>
+                                                {(selectedEndpoint.type.includes('HTTP') || selectedEndpoint.type === 'CLOUD') && (
+                                                    <>
+                                                        <th className="px-4 py-3 text-text-muted font-bold tracking-tight text-center hidden lg:table-cell">DNS</th>
+                                                        <th className="px-4 py-3 text-text-muted font-bold tracking-tight text-center hidden lg:table-cell">TCP</th>
+                                                        <th className="px-4 py-3 text-text-muted font-bold tracking-tight text-center hidden lg:table-cell">TLS</th>
+                                                        <th className="px-4 py-3 text-text-muted font-bold tracking-tight text-center hidden lg:table-cell">TTFB</th>
+                                                    </>
+                                                )}
                                                 <th className="px-4 py-3 text-text-muted font-bold tracking-tight text-center">Total</th>
                                                 <th className="px-4 py-3 text-text-muted font-bold tracking-tight text-center hidden sm:table-cell">IP Address</th>
-                                                <th className="px-4 py-3 text-text-muted font-bold tracking-tight text-right">HTTP Code</th>
+                                                {(selectedEndpoint.type.includes('HTTP') || selectedEndpoint.type === 'CLOUD') && (
+                                                    <th className="px-4 py-3 text-text-muted font-bold tracking-tight text-right">HTTP Code</th>
+                                                )}
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border">
@@ -897,20 +918,26 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                                             {r.score}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-3 text-center hidden lg:table-cell text-text-muted font-mono">{r.metrics.dns_ms !== undefined ? `${formatMs(r.metrics.dns_ms)}ms` : '-'}</td>
-                                                    <td className="px-4 py-3 text-center hidden lg:table-cell text-text-muted font-mono">{r.metrics.tcp_ms !== undefined ? `${formatMs(r.metrics.tcp_ms)}ms` : '-'}</td>
-                                                    <td className="px-4 py-3 text-center hidden lg:table-cell text-text-muted font-mono">{r.metrics.tls_ms !== undefined ? `${formatMs(r.metrics.tls_ms)}ms` : '-'}</td>
-                                                    <td className="px-4 py-3 text-center hidden lg:table-cell text-text-muted font-mono">{r.metrics.ttfb_ms !== undefined ? `${formatMs(r.metrics.ttfb_ms)}ms` : '-'}</td>
+                                                    {(selectedEndpoint.type.includes('HTTP') || selectedEndpoint.type === 'CLOUD') && (
+                                                        <>
+                                                            <td className="px-4 py-3 text-center hidden lg:table-cell text-text-muted font-mono">{r.metrics.dns_ms !== undefined ? `${formatMs(r.metrics.dns_ms)}ms` : '-'}</td>
+                                                            <td className="px-4 py-3 text-center hidden lg:table-cell text-text-muted font-mono">{r.metrics.tcp_ms !== undefined ? `${formatMs(r.metrics.tcp_ms)}ms` : '-'}</td>
+                                                            <td className="px-4 py-3 text-center hidden lg:table-cell text-text-muted font-mono">{r.metrics.tls_ms !== undefined ? `${formatMs(r.metrics.tls_ms)}ms` : '-'}</td>
+                                                            <td className="px-4 py-3 text-center hidden lg:table-cell text-text-muted font-mono">{r.metrics.ttfb_ms !== undefined ? `${formatMs(r.metrics.ttfb_ms)}ms` : '-'}</td>
+                                                        </>
+                                                    )}
                                                     <td className="px-4 py-3 text-center font-mono text-text-secondary font-bold">{formatMs(r.metrics.total_ms)}ms</td>
                                                     <td className="px-4 py-3 text-center text-text-muted font-mono truncate max-w-[120px] hidden sm:table-cell">{r.remoteIp || '-'}</td>
-                                                    <td className="px-4 py-3 text-right">
-                                                        <span className={cn(
-                                                            "px-2 py-0.5 rounded font-black text-[11px]",
-                                                            r.httpCode === 200 ? "text-green-600 dark:text-green-400 bg-green-500/10" : "text-orange-500 bg-orange-500/10"
-                                                        )}>
-                                                            {r.httpCode || 'N/A'}
-                                                        </span>
-                                                    </td>
+                                                    {(selectedEndpoint.type.includes('HTTP') || selectedEndpoint.type === 'CLOUD') && (
+                                                        <td className="px-4 py-3 text-right">
+                                                            <span className={cn(
+                                                                "px-2 py-0.5 rounded font-black text-[11px]",
+                                                                r.httpCode === 200 ? "text-green-600 dark:text-green-400 bg-green-500/10" : "text-orange-500 bg-orange-500/10"
+                                                            )}>
+                                                                {r.httpCode || 'N/A'}
+                                                            </span>
+                                                        </td>
+                                                    )}
                                                 </tr>
                                             ))}
                                         </tbody>
