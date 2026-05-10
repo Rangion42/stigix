@@ -724,22 +724,22 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-center">
-                                    <div className="flex flex-col items-center gap-1.5">
+                                    <div className="flex flex-col items-center">
                                         <div className={cn(
-                                            "inline-flex items-center justify-center w-12 h-8 rounded-lg border font-black text-sm shadow-sm",
+                                            "inline-flex items-center justify-center w-12 h-8 rounded-lg border font-black text-sm shadow-sm mb-1",
                                             getScoreColor(e.lastScore)
                                         )}>
                                             {e.lastScore}
                                         </div>
-                                        <div className="text-[9px] text-text-muted font-bold opacity-70 uppercase tracking-tighter">
+                                        <div className="text-[10px] text-text-muted font-bold opacity-60 uppercase tracking-tighter">
                                             Avg: {e.avgScore} • Min: {e.minScore} • Max: {e.maxScore}
                                         </div>
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-center">
                                     <div className="flex flex-col items-center">
-                                        <span className="text-sm font-bold text-text-secondary font-mono">{formatMs(e.avgLatency)}ms</span>
-                                        <span className="text-[10px] text-text-muted font-bold opacity-60 uppercase">Max: {formatMs(e.maxLatency)}ms</span>
+                                        <span className="text-sm font-bold text-text-secondary font-mono h-8 flex items-center justify-center mb-1">{formatMs(e.avgLatency)}ms</span>
+                                        <span className="text-[10px] text-text-muted font-bold opacity-60 uppercase tracking-tighter">Max: {formatMs(e.maxLatency)}ms</span>
                                     </div>
                                 </td>
                                 <td className="px-6 py-4">
