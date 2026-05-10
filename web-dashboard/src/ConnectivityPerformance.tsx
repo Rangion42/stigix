@@ -702,7 +702,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                         </span>
                                     </div>
                                 </td>
-                                <td className="px-6 py-4 text-center">
+                                <td className="px-6 py-4 text-center align-middle">
                                     <span className={cn(
                                         "px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-tighter",
                                         e.type === 'HTTPS' ? "text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/20" :
@@ -713,7 +713,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                         {e.type}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 text-center">
+                                <td className="px-6 py-4 text-center align-middle">
                                     <span className={cn(
                                         "px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest",
                                         e.enabled
@@ -723,8 +723,8 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                         {e.enabled ? "Active" : "Inactive"}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 text-center">
-                                    <div className="flex flex-col items-center">
+                                <td className="px-6 py-4 text-center align-middle">
+                                    <div className="flex flex-col items-center justify-center">
                                         <div className={cn(
                                             "inline-flex items-center justify-center w-12 h-8 rounded-lg border font-black text-sm shadow-sm mb-1",
                                             getScoreColor(e.lastScore)
