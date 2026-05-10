@@ -183,7 +183,8 @@ Layer-2/3 device simulation with DHCP and ARP support.
 
 <img src="docs/screenshots/05-IOT/18.png" alt="IoT Simulation" width="800">
 
-**[View all IoT screenshots →](docs/screenshots/05-IOT)** (6 images)
+**[View all IoT screenshots →](docs/screenshots/05-IOT)** (10 images)
+
 
 ---
 

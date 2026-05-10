@@ -53,6 +53,9 @@ On macOS, Windows, and WSL2, IoT simulation runs in **Bridge Mode** with these l
 
 IoT devices are managed via the **IoT Tab** in the Dashboard. The configuration is stored in `config/iot-devices.json`.
 
+![IoT Device Gallery](screenshots/05-IOT/04-iot-device-gallery.png)
+
+
 ### Technical JSON Format
 
 Each device in the JSON array follows this structure:
@@ -85,6 +88,9 @@ Each device in the JSON array follows this structure:
 - `hostname` - DHCP Option 12
 - `vendor_class_id` - DHCP Option 60
 - `param_req_list` - DHCP Option 55 (Parameter Request List)
+
+![IoT Device Configuration Modal](screenshots/05-IOT/01-iot-edit-device-basic.png)
+
 
 
 ### 🤖 Device Configuration Generation
@@ -155,6 +161,9 @@ When **Bad Behavior** is enabled, the simulated device will generate traffic pat
 - **Data Exfil**: Simulated large data transfers to external IPs.
 - **PAN Test Domains**: Generates traffic to official Palo Alto test domains for guaranteed detection.
 
+![IoT Bad Behavior Configuration](screenshots/05-IOT/02-iot-edit-device-bad-behavior.png)
+
+
 ### JSON Security Configuration
 
 To enable bad behavior, include the `security` object in your device configuration.
@@ -213,7 +222,12 @@ Launches multiple attack threads simultaneously for high complexity.
 }
 ```
 
-## 📊 Live Log Examples
+## 📊 Visual Diagnostics & Logs
+
+When a device starts, you can monitor the "Real-on-the-Wire" interaction in the UI logs via the **Real-time Analysis** modal:
+
+![IoT Real-time Analysis Logs](screenshots/05-IOT/03-iot-realtime-logs-dhcp.png)
+
 
 When a device starts, you can monitor the "Real-on-the-Wire" interaction in the UI logs:
 
