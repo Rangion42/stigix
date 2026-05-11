@@ -1301,12 +1301,21 @@ const EMBEDDED_SECURITY_PROFILE = {
 const ensureSecurityProfile = () => {
     // SECURITY_PROFILE_FILE is declared later in the file — inline the path here to avoid TDZ error
     const profileFile = path.join(APP_CONFIG.configDir, 'security-profile.json');
-    if (fs.existsSync(profileFile)) return; // already present, nothing to do
+    if (fs.existsSync(profileFile)) {
+        // File exists — but validate it has actual data (not an empty/corrupted file)
+        try {
+            const existing = JSON.parse(fs.readFileSync(profileFile, 'utf8'));
+            if (existing?.url_filtering?.items?.length > 0) return; // looks good
+            log('SYSTEM', 'security-profile.json exists but has empty items — overwriting with defaults.');
+        } catch (_) {
+            log('SYSTEM', 'security-profile.json is malformed — overwriting with defaults.');
+        }
+    }
     try {
         fs.writeFileSync(profileFile, JSON.stringify(EMBEDDED_SECURITY_PROFILE, null, 2), 'utf8');
-        log('SYSTEM', 'security-profile.json created from embedded defaults (upgrade detected).');
+        log('SYSTEM', 'security-profile.json written from embedded Palo Alto defaults.');
     } catch (e) {
-        log('SYSTEM', `Failed to create security-profile.json: ${e}`, 'error');
+        log('SYSTEM', `Failed to write security-profile.json: ${e}`, 'error');
     }
 };
 
