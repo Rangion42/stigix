@@ -6329,24 +6329,16 @@ const getSecurityProfile = () => {
         if (fs.existsSync(SECURITY_PROFILE_FILE)) {
             const raw = fs.readFileSync(SECURITY_PROFILE_FILE, 'utf8');
             const profile = JSON.parse(raw);
-            // Basic sanity: ensure top-level keys exist
-            if (profile && profile.url_filtering && profile.dns_security) {
+            // Basic sanity: ensure top-level keys exist AND have actual data
+            if (profile && profile.url_filtering?.items?.length > 0) {
                 return profile;
             }
         }
     } catch (e) {
         console.error('[security-profile] Failed to read security-profile.json:', e);
     }
-    // Fallback: empty-but-valid structure (should never happen if the file is committed)
-    return {
-        version: '1.0',
-        vendor: 'paloalto',
-        url_filtering: { items: [] },
-        dns_security: { items: [] },
-        threat_prevention: { default_eicar_endpoints: [] },
-        c2_scenarios: [],
-        ai_security_scenarios: []
-    };
+    // Fallback: use the embedded Palo Alto catalogue (file absent or empty)
+    return EMBEDDED_SECURITY_PROFILE;
 };
 
 app.get('/api/security/profile', authenticateToken, (req, res) => {
