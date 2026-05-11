@@ -6594,6 +6594,7 @@ app.post('/api/security/url-test', authenticateToken, async (req, res) => {
                 category,
                 blockPageDetected: isBlockPage,
                 testPageDetected: isTestPage,
+                command: curlCommand,
                 reason: isTestPage ? 'Legitimate Palo Alto Test Page detected' :
                     isBlockPage ? 'Security Block Page detected in response content' :
                         (status === 'allowed') ? `Allowed (HTTP ${httpCode})` : `Blocked (HTTP ${httpCode})`

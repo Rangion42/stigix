@@ -2605,7 +2605,7 @@ export default function Security({ token }: SecurityProps) {
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-2">
                                         <div className="h-4 w-1 bg-blue-500 rounded-full" />
-                                        <h4 className="text-sm font-black text-text-primary uppercase tracking-widest">Detailed Execution Log</h4>
+                                        <h4 className="text-sm font-semibold text-text-primary tracking-normal">Detailed execution log</h4>
                                     </div>
 
                                     <div className="grid grid-cols-1 gap-4">
@@ -2618,7 +2618,7 @@ export default function Security({ token }: SecurityProps) {
                                         {selectedTest.details.domain && (
                                             <div className="bg-card-secondary/30 rounded-xl p-4 border border-border/50 group">
                                                 <span className="text-[9px] font-black text-text-muted uppercase tracking-widest block mb-2 opacity-60">Destination Host</span>
-                                                <span className="text-xs font-mono text-text-primary break-all group-hover:text-purple-500 transition-colors uppercase">{selectedTest.details.domain}</span>
+                                                <span className="text-xs font-mono text-text-primary break-all group-hover:text-purple-500 transition-colors">{selectedTest.details.domain}</span>
                                             </div>
                                         )}
                                         {selectedTest.details.resolvedIp && (
@@ -2649,7 +2649,7 @@ export default function Security({ token }: SecurityProps) {
                                         )}
                                         {selectedTest.details.error && (
                                             <div className="bg-red-500/5 rounded-xl p-4 border border-red-500/20">
-                                                <span className="text-[9px] font-black text-red-500 uppercase tracking-widest block mb-2">Test Error Signature</span>
+                                                <span className="text-[9px] font-semibold text-red-500 uppercase tracking-widest block mb-2">Test error signature</span>
                                                 <pre className="text-[10px] font-mono text-red-400 bg-black/20 p-3 rounded-lg overflow-x-auto border border-red-500/10 tracking-tight whitespace-pre-wrap">{selectedTest.details.error}</pre>
                                             </div>
                                         )}
@@ -2751,7 +2751,7 @@ export default function Security({ token }: SecurityProps) {
                                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                                     <div className="flex items-center gap-2">
                                                         <div className="h-4 w-1 bg-orange-500 rounded-full" />
-                                                        <h4 className="text-[10px] font-black text-text-primary uppercase tracking-widest">Batch Analysis Manifest</h4>
+                                                        <h4 className="text-[10px] font-semibold text-text-primary tracking-wide">Batch analysis manifest</h4>
                                                     </div>
                                                     <div className="relative group flex-1 sm:max-w-[240px]">
                                                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-blue-500 transition-colors" />
