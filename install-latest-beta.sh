@@ -8,7 +8,7 @@ set -e
 INSTALL_MODE="both"
 DRY_RUN=false
 REPO_URL="https://raw.githubusercontent.com/jsuzanne/stigix/main"
-COMPOSE_URL="$REPO_URL/docker-compose.yml"
+COMPOSE_URL="$REPO_URL/docker-compose-latest-beta.yml"
 
 show_help() {
     echo "🚀 Stigix All-in-One - Installation Script"
