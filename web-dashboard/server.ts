@@ -243,14 +243,19 @@ function backupConfig(filePath: string) {
 // Intercept fs.writeFileSync to automatically backup critical config files
 const originalWriteFileSync = fs.writeFileSync;
 (fs as any).writeFileSync = function(file: any, data: any, options: any) {
-    const configFiles = [
-        VYOS_CONFIG_FILE, APPLICATIONS_CONFIG_FILE, SECURITY_CONFIG_FILE,
-        VOICE_CONFIG_FILE, CUSTOM_CONNECTIVITY_FILE, CONVERGENCE_ENDPOINTS_FILE,
-        CONVERGENCE_CONFIG_FILE, IOT_DEVICES_FILE, PRISMA_CONFIG_FILE,
-        UI_CONFIG_FILE, CLOUD_CONFIG_FILE
-    ];
-    if (typeof file === 'string' && configFiles.includes(file)) {
-        backupConfig(file);
+    try {
+        const configFiles = [
+            VYOS_CONFIG_FILE, APPLICATIONS_CONFIG_FILE, SECURITY_CONFIG_FILE,
+            VOICE_CONFIG_FILE, CUSTOM_CONNECTIVITY_FILE, CONVERGENCE_ENDPOINTS_FILE,
+            CONVERGENCE_CONFIG_FILE, IOT_DEVICES_FILE, PRISMA_CONFIG_FILE,
+            UI_CONFIG_FILE, CLOUD_CONFIG_FILE
+        ];
+        if (typeof file === 'string' && configFiles.includes(file)) {
+            backupConfig(file);
+        }
+    } catch (tdz) {
+        // Some config path constants are not yet initialized (TDZ during module startup).
+        // Skip backup — the original write will still proceed below.
     }
     return originalWriteFileSync.apply(this, arguments as any);
 };
