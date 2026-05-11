@@ -2612,7 +2612,7 @@ export default function Security({ token }: SecurityProps) {
                                         {selectedTest.details.url && (
                                             <div className="bg-card-secondary/30 rounded-xl p-4 border border-border/50 group">
                                                 <span className="text-[9px] font-black text-text-muted uppercase tracking-widest block mb-2 opacity-60">Target Resource</span>
-                                                <span className="text-xs font-mono text-text-primary break-all group-hover:text-blue-500 transition-colors uppercase">{selectedTest.details.url}</span>
+                                                <span className="text-xs font-mono text-text-primary break-all group-hover:text-blue-500 transition-colors">{selectedTest.details.url}</span>
                                             </div>
                                         )}
                                         {selectedTest.details.domain && (
@@ -2650,7 +2650,7 @@ export default function Security({ token }: SecurityProps) {
                                         {selectedTest.details.error && (
                                             <div className="bg-red-500/5 rounded-xl p-4 border border-red-500/20">
                                                 <span className="text-[9px] font-black text-red-500 uppercase tracking-widest block mb-2">Test Error Signature</span>
-                                                <pre className="text-[10px] font-mono text-red-400 bg-black/20 p-3 rounded-lg overflow-x-auto border border-red-500/10 uppercase tracking-tighter whitespace-pre-wrap">{selectedTest.details.error}</pre>
+                                                <pre className="text-[10px] font-mono text-red-400 bg-black/20 p-3 rounded-lg overflow-x-auto border border-red-500/10 tracking-tight whitespace-pre-wrap">{selectedTest.details.error}</pre>
                                             </div>
                                         )}
 
@@ -2751,7 +2751,7 @@ export default function Security({ token }: SecurityProps) {
                                                     <Info size={40} className="text-blue-600" />
                                                 </div>
                                                 <span className="text-blue-600 dark:text-blue-400 font-black uppercase text-[10px] tracking-widest block mb-2">Disposition Reasoning</span>
-                                                <p className="text-sm text-text-primary font-bold leading-relaxed uppercase tracking-tight">{selectedTest.details.reason}</p>
+                                                <p className="text-sm text-text-primary font-medium leading-relaxed">{selectedTest.details.reason}</p>
                                             </div>
                                         )}
 
@@ -2792,7 +2792,7 @@ export default function Security({ token }: SecurityProps) {
                                                                     )
                                                                     .map((r: any, i: number) => (
                                                                         <tr key={i} className="hover:bg-card-secondary/30 transition-colors group">
-                                                                            <td className="py-3 px-4 text-text-primary font-mono text-[10px] break-all group-hover:text-blue-500 transition-colors uppercase tracking-widest">{r.value}</td>
+                                                                            <td className="py-3 px-4 text-text-primary font-mono text-[10px] break-all group-hover:text-blue-500 transition-colors tracking-wide">{r.value}</td>
                                                                             <td className="py-3 px-4 text-right">
                                                                                 <span className={cn(
                                                                                     "px-2 py-0.5 rounded-lg font-black uppercase text-[9px] border shadow-sm",
@@ -2803,7 +2803,7 @@ export default function Security({ token }: SecurityProps) {
                                                                                     {r.status}
                                                                                 </span>
                                                                             </td>
-                                                                            <td className="py-3 px-4 text-text-muted text-[10px] font-medium break-words max-w-[200px] uppercase opacity-60 group-hover:opacity-100">{r.details || '-'}</td>
+                                                                            <td className="py-3 px-4 text-text-muted text-[10px] font-medium break-words max-w-[200px] opacity-60 group-hover:opacity-100">{r.details || '-'}</td>
                                                                         </tr>
                                                                     ))}
                                                             </tbody>
@@ -2819,7 +2819,7 @@ export default function Security({ token }: SecurityProps) {
                                                     <Info size={40} className="text-blue-600" />
                                                 </div>
                                                 <span className="text-blue-600 dark:text-blue-400 font-black uppercase text-[10px] tracking-widest block mb-2">Disposition Reasoning</span>
-                                                <p className="text-sm text-text-primary font-bold leading-relaxed uppercase tracking-tight">{selectedTest.details.reason}</p>
+                                                <p className="text-sm text-text-primary font-medium leading-relaxed">{selectedTest.details.reason}</p>
                                             </div>
                                         )}
 
