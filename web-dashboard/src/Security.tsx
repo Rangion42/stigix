@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Play, AlertTriangle, CheckCircle, XCircle, Clock, Download, Trash2, ChevronDown, ChevronUp, Copy, Filter, Link, Upload, RefreshCcw, ShieldAlert, Globe, ListTree, RefreshCw, MoreVertical, Settings, Database, Server, Info, Search, History as HistoryIcon, Zap, ChevronRight, Activity } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 import { clsx, type ClassValue } from 'clsx';
-import { URL_CATEGORIES, DNS_TEST_DOMAINS, C2_SCENARIOS, AI_SECURITY_SCENARIOS, type AISecurityScenario } from '../shared/security-categories';
+// Types only — runtime data is loaded from /api/security/profile (config/security-profile.json)
+import { URL_CATEGORIES, DNS_TEST_DOMAINS, C2_SCENARIOS, AI_SECURITY_SCENARIOS, type URLCategory, type DNSTestDomain, type C2Scenario, type AISecurityScenario } from '../shared/security-categories';
 
 import { ScoreDashboard } from './components/ScoreDashboard';
 import { useSecurityScores } from './hooks/useSecurityScores';
@@ -151,6 +152,21 @@ export default function Security({ token }: SecurityProps) {
     const [edlExpanded, setEdlExpanded] = useState(true);
     const [resultsExpanded, setResultsExpanded] = useState(true);
 
+    // Security profile (catalogue loaded from API — source: config/security-profile.json)
+    const [securityProfile, setSecurityProfile] = useState<{
+        url_filtering: { items: URLCategory[] };
+        dns_security: { items: DNSTestDomain[] };
+        threat_prevention: { default_eicar_endpoints: string[] };
+        c2_scenarios: C2Scenario[];
+        ai_security_scenarios: AISecurityScenario[];
+    }>({
+        url_filtering: { items: URL_CATEGORIES },
+        dns_security: { items: DNS_TEST_DOMAINS },
+        threat_prevention: { default_eicar_endpoints: ['https://secure.eicar.org/eicar.com.txt'] },
+        c2_scenarios: C2_SCENARIOS,
+        ai_security_scenarios: AI_SECURITY_SCENARIOS
+    });
+
     // C2 scenario state
     const [c2SelectedScenarios, setC2SelectedScenarios] = useState<string[]>(C2_SCENARIOS.map(s => s.id));
     const [batchProcessingC2, setBatchProcessingC2] = useState(false);
@@ -245,6 +261,19 @@ export default function Security({ token }: SecurityProps) {
         fetchConfig();
         fetchResults();
         fetchHealth();
+
+        // Load security profile (catalogue: URL/DNS/EICAR/C2/AI)
+        fetch('/api/security/profile', { headers: authHeaders() })
+            .then(r => r.ok ? r.json() : null)
+            .then(profile => {
+                if (profile?.url_filtering?.items?.length) {
+                    setSecurityProfile(profile);
+                    // Re-initialize selection state from profile
+                    setC2SelectedScenarios((profile.c2_scenarios || []).map((s: C2Scenario) => s.id));
+                    setAISelectedScenarios((profile.ai_security_scenarios || []).map((s: AISecurityScenario) => s.id));
+                }
+            })
+            .catch(() => { /* keep TS fallback */ });
 
         // Fetch shared targets with security capability
         fetch('/api/targets', { headers: authHeaders() })
@@ -537,7 +566,7 @@ export default function Security({ token }: SecurityProps) {
 
     const toggleAllURLCategories = () => {
         if (!config) return;
-        const allIds = URL_CATEGORIES.map(cat => cat.id);
+        const allIds = securityProfile.url_filtering.items.map(cat => cat.id);
         const allEnabled = config.url_filtering.enabled_categories.length === allIds.length;
 
         saveConfig({
@@ -547,7 +576,7 @@ export default function Security({ token }: SecurityProps) {
 
     const toggleAllDNSTests = () => {
         if (!config) return;
-        const allIds = DNS_TEST_DOMAINS.map(test => test.id);
+        const allIds = securityProfile.dns_security.items.map(test => test.id);
         const allEnabled = config.dns_security.enabled_tests.length === allIds.length;
 
         saveConfig({
@@ -572,7 +601,7 @@ export default function Security({ token }: SecurityProps) {
         }
     };
 
-    const runURLTest = async (category: typeof URL_CATEGORIES[0]) => {
+    const runURLTest = async (category: URLCategory) => {
         setTesting({ ...testing, [`url-${category.id}`]: true });
         try {
             const res = await fetch('/api/security/url-test', {
@@ -598,7 +627,7 @@ export default function Security({ token }: SecurityProps) {
         setBatchProcessingUrl(true);
         showToast(`Running ${config.url_filtering.enabled_categories.length} URL filtering tests...`, 'info');
         try {
-            const enabledCategories = URL_CATEGORIES.filter(cat =>
+            const enabledCategories = securityProfile.url_filtering.items.filter(cat =>
                 config.url_filtering.enabled_categories.includes(cat.id)
             );
 
@@ -620,7 +649,7 @@ export default function Security({ token }: SecurityProps) {
         }
     };
 
-    const runDNSTest = async (test: typeof DNS_TEST_DOMAINS[0]) => {
+    const runDNSTest = async (test: DNSTestDomain) => {
         setTesting({ ...testing, [`dns-${test.id}`]: true });
         try {
             const res = await fetch('/api/security/dns-test', {
@@ -646,7 +675,7 @@ export default function Security({ token }: SecurityProps) {
         setBatchProcessingDns(true);
         showToast(`Running ${config.dns_security.enabled_tests.length} DNS security tests...`, 'info');
         try {
-            const enabledTests = DNS_TEST_DOMAINS.filter(test =>
+            const enabledTests = securityProfile.dns_security.items.filter(test =>
                 config.dns_security.enabled_tests.includes(test.id)
             );
 
@@ -687,7 +716,7 @@ export default function Security({ token }: SecurityProps) {
 
     const getC2VerdictBadge = getAIVerdictBadge; // alias for backward compat
 
-    const runC2Test = async (scenario: typeof C2_SCENARIOS[0]) => {
+    const runC2Test = async (scenario: C2Scenario) => {
         setTesting(prev => ({ ...prev, [`c2-${scenario.id}`]: true }));
         try {
             const res = await fetch('/api/security/c2-test', {
@@ -719,7 +748,7 @@ export default function Security({ token }: SecurityProps) {
         setBatchProcessingC2(true);
         showToast(`Running ${c2SelectedScenarios.length} C2 attack scenarios...`, 'info');
         try {
-            const selectedScenarios = C2_SCENARIOS
+            const selectedScenarios = securityProfile.c2_scenarios
                 .filter(s => c2SelectedScenarios.includes(s.id))
                 .map(s => ({ scenarioId: s.id, scenarioName: s.name, attackType: s.attack_type, target: s.target }));
             await fetch('/api/security/c2-test-batch', {
@@ -741,10 +770,10 @@ export default function Security({ token }: SecurityProps) {
     };
 
     const toggleAllC2Scenarios = () => {
-        if (c2SelectedScenarios.length === C2_SCENARIOS.length) {
+        if (c2SelectedScenarios.length === securityProfile.c2_scenarios.length) {
             setC2SelectedScenarios([]);
         } else {
-            setC2SelectedScenarios(C2_SCENARIOS.map(s => s.id));
+            setC2SelectedScenarios(securityProfile.c2_scenarios.map(s => s.id));
         }
     };
 
@@ -782,7 +811,7 @@ export default function Security({ token }: SecurityProps) {
         setBatchProcessingAI(true);
         showToast(`Running ${aiSelectedScenarios.length} AI Security scenarios...`, 'info');
         try {
-            const selectedScenarios = AI_SECURITY_SCENARIOS
+            const selectedScenarios = securityProfile.ai_security_scenarios
                 .filter(s => aiSelectedScenarios.includes(s.id))
                 .map(s => ({ scenarioId: s.id, scenarioName: s.name, attackType: s.attack_type, targets: s.targets }));
             await fetch('/api/security/ai-test-batch', {
@@ -803,10 +832,10 @@ export default function Security({ token }: SecurityProps) {
     };
 
     const toggleAllAIScenarios = () => {
-        if (aiSelectedScenarios.length === AI_SECURITY_SCENARIOS.length) {
+        if (aiSelectedScenarios.length === securityProfile.ai_security_scenarios.length) {
             setAISelectedScenarios([]);
         } else {
-            setAISelectedScenarios(AI_SECURITY_SCENARIOS.map(s => s.id));
+            setAISelectedScenarios(securityProfile.ai_security_scenarios.map(s => s.id));
         }
     };
 
@@ -1020,8 +1049,8 @@ export default function Security({ token }: SecurityProps) {
         return <div className="p-8 text-center text-text-muted animate-pulse font-black tracking-widest text-xs">Loading security configuration...</div>;
     }
 
-    const basicDNSTests = DNS_TEST_DOMAINS.filter(t => t.category === 'basic');
-    const advancedDNSTests = DNS_TEST_DOMAINS.filter(t => t.category === 'advanced');
+    const basicDNSTests = securityProfile.dns_security.items.filter(t => t.category === 'basic');
+    const advancedDNSTests = securityProfile.dns_security.items.filter(t => t.category === 'advanced');
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto pb-12">
@@ -1214,7 +1243,7 @@ export default function Security({ token }: SecurityProps) {
                         <div>
                             <h3 className="text-sm font-black text-text-primary tracking-tight">URL Filtering</h3>
                             <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest opacity-70">
-                                {config.url_filtering.enabled_categories.length} / {URL_CATEGORIES.length} Categories Active
+                                {config.url_filtering.enabled_categories.length} / {securityProfile.url_filtering.items.length} Categories Active
                             </p>
                         </div>
                     </div>
@@ -1229,7 +1258,7 @@ export default function Security({ token }: SecurityProps) {
                                     <div className="relative flex items-center">
                                         <input
                                             type="checkbox"
-                                            checked={config.url_filtering.enabled_categories.length === URL_CATEGORIES.length}
+                                            checked={config.url_filtering.enabled_categories.length === securityProfile.url_filtering.items.length}
                                             onChange={toggleAllURLCategories}
                                             className="w-4 h-4 rounded border-border bg-card-secondary text-blue-600 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
                                         />
@@ -1264,7 +1293,7 @@ export default function Security({ token }: SecurityProps) {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-border">
-                            {URL_CATEGORIES.map(category => {
+                            {securityProfile.url_filtering.items.map(category => {
                                 const isEnabled = config.url_filtering.enabled_categories.includes(category.id);
                                 const isTesting = testing[`url-${category.id}`];
                                 const lastResult = testResults.find(r =>
@@ -1343,7 +1372,7 @@ export default function Security({ token }: SecurityProps) {
                         <div>
                             <h3 className="text-sm font-black text-text-primary tracking-tight">DNS Security Tests</h3>
                             <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest opacity-70">
-                                {config.dns_security.enabled_tests.length} / {DNS_TEST_DOMAINS.length} Domains Active
+                                {config.dns_security.enabled_tests.length} / {securityProfile.dns_security.items.length} Domains Active
                             </p>
                         </div>
                     </div>
@@ -1358,7 +1387,7 @@ export default function Security({ token }: SecurityProps) {
                                     <div className="relative flex items-center">
                                         <input
                                             type="checkbox"
-                                            checked={config.dns_security.enabled_tests.length === DNS_TEST_DOMAINS.length}
+                                            checked={config.dns_security.enabled_tests.length === securityProfile.dns_security.items.length}
                                             onChange={toggleAllDNSTests}
                                             className="w-4 h-4 rounded border-border bg-card-secondary text-blue-600 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
                                         />
@@ -1701,7 +1730,7 @@ export default function Security({ token }: SecurityProps) {
                                 <span className="px-1.5 py-0.5 text-[8px] font-black tracking-widest uppercase bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-500/20 rounded-md">Beta</span>
                             </div>
                             <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest opacity-70">
-                                {c2SelectedScenarios.length} / {C2_SCENARIOS.length} Scenarios Active
+                                {c2SelectedScenarios.length} / {securityProfile.c2_scenarios.length} Scenarios Active
                             </p>
                         </div>
                     </div>
@@ -1717,7 +1746,7 @@ export default function Security({ token }: SecurityProps) {
                                     <div className="relative flex items-center">
                                         <input
                                             type="checkbox"
-                                            checked={c2SelectedScenarios.length === C2_SCENARIOS.length}
+                                            checked={c2SelectedScenarios.length === securityProfile.c2_scenarios.length}
                                             onChange={toggleAllC2Scenarios}
                                             className="w-4 h-4 rounded border-border bg-card-secondary text-purple-600 focus:ring-1 focus:ring-purple-500 outline-none transition-all"
                                         />
@@ -1750,7 +1779,7 @@ export default function Security({ token }: SecurityProps) {
                         <div>
                             <h4 className="text-[10px] font-black text-text-muted tracking-[0.2em] mb-4 border-l-2 border-purple-600 dark:border-purple-400 pl-2">Attack Simulation Scenarios</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {C2_SCENARIOS.map(scenario => {
+                                {securityProfile.c2_scenarios.map(scenario => {
                                     const isEnabled = c2SelectedScenarios.includes(scenario.id);
                                     const isTesting = testing[`c2-${scenario.id}`];
                                     const lastResult = testResults.find(r =>
@@ -1829,7 +1858,7 @@ export default function Security({ token }: SecurityProps) {
                                 <span className="px-1.5 py-0.5 text-[8px] font-black tracking-widest uppercase bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-500/20 rounded-md">Beta</span>
                             </div>
                             <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest opacity-70">
-                                {aiSelectedScenarios.length} / {AI_SECURITY_SCENARIOS.length} Scenarios Active · Palo Alto AI Security (AISA)
+                                {aiSelectedScenarios.length} / {securityProfile.ai_security_scenarios.length} Scenarios Active · Palo Alto AI Security (AISA)
                             </p>
                         </div>
                     </div>
@@ -1844,7 +1873,7 @@ export default function Security({ token }: SecurityProps) {
                                 <label className="flex items-center gap-2 cursor-pointer group">
                                     <input
                                         type="checkbox"
-                                        checked={aiSelectedScenarios.length === AI_SECURITY_SCENARIOS.length}
+                                        checked={aiSelectedScenarios.length === securityProfile.ai_security_scenarios.length}
                                         onChange={toggleAllAIScenarios}
                                         className="w-4 h-4 rounded border-border bg-card-secondary text-cyan-600 focus:ring-1 focus:ring-cyan-500 outline-none transition-all"
                                     />
@@ -1875,7 +1904,7 @@ export default function Security({ token }: SecurityProps) {
                         <div>
                             <h4 className="text-[10px] font-black text-text-muted tracking-[0.2em] mb-4 border-l-2 border-cyan-600 dark:border-cyan-400 pl-2">AI Security Attack Scenarios</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {AI_SECURITY_SCENARIOS.map(scenario => {
+                                {securityProfile.ai_security_scenarios.map(scenario => {
                                     const isEnabled = aiSelectedScenarios.includes(scenario.id);
                                     const isTesting = testing[`ai-${scenario.id}`];
                                     const lastResult = testResults.find(r =>

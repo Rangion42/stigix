@@ -6161,6 +6161,40 @@ setTimeout(() => {
 }, 5000);
 
 
+// API: Get Security Profile (catalogue: URL categories, DNS domains, EICAR defaults, C2 + AI scenarios)
+// Reads config/security-profile.json — committed to the repo with Palo Alto defaults.
+// Falls back to an empty-but-valid structure if the file is missing or malformed.
+const SECURITY_PROFILE_FILE = path.join(APP_CONFIG.configDir, 'security-profile.json');
+
+const getSecurityProfile = () => {
+    try {
+        if (fs.existsSync(SECURITY_PROFILE_FILE)) {
+            const raw = fs.readFileSync(SECURITY_PROFILE_FILE, 'utf8');
+            const profile = JSON.parse(raw);
+            // Basic sanity: ensure top-level keys exist
+            if (profile && profile.url_filtering && profile.dns_security) {
+                return profile;
+            }
+        }
+    } catch (e) {
+        console.error('[security-profile] Failed to read security-profile.json:', e);
+    }
+    // Fallback: empty-but-valid structure (should never happen if the file is committed)
+    return {
+        version: '1.0',
+        vendor: 'paloalto',
+        url_filtering: { items: [] },
+        dns_security: { items: [] },
+        threat_prevention: { default_eicar_endpoints: [] },
+        c2_scenarios: [],
+        ai_security_scenarios: []
+    };
+};
+
+app.get('/api/security/profile', authenticateToken, (req, res) => {
+    res.json(getSecurityProfile());
+});
+
 // API: Get Security Configuration
 app.get('/api/security/config', authenticateToken, (req, res) => {
     const config = getSecurityUIConfig();
