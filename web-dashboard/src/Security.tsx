@@ -2745,15 +2745,6 @@ export default function Security({ token }: SecurityProps) {
                                             </div>
                                         )}
 
-                                        {selectedTest.details.reason && (
-                                            <div className="mt-8 p-6 bg-blue-600/5 border border-blue-500/20 rounded-2xl relative overflow-hidden group">
-                                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
-                                                    <Info size={40} className="text-blue-600" />
-                                                </div>
-                                                <span className="text-blue-600 dark:text-blue-400 font-black uppercase text-[10px] tracking-widest block mb-2">Disposition Reasoning</span>
-                                                <p className="text-sm text-text-primary font-medium leading-relaxed">{selectedTest.details.reason}</p>
-                                            </div>
-                                        )}
 
                                         {selectedTest.details.isBatch && selectedTest.details.results && (
                                             <div className="space-y-4 pt-4">
@@ -2813,7 +2804,7 @@ export default function Security({ token }: SecurityProps) {
                                             </div>
                                         )}
 
-                                        {selectedTest.details.reason && (
+                                        {selectedTest.details.reason && !selectedTest.details.errorType && (
                                             <div className="mt-8 p-6 bg-blue-600/5 border border-blue-500/20 rounded-2xl relative overflow-hidden group">
                                                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
                                                     <Info size={40} className="text-blue-600" />
