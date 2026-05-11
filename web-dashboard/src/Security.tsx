@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Play, AlertTriangle, CheckCircle, XCircle, Clock, Download, Trash2, ChevronDown, ChevronUp, Copy, Filter, Link, Upload, RefreshCcw, ShieldAlert, Globe, ListTree, RefreshCw, MoreVertical, Settings, Database, Server, Info, Search, History as HistoryIcon, Zap, ChevronRight, Activity } from 'lucide-react';
+import { Shield, Play, AlertTriangle, CheckCircle, XCircle, Clock, Download, Trash2, ChevronDown, ChevronUp, Copy, Filter, Link, Upload, RefreshCcw, ShieldAlert, Globe, ListTree, RefreshCw, MoreVertical, Settings, Database, Server, Info, Search, History as HistoryIcon, Zap, ChevronRight, Activity, FileJson } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 import { clsx, type ClassValue } from 'clsx';
 // Types only — runtime data is loaded from /api/security/profile (config/security-profile.json)
@@ -1045,6 +1045,53 @@ export default function Security({ token }: SecurityProps) {
         }
     };
 
+    // ── Import / Export Security Profile ──────────────────────────────────
+    const [importingProfile, setImportingProfile] = useState(false);
+
+    const exportProfile = async () => {
+        try {
+            const res = await fetch('/api/security/profile', { headers: authHeaders() });
+            const profile = await res.json();
+            const blob = new Blob([JSON.stringify(profile, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `security-profile-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Security profile exported successfully', 'success');
+        } catch (e) {
+            showToast('Failed to export security profile', 'error');
+        }
+    };
+
+    const importProfile = async (file: File) => {
+        setImportingProfile(true);
+        try {
+            const text = await file.text();
+            const profile = JSON.parse(text);
+            const res = await fetch('/api/security/profile', {
+                method: 'POST',
+                headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify(profile)
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Import failed');
+            }
+            const { profile: saved } = await res.json();
+            setSecurityProfile(saved);
+            // Re-sync selection state
+            setC2SelectedScenarios((saved.c2_scenarios || []).map((s: C2Scenario) => s.id));
+            setAISelectedScenarios((saved.ai_security_scenarios || []).map((s: AISecurityScenario) => s.id));
+            showToast(`Profile imported: ${saved.url_filtering.items.length} URL categories, ${saved.dns_security.items.length} DNS domains`, 'success');
+        } catch (e: any) {
+            showToast(`Import failed: ${e.message}`, 'error');
+        } finally {
+            setImportingProfile(false);
+        }
+    };
+
     if (!config) {
         return <div className="p-8 text-center text-text-muted animate-pulse font-black tracking-widest text-xs">Loading security configuration...</div>;
     }
@@ -1118,6 +1165,53 @@ export default function Security({ token }: SecurityProps) {
                             )}
                         </div>
                     )}
+                </div>
+            </div>
+
+            {/* Import / Export Security Profile */}
+            <div className="flex items-center justify-between bg-card-secondary border border-border rounded-xl px-4 py-3">
+                <div className="flex items-center gap-2">
+                    <FileJson size={15} className="text-text-muted" />
+                    <div>
+                        <span className="text-[11px] font-black text-text-primary tracking-tight">Security Profile</span>
+                        <span className="text-[10px] text-text-muted ml-2 font-medium">
+                            {securityProfile.url_filtering.items.length} URL · {securityProfile.dns_security.items.length} DNS · {securityProfile.c2_scenarios.length} C2 · {securityProfile.ai_security_scenarios.length} AI
+                        </span>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    {/* Import */}
+                    <label
+                        htmlFor="security-profile-import"
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black tracking-wide border cursor-pointer transition-all select-none
+                            ${ importingProfile
+                                ? 'opacity-50 cursor-not-allowed bg-card-secondary border-border text-text-muted'
+                                : 'bg-blue-600/10 border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-600/20 hover:border-blue-500/50'
+                            }`}
+                    >
+                        <Upload size={12} />
+                        {importingProfile ? 'Importing…' : 'Import'}
+                    </label>
+                    <input
+                        id="security-profile-import"
+                        type="file"
+                        accept=".json,application/json"
+                        className="hidden"
+                        disabled={importingProfile}
+                        onChange={e => {
+                            const file = e.target.files?.[0];
+                            if (file) importProfile(file);
+                            e.target.value = '';
+                        }}
+                    />
+                    {/* Export */}
+                    <button
+                        onClick={exportProfile}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black tracking-wide border bg-green-600/10 border-green-500/30 text-green-600 dark:text-green-400 hover:bg-green-600/20 hover:border-green-500/50 transition-all"
+                    >
+                        <Download size={12} />
+                        Export
+                    </button>
                 </div>
             </div>
 

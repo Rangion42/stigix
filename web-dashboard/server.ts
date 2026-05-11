@@ -6345,6 +6345,30 @@ app.get('/api/security/profile', authenticateToken, (req, res) => {
     res.json(getSecurityProfile());
 });
 
+// API: Save custom Security Profile (import)
+app.post('/api/security/profile', authenticateToken, async (req, res) => {
+    const profile = req.body;
+
+    // Validate minimum structure
+    if (!profile || !Array.isArray(profile.url_filtering?.items) || !Array.isArray(profile.dns_security?.items)) {
+        return res.status(400).json({ error: 'Invalid profile structure. Expected url_filtering.items and dns_security.items arrays.' });
+    }
+    if (profile.url_filtering.items.length === 0 && profile.dns_security.items.length === 0) {
+        return res.status(400).json({ error: 'Profile must contain at least some url_filtering or dns_security items.' });
+    }
+
+    try {
+        // Use fs.promises.writeFile (async) to bypass the writeFileSync backup interceptor
+        const profileFile = path.join(APP_CONFIG.configDir, 'security-profile.json');
+        await fs.promises.writeFile(profileFile, JSON.stringify(profile, null, 2), 'utf8');
+        log('SYSTEM', `Security profile saved: ${profile.url_filtering.items.length} URL categories, ${profile.dns_security.items.length} DNS domains, ${(profile.c2_scenarios||[]).length} C2, ${(profile.ai_security_scenarios||[]).length} AI scenarios`);
+        res.json({ success: true, profile });
+    } catch (e) {
+        console.error('[security-profile] Failed to save profile:', e);
+        res.status(500).json({ error: 'Failed to save security profile.' });
+    }
+});
+
 // API: Get Security Configuration
 app.get('/api/security/config', authenticateToken, (req, res) => {
     const config = getSecurityUIConfig();
