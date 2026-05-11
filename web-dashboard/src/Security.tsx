@@ -2650,7 +2650,108 @@ export default function Security({ token }: SecurityProps) {
                                         {selectedTest.details.error && (
                                             <div className="bg-red-500/5 rounded-xl p-4 border border-red-500/20">
                                                 <span className="text-[9px] font-black text-red-500 uppercase tracking-widest block mb-2">Test Error Signature</span>
-                                                <pre className="text-[10px] font-mono text-red-400 bg-black/20 p-3 rounded-lg overflow-x-auto border border-red-500/10 uppercase tracking-tighter">{selectedTest.details.error}</pre>
+                                                <pre className="text-[10px] font-mono text-red-400 bg-black/20 p-3 rounded-lg overflow-x-auto border border-red-500/10 uppercase tracking-tighter whitespace-pre-wrap">{selectedTest.details.error}</pre>
+                                            </div>
+                                        )}
+
+                                        {/* Network Diagnostic Block — shown when we have curl error info */}
+                                        {selectedTest.details.errorType && (
+                                            <div className="rounded-2xl border overflow-hidden shadow-sm">
+                                                {/* Header */}
+                                                <div className={`px-4 py-3 flex items-center justify-between ${
+                                                    selectedTest.details.errorType === 'DNS_RESOLUTION_FAILURE' ? 'bg-orange-500/10 border-b border-orange-500/20' :
+                                                    selectedTest.details.errorType === 'CONNECTION_TIMEOUT'     ? 'bg-amber-500/10 border-b border-amber-500/20' :
+                                                    selectedTest.details.errorType.includes('SSL')              ? 'bg-yellow-500/10 border-b border-yellow-500/20' :
+                                                    selectedTest.details.likelyFirewallBlock                    ? 'bg-red-500/10 border-b border-red-500/20' :
+                                                    'bg-slate-500/10 border-b border-slate-500/20'
+                                                }`}>
+                                                    <div className="flex items-center gap-2">
+                                                        <Activity size={14} className={
+                                                            selectedTest.details.errorType === 'DNS_RESOLUTION_FAILURE' ? 'text-orange-500' :
+                                                            selectedTest.details.errorType === 'CONNECTION_TIMEOUT'     ? 'text-amber-500' :
+                                                            selectedTest.details.errorType.includes('SSL')              ? 'text-yellow-500' :
+                                                            selectedTest.details.likelyFirewallBlock                    ? 'text-red-500' :
+                                                            'text-slate-400'
+                                                        } />
+                                                        <span className="text-[10px] font-black tracking-widest uppercase text-text-primary">Network Diagnostic</span>
+                                                    </div>
+                                                    <span className={`px-2 py-0.5 rounded-md text-[9px] font-black tracking-widest border ${
+                                                        selectedTest.details.likelyFirewallBlock
+                                                            ? 'bg-red-500/10 border-red-500/30 text-red-500'
+                                                            : 'bg-slate-500/10 border-slate-500/30 text-slate-400'
+                                                    }`}>
+                                                        {selectedTest.details.likelyFirewallBlock ? '🔥 Likely Firewall' : '⚠️ Not a Firewall Block'}
+                                                    </span>
+                                                </div>
+                                                {/* Body */}
+                                                <div className="bg-card-secondary/30 border border-border/50 divide-y divide-border/30">
+                                                    {/* Error type row */}
+                                                    <div className="px-4 py-3 grid grid-cols-[140px_1fr] gap-3 items-start">
+                                                        <span className="text-[9px] font-black text-text-muted uppercase tracking-widest pt-0.5">Error Type</span>
+                                                        <span className={`text-[11px] font-black font-mono tracking-wide ${
+                                                            selectedTest.details.errorType === 'DNS_RESOLUTION_FAILURE' ? 'text-orange-500' :
+                                                            selectedTest.details.errorType === 'CONNECTION_TIMEOUT'     ? 'text-amber-500' :
+                                                            selectedTest.details.errorType.includes('SSL')              ? 'text-yellow-500' :
+                                                            'text-red-400'
+                                                        }`}>{selectedTest.details.errorType}</span>
+                                                    </div>
+                                                    {/* Curl exit code */}
+                                                    {selectedTest.details.curlExitCode !== undefined && (
+                                                        <div className="px-4 py-3 grid grid-cols-[140px_1fr] gap-3 items-start">
+                                                            <span className="text-[9px] font-black text-text-muted uppercase tracking-widest pt-0.5">Curl Exit Code</span>
+                                                            <span className="text-[11px] font-mono text-text-primary">
+                                                                <span className="text-red-400 font-black">{selectedTest.details.curlExitCode}</span>
+                                                                <span className="text-text-muted ml-2 text-[10px]">
+                                                                    {selectedTest.details.curlExitCode === 6  ? '(CURLE_COULDNT_RESOLVE_HOST)' :
+                                                                     selectedTest.details.curlExitCode === 7  ? '(CURLE_COULDNT_CONNECT)' :
+                                                                     selectedTest.details.curlExitCode === 28 ? '(CURLE_OPERATION_TIMEDOUT)' :
+                                                                     selectedTest.details.curlExitCode === 35 ? '(CURLE_SSL_CONNECT_ERROR)' :
+                                                                     selectedTest.details.curlExitCode === 51 ? '(CURLE_PEER_FAILED_VERIFICATION)' :
+                                                                     selectedTest.details.curlExitCode === 52 ? '(CURLE_GOT_NOTHING)' :
+                                                                     selectedTest.details.curlExitCode === 56 ? '(CURLE_RECV_ERROR)' :
+                                                                     '(CURLE_UNKNOWN)'}
+                                                                </span>
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {/* HTTP Code */}
+                                                    <div className="px-4 py-3 grid grid-cols-[140px_1fr] gap-3 items-start">
+                                                        <span className="text-[9px] font-black text-text-muted uppercase tracking-widest pt-0.5">HTTP Response</span>
+                                                        <span className="text-[11px] font-mono text-text-muted">000 (no response — connection failed before HTTP)</span>
+                                                    </div>
+                                                    {/* Human-readable explanation */}
+                                                    {selectedTest.details.errorDescription && (
+                                                        <div className="px-4 py-3 grid grid-cols-[140px_1fr] gap-3 items-start">
+                                                            <span className="text-[9px] font-black text-text-muted uppercase tracking-widest pt-0.5">What Happened</span>
+                                                            <span className="text-[11px] text-text-primary leading-relaxed">{selectedTest.details.errorDescription}</span>
+                                                        </div>
+                                                    )}
+                                                    {/* Recommendation */}
+                                                    <div className="px-4 py-3 grid grid-cols-[140px_1fr] gap-3 items-start bg-card/50">
+                                                        <span className="text-[9px] font-black text-text-muted uppercase tracking-widest pt-0.5">Next Step</span>
+                                                        <span className="text-[10px] text-text-muted leading-relaxed italic">
+                                                            {selectedTest.details.errorType === 'DNS_RESOLUTION_FAILURE'
+                                                                ? 'Verify the URL in your security profile is correct. Run: nslookup <hostname> to confirm DNS resolution.'
+                                                            : selectedTest.details.errorType === 'CONNECTION_TIMEOUT'
+                                                                ? 'This pattern is consistent with a firewall silent-drop rule. Check your NGFW URL filtering policy logs.'
+                                                            : selectedTest.details.errorType === 'CONNECTION_REFUSED'
+                                                                ? 'The firewall sent a TCP RST. Check if a "block-and-reset" action is configured in the URL filtering policy.'
+                                                            : selectedTest.details.errorType.includes('SSL')
+                                                                ? 'Check SSL Inspection settings. If SSL decryption is enabled, ensure the CA certificate is trusted on this node.'
+                                                            : 'Check NGFW security logs for the source IP of this node around the test timestamp.'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {selectedTest.details.reason && (
+                                            <div className="mt-8 p-6 bg-blue-600/5 border border-blue-500/20 rounded-2xl relative overflow-hidden group">
+                                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                                                    <Info size={40} className="text-blue-600" />
+                                                </div>
+                                                <span className="text-blue-600 dark:text-blue-400 font-black uppercase text-[10px] tracking-widest block mb-2">Disposition Reasoning</span>
+                                                <p className="text-sm text-text-primary font-bold leading-relaxed uppercase tracking-tight">{selectedTest.details.reason}</p>
                                             </div>
                                         )}
 

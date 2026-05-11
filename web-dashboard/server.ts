@@ -6501,6 +6501,44 @@ app.delete('/api/security/results', authenticateToken, async (req, res) => {
 });
 
 // API: URL Filtering Test
+// ── Curl error parser helpers ──────────────────────────────────────────────
+const parseCurlExitCode = (errMsg: string): number => {
+    const match = errMsg.match(/curl: \((\d+)\)/);
+    return match ? parseInt(match[1]) : -1;
+};
+
+const getCurlErrorInfo = (exitCode: number, errMsg: string): {
+    status: string; errorType: string; errorDescription: string;
+    technicalDetail: string; likelyFirewallBlock: boolean;
+} => {
+    switch (exitCode) {
+        case 6:  return { status: 'dns_error',           errorType: 'DNS_RESOLUTION_FAILURE',  likelyFirewallBlock: false,
+            errorDescription: 'The hostname could not be resolved. The domain does not exist, is misspelled, or DNS is unavailable from this node.',
+            technicalDetail: `curl exit 6 (CURLE_COULDNT_RESOLVE_HOST) — DNS query returned NXDOMAIN or timed out. Raw: ${errMsg.split('\n').slice(-2).join(' ')}` };
+        case 7:  return { status: 'connection_refused',  errorType: 'CONNECTION_REFUSED',       likelyFirewallBlock: true,
+            errorDescription: 'TCP connection was actively refused (RST). The firewall may be sending a reject instead of a silent drop.',
+            technicalDetail: `curl exit 7 (CURLE_COULDNT_CONNECT) — TCP RST received, port closed or firewall reject rule.` };
+        case 28: return { status: 'timeout',             errorType: 'CONNECTION_TIMEOUT',       likelyFirewallBlock: true,
+            errorDescription: 'Connection timed out after 10s. The firewall is likely silently dropping packets (no RST — typical block-and-drop policy).',
+            technicalDetail: `curl exit 28 (CURLE_OPERATION_TIMEDOUT) — exceeded 10s max-time, no response received.` };
+        case 35: return { status: 'ssl_error',           errorType: 'SSL_HANDSHAKE_FAILED',     likelyFirewallBlock: false,
+            errorDescription: 'SSL/TLS handshake failed. The server certificate may be invalid, or the firewall is intercepting HTTPS without proper inspection.',
+            technicalDetail: `curl exit 35 (CURLE_SSL_CONNECT_ERROR) — TLS ClientHello rejected or no server response.` };
+        case 51: return { status: 'ssl_error',           errorType: 'SSL_CERT_INVALID',         likelyFirewallBlock: false,
+            errorDescription: 'SSL certificate verification failed. The server returned an untrusted or self-signed certificate.',
+            technicalDetail: `curl exit 51 (CURLE_PEER_FAILED_VERIFICATION) — certificate chain validation error.` };
+        case 52: return { status: 'blocked',             errorType: 'EMPTY_RESPONSE',           likelyFirewallBlock: true,
+            errorDescription: 'TCP connection succeeded but the server sent nothing. The firewall likely reset the connection after the HTTP request (inline blocking).',
+            technicalDetail: `curl exit 52 (CURLE_GOT_NOTHING) — zero bytes received after TCP handshake completed.` };
+        case 56: return { status: 'blocked',             errorType: 'CONNECTION_RESET',         likelyFirewallBlock: true,
+            errorDescription: 'Connection was reset mid-transfer. The firewall injected a TCP RST to terminate the flow — typical of IPS or URL filtering enforcement.',
+            technicalDetail: `curl exit 56 (CURLE_RECV_ERROR) — TCP RST received during HTTP data transfer.` };
+        default: return { status: exitCode === -1 ? 'error' : 'blocked', errorType: 'CURL_ERROR', likelyFirewallBlock: false,
+            errorDescription: exitCode === -1 ? 'Unexpected error during test execution.' : `Unknown curl failure (exit code ${exitCode}).`,
+            technicalDetail: `curl exit ${exitCode}: ${errMsg.split('\n').filter((l: string) => l.trim()).join(' | ')}` };
+    }
+};
+
 app.post('/api/security/url-test', authenticateToken, async (req, res) => {
     const { url, category } = req.body;
 
@@ -6565,17 +6603,27 @@ app.post('/api/security/url-test', authenticateToken, async (req, res) => {
             const { previousStatus } = await addTestResult('url_filtering', category || url, result, testId);
             res.json({ ...result, previousStatus });
         } catch (curlError: any) {
-            // Curl error usually means blocked or network error
+            // Parse curl exit code for precise error classification
+            const exitCode = parseCurlExitCode(curlError.message);
+            const errInfo = getCurlErrorInfo(exitCode, curlError.message);
+            const curlCmd = `curl -sSL --max-time 10 -w '%{http_code}' '${url}'`;
+
             const result = {
                 success: false,
                 httpCode: 0,
-                status: 'blocked',
+                status: errInfo.status,
                 category,
-                error: curlError.message,
-                reason: `CURL Error: ${curlError.message.includes('timeout') ? 'Connection Timeout (Blocked by firewall drop?)' : curlError.message}`
+                url,
+                curlExitCode: exitCode,
+                errorType: errInfo.errorType,
+                errorDescription: errInfo.errorDescription,
+                error: errInfo.technicalDetail,
+                likelyFirewallBlock: errInfo.likelyFirewallBlock,
+                reason: `${errInfo.errorType}: ${errInfo.errorDescription}`,
+                command: curlCmd
             };
 
-            logTest(`[URL-TEST-${testId}] Final status: blocked (curl error: ${curlError.message})`);
+            logTest(`[URL-TEST-${testId}] Final status: ${errInfo.status} (curl exit ${exitCode} — ${errInfo.errorType})`);
             const { previousStatus } = await addTestResult('url_filtering', category || url, result, testId);
             res.json({ ...result, previousStatus });
         }
@@ -6662,22 +6710,34 @@ app.post('/api/security/url-test-batch', authenticateToken, async (req, res) => 
                     testPageDetected: isTestPage
                 }, runId);
             } catch (curlError: any) {
-                logTest(`[URL-TEST-${testId}] Final status: blocked (curl error: ${curlError.message})`);
+                const exitCode = parseCurlExitCode(curlError.message);
+                const errInfo = getCurlErrorInfo(exitCode, curlError.message);
+                const curlCmd = `curl -sSL --max-time 10 -w '%{http_code}' '${test.url}'`;
+
+                logTest(`[URL-TEST-${testId}] Final status: ${errInfo.status} (curl exit ${exitCode} — ${errInfo.errorType})`);
 
                 const result = {
                     success: false,
                     httpCode: 0,
-                    status: 'blocked',
+                    status: errInfo.status,
                     url: test.url,
-                    error: curlError.message,
-                    reason: `CURL Error: ${curlError.message.includes('timeout') ? 'Connection Timeout (Blocked by firewall drop?)' : curlError.message}`
+                    curlExitCode: exitCode,
+                    errorType: errInfo.errorType,
+                    errorDescription: errInfo.errorDescription,
+                    error: errInfo.technicalDetail,
+                    likelyFirewallBlock: errInfo.likelyFirewallBlock,
+                    command: curlCmd,
+                    reason: `${errInfo.errorType}: ${errInfo.errorDescription}`
                 };
 
                 results.push(result);
                 await addTestResult('url_filtering', test.category, result, testId, {
                     url: test.url,
-                    error: curlError.message,
-                    command: curlCommand
+                    error: errInfo.technicalDetail,
+                    errorType: errInfo.errorType,
+                    curlExitCode: exitCode,
+                    likelyFirewallBlock: errInfo.likelyFirewallBlock,
+                    command: curlCmd
                 }, runId);
             }
         } catch (e: any) {
