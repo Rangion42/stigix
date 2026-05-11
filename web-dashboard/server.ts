@@ -8042,7 +8042,15 @@ app.post('/api/security/edl-test', authenticateToken, async (req, res) => {
 // API: Get Cloud EICAR Signed URL
 app.get('/api/security/cloud-eicar-url', authenticateToken, (req, res) => {
     const { url } = targetManager.getEffectiveUrl('advanced-custom#{"mode":"eicar"}');
-    res.json({ url });
+    let hasKey = false;
+    try {
+        const cloudCfgRaw = fs.existsSync(CLOUD_CONFIG_FILE) ? fs.readFileSync(CLOUD_CONFIG_FILE, 'utf-8') : '{}';
+        const cloudCfg = JSON.parse(cloudCfgRaw);
+        hasKey = !!(cloudCfg.masterKey || process.env.STIGIX_TARGET_MASTER_KEY);
+    } catch (_) {
+        hasKey = !!process.env.STIGIX_TARGET_MASTER_KEY;
+    }
+    res.json({ url, hasKey });
 });
 
 // API: Threat Prevention Test (EICAR)

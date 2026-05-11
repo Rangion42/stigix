@@ -205,6 +205,7 @@ export default function Security({ token }: SecurityProps) {
 
     // EICAR targets selection
     const [cloudEicarUrl, setCloudEicarUrl] = useState('');
+    const [cloudHasKey, setCloudHasKey] = useState(true);
     const [customEicarUrl, setCustomEicarUrl] = useState('');
     const [selectedEicarTargets, setSelectedEicarTargets] = useState<string[]>([]);
     const [securityTargets, setSecurityTargets] = useState<any[]>([]);
@@ -287,7 +288,11 @@ export default function Security({ token }: SecurityProps) {
             .then(data => {
                 if (data.url) {
                     setCloudEicarUrl(data.url);
-                    setSelectedEicarTargets(prev => prev.includes(data.url) ? prev : [...prev, data.url]); // Auto-select cloud by default
+                    setCloudHasKey(data.hasKey !== false);
+                    // Only auto-select if the key is configured
+                    if (data.hasKey !== false) {
+                        setSelectedEicarTargets(prev => prev.includes(data.url) ? prev : [...prev, data.url]);
+                    }
                 }
             })
             .catch(() => {});
@@ -1694,23 +1699,43 @@ export default function Security({ token }: SecurityProps) {
                                             let host = '';
                                             try { host = new URL(cloudEicarUrl).hostname; } catch {}
                                             const status = targetReachability[host];
-                                            
+                                            const disabled = !cloudHasKey;
+
                                             return (
                                                 <div
                                                     onClick={() => {
+                                                        if (disabled) return;
                                                         setSelectedEicarTargets(prev => isSelected ? prev.filter(u => u !== cloudEicarUrl) : [...prev, cloudEicarUrl]);
                                                     }}
-                                                    className={`bg-card border px-4 py-3 rounded-xl group cursor-pointer transition-all flex items-center gap-3 shadow-sm hover:shadow-md ${isSelected ? 'border-red-500 bg-red-600/5 shadow-red-500/10' : 'border-border'}`}
+                                                    className={`bg-card border px-4 py-3 rounded-xl group transition-all flex items-center gap-3 shadow-sm ${
+                                                        disabled
+                                                            ? 'opacity-50 cursor-not-allowed border-amber-500/30 bg-amber-500/5'
+                                                            : `cursor-pointer hover:shadow-md ${isSelected ? 'border-red-500 bg-red-600/5 shadow-red-500/10' : 'border-border'}`
+                                                    }`}
                                                 >
-                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all shrink-0 ${isSelected ? 'bg-red-600 border-red-500' : 'bg-card-secondary border-border'}`}>
-                                                        {isSelected && <CheckCircle size={10} className="text-white" fill="currentColor" />}
+                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all shrink-0 ${isSelected && !disabled ? 'bg-red-600 border-red-500' : 'bg-card-secondary border-border'}`}>
+                                                        {isSelected && !disabled && <CheckCircle size={10} className="text-white" fill="currentColor" />}
                                                     </div>
                                                     <div className="flex flex-col min-w-0 flex-1">
-                                                        <h4 className={`text-xs font-bold transition-colors tracking-tight truncate ${isSelected ? 'text-red-500' : 'text-text-primary'}`}>Stigix Cloud (Public Worker)</h4>
+                                                        <div className="flex items-center gap-2">
+                                                            <h4 className={`text-xs font-bold transition-colors tracking-tight truncate ${isSelected && !disabled ? 'text-red-500' : 'text-text-primary'}`}>Stigix Cloud (Public Worker)</h4>
+                                                            {disabled && (
+                                                                <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 tracking-wide whitespace-nowrap shrink-0">
+                                                                    ⚠ Requires STIGIX_TARGET_MASTER_KEY
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <p className="text-[9px] text-text-muted font-mono mt-0.5 truncate">{cloudEicarUrl}</p>
+                                                        {disabled && (
+                                                            <p className="text-[8px] text-amber-600 dark:text-amber-500 mt-1">
+                                                                Configure your key in Settings → Cloud Target to enable this endpoint.
+                                                            </p>
+                                                        )}
                                                     </div>
                                                     <div className="flex items-center gap-1.5 ml-2 border-l border-border/50 pl-3">
-                                                        {status === 'loading' || status === undefined ? (
+                                                        {disabled ? (
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Key not configured" />
+                                                        ) : status === 'loading' || status === undefined ? (
                                                             <div className="w-1.5 h-1.5 rounded-full bg-border animate-pulse shrink-0" title="Checking reachability..." />
                                                         ) : status ? (
                                                             <div className="relative flex h-2 w-2 items-center justify-center shrink-0" title="Reachable">
