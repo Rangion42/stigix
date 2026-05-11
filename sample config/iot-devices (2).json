@@ -1,0 +1,4050 @@
+{
+  "devices": [
+    {
+      "id": "vmwarein_virtual_mach_001",
+      "name": "VMware, Inc. VMware",
+      "vendor": "VMware, Inc.",
+      "type": "Virtual Machine",
+      "mac": "00:50:56:9d:9e:49",
+      "ip_start": "192.168.207.50",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http"
+      ],
+      "enabled": true,
+      "traffic_interval": 86,
+      "description": "VMware — Traditional IT — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Prod-SharePoint-AF7",
+          "vendor_class_id": "VMware Virtual Platform",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            15,
+            28,
+            51,
+            58,
+            59
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": false,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      },
+      "running": true,
+      "status": {
+        "running": true,
+        "stats": {
+          "packets_sent": 394,
+          "bytes_sent": 23849,
+          "current_ip": "192.168.219.164",
+          "uptime_seconds": 587,
+          "protocols": {
+            "arp": 0,
+            "dhcp": 0,
+            "dns": 0,
+            "http": 7,
+            "bad_beacon": 124,
+            "bad_dns": 263
+          },
+          "bad_behavior_active": true
+        },
+        "logs": [
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:18.374386",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:19.515207",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:30.281673",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:31.586570",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: cryptominer.evil"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:31.677370",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:32.361070",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: phishing-site.bad → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:33.255469",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: admin.suspicious-iot.ru → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:33.886108",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: c2.malware-test.org → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:34.540359",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: gitlab.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:35.628135",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: c2.malware-test.org → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:36.183957",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:36.741296",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: admin.suspicious-iot.ru → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:37.303781",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: bitcoin-pool.mining.cc → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:37.905895",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:38.476953",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: phishing-site.bad → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:41.673717",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "⚠️ No gateway, skipping beacon HTTP"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:41.735994",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:42.844865",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:52.820740",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: torrent-tracker.net"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:52.918973",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:54.080762",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:54.185078",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: admin.suspicious-iot.ru → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:55.545735",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: docker.io → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:56.245504",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:56.974053",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: vpn.corporate.example → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:57.884216",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: torrent-tracker.net → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:58.456728",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: torrent-tracker.net → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:59.127219",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:59.946167",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: api.github.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:02.441386",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: gitlab.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:03.209911",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: admin.suspicious-iot.ru → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:04.076694",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [random] Beacon: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:04.270940",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:05.326079",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:15.146861",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [random] Beacon: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:15.522856",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:16.717035",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:18.816818",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:19.599163",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:20.942167",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:21.885841",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [random] Beacon: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:21.935924",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: malware-download.xyz → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:22.606724",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: phishing-site.bad → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:23.818989",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: gitlab.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:24.765359",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: gitlab.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:25.661184",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:26.361711",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:26.768947",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:26.954007",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: torrent-tracker.net → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:27.949395",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "⚠️ No gateway, skipping beacon HTTP"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:28.101061",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:36.288587",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "debug",
+            "message": "📤 HTTP SYN sent to None:80"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:37.105223",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: update.windows.com"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:38.366879",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:39.418249",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:42.632621",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: vpn.corporate.example → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:43.356726",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: c2.malware-test.org → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:44.274141",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: admin.suspicious-iot.ru → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:45.067536",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:46.024549",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:46.123630",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "⚠️ No gateway, skipping beacon HTTP"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:46.935892",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: gitlab.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:47.667824",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: docker.io → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:48.521181",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: docker.io → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:49.064828",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:49.678156",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:49.811141",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: malware-download.xyz → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:51.020826",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:58.216889",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [random] Beacon: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:01.694084",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:03.824315",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:05.527515",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:06.216894",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: bitcoin-pool.mining.cc → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:07.055805",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: c2.malware-test.org → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:07.626490",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:08.291967",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: gitlab.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:08.965384",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:09.883119",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: phishing-site.bad → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:10.578172",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:11.240791",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: malware-download.xyz → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:12.025204",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:13.330208",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: vpn.corporate.example"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:14.045616",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:15.223541",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:21.331884",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "⚠️ No gateway, skipping beacon HTTP"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:25.327357",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:26.439304",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:27.632901",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: docker.io → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:28.630257",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:29.959951",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: gitlab.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:30.637198",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: phishing-site.bad → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:32.407935",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: bitcoin-pool.mining.cc → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:33.331040",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: docker.io → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:33.414375",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "⚠️ No gateway, skipping beacon HTTP"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:34.759216",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:35.746014",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: docker.io → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:36.825494",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:37.133162",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:37.818169",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: docker.io → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:38.172501",
+            "device_id": "vmwarein_virtual_mach_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          }
+        ]
+      }
+    },
+    {
+      "id": "appleinc_smartphone_o_001",
+      "name": "Apple Inc. iPad",
+      "vendor": "Apple Inc.",
+      "type": "Smartphone or Tablet",
+      "mac": "00:e0:4c:68:07:15",
+      "ip_start": "192.168.207.51",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "ntp"
+      ],
+      "enabled": true,
+      "traffic_interval": 282,
+      "description": "iPad — Traditional IT — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Joe-Gaming-iPAD",
+          "vendor_class_id": "Apple iOS Device",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            15,
+            119,
+            252,
+            95,
+            44,
+            46
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "hikvisio_camera_001",
+      "name": "Hikvision HIKVISION DS-2CD753F-EZ",
+      "vendor": "Hikvision",
+      "type": "Camera",
+      "mac": "c4:2f:90:89:90:b9",
+      "ip_start": "192.168.207.52",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "lldp",
+        "ntp",
+        "rtsp"
+      ],
+      "enabled": true,
+      "traffic_interval": 277,
+      "description": "Hikvision Camera — Office — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Hikvision IP Camera",
+          "vendor_class_id": "HIKVISION",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            12,
+            15,
+            28,
+            42,
+            51,
+            54,
+            58,
+            59
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "hikvisio_camera_002",
+      "name": "Hikvision HIKVISION DS-2CD753F-EZ",
+      "vendor": "Hikvision",
+      "type": "Camera",
+      "mac": "58:03:fb:b6:a4:cf",
+      "ip_start": "192.168.207.53",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "lldp",
+        "ntp",
+        "rtsp"
+      ],
+      "enabled": true,
+      "traffic_interval": 231,
+      "description": "Hikvision Camera — Office — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Hikvision-Camera",
+          "vendor_class_id": "HIKVISION",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            12,
+            15,
+            28,
+            42,
+            51,
+            54,
+            58,
+            59
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "axiscomm_camera_001",
+      "name": "Axis Communications M3057",
+      "vendor": "Axis Communications",
+      "type": "Camera",
+      "mac": "00:40:8c:fc:34:ca",
+      "ip_start": "192.168.207.54",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "lldp",
+        "ntp",
+        "rtsp"
+      ],
+      "enabled": true,
+      "traffic_interval": 214,
+      "description": "Axis Communications Network Camera — Office — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "axis-00408cfc34ca",
+          "vendor_class_id": "AXIS Network Camera",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            12,
+            15,
+            28,
+            42,
+            43,
+            51,
+            54,
+            58,
+            59,
+            119
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": false,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      },
+      "running": false,
+      "status": {
+        "running": false,
+        "stats": {
+          "packets_sent": 37,
+          "bytes_sent": 2250,
+          "current_ip": "192.168.207.54",
+          "uptime_seconds": 69,
+          "protocols": {
+            "arp": 0,
+            "dhcp": 0,
+            "dns": 0,
+            "http": 1,
+            "lldp": 2,
+            "ntp": 2,
+            "rtsp": 1,
+            "bad_beacon": 9,
+            "bad_dns": 22
+          },
+          "bad_behavior_active": true
+        },
+        "logs": [
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:08:53.271609",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "📡 [IOT] System Interface: enp2s0 (Source: CLI/Auto)"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:08:53.271797",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "🚀 Starting device simulation: Axis Communications M3057 (axiscomm_camera_001) [DHCP: auto]"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:08:53.271826",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "🆔 MAC addr: 00:40:8c:fc:34:ca"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:08:53.271845",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "📌 Fallback/Static IP: 192.168.207.54"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:08:53.272886",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "🔄 DHCP attempt 1 (mode: auto)..."
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:08:53.273314",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "🔐 Using DHCP fingerprint: hostname='axis-00408cfc34ca', vendor_class='AXIS Network Camera', param_req_list=[1, 3, 6, 12, 15, 28, 42, 43, 51, 54, 58, 59, 119]"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:08:53.276356",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "📤 DHCP DISCOVER (xid: 0xfb0ecc63, MAC: 00:40:8c:fc:34:ca)"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:08:53.387835",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "⏳ Waiting for DHCP OFFER (timeout: 4s)..."
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:08:57.434223",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "⚠️ No DHCP OFFER received (timeout 4s)"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:08:57.434323",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "⏳ DHCP retry 1/3 in 2s..."
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:08:59.434811",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "🔄 DHCP attempt 2 (mode: auto)..."
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:08:59.434935",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "🔐 Using DHCP fingerprint: hostname='axis-00408cfc34ca', vendor_class='AXIS Network Camera', param_req_list=[1, 3, 6, 12, 15, 28, 42, 43, 51, 54, 58, 59, 119]"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:08:59.436139",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "📤 DHCP DISCOVER (xid: 0xc9bb5984, MAC: 00:40:8c:fc:34:ca)"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:08:59.484333",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "⏳ Waiting for DHCP OFFER (timeout: 4s)..."
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:03.527947",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "⚠️ No DHCP OFFER received (timeout 4s)"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:03.531573",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "⏳ DHCP retry 2/3 in 4s..."
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:07.532267",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "🔄 DHCP attempt 3 (mode: auto)..."
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:07.532386",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "🔐 Using DHCP fingerprint: hostname='axis-00408cfc34ca', vendor_class='AXIS Network Camera', param_req_list=[1, 3, 6, 12, 15, 28, 42, 43, 51, 54, 58, 59, 119]"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:07.533895",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "📤 DHCP DISCOVER (xid: 0xe87ea7e1, MAC: 00:40:8c:fc:34:ca)"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:07.668680",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "⏳ Waiting for DHCP OFFER (timeout: 4s)..."
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:11.786785",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "⚠️ No DHCP OFFER received (timeout 4s)"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:11.789220",
+            "device_id": "axiscomm_camera_001",
+            "level": "error",
+            "message": "❌ DHCP failed after 3 attempts — device will have no IP until renewal"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:11.789306",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "✅ IP ready: 192.168.207.54 — starting protocol threads"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:11.821813",
+            "device_id": "axiscomm_camera_001",
+            "level": "debug",
+            "message": "🔍 ARP thread started"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:11.839890",
+            "device_id": "axiscomm_camera_001",
+            "level": "debug",
+            "message": "🌐 DNS thread started"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:11.868125",
+            "device_id": "axiscomm_camera_001",
+            "level": "debug",
+            "message": "🌐 HTTP thread started"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:11.880691",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "📡 LLDP thread started"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:11.897352",
+            "device_id": "axiscomm_camera_001",
+            "level": "debug",
+            "message": "🕐 NTP thread started"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:11.904368",
+            "device_id": "axiscomm_camera_001",
+            "level": "debug",
+            "message": "🎥 RTSP thread started"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:12.026395",
+            "device_id": "axiscomm_camera_001",
+            "level": "debug",
+            "message": "📤 HTTP SYN sent to None:80"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:12.142786",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "🕐 NTP request sent to 129.6.15.28"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:12.143432",
+            "device_id": "axiscomm_camera_001",
+            "level": "debug",
+            "message": "DHCP renewal thread started"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:12.143764",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "⚠️  BAD BEHAVIOR ENABLED (types: random, dns_flood, beacon) — IP: 192.168.207.54"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:12.170304",
+            "device_id": "axiscomm_camera_001",
+            "level": "debug",
+            "message": "📤 RTSP SYN sent to None:554"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:12.176569",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "📡 LLDP advertisement sent to switch"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:12.189593",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 BAD BEHAVIOR thread started (types: random, dns_flood, beacon)"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:14.254167",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "🕐 NTP request sent to 216.239.35.0"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:27.403754",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "⚠️ ARP skipped — no IP or gateway available"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:27.836514",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "⚠️ No gateway from DHCP, bad behavior will skip gateway-targeted traffic"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:27.836583",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 Starting behavior thread: random"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:27.847310",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 RANDOM MIX behavior started"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:27.916534",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [random] Beacon: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:28.063791",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 Starting behavior thread: dns_flood"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:28.111408",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 DNS FLOOD behavior started"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:28.217272",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:28.330165",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 Starting behavior thread: beacon"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:28.341539",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 BEACON behavior started"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:28.409868",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:29.134924",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: c2.malware-test.org → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:29.461534",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:29.688519",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: vpn.corporate.example → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:30.502051",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:31.074482",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: phishing-site.bad → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:31.685532",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:32.365715",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: admin.suspicious-iot.ru → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:33.044473",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: api.github.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:33.682446",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: gitlab.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:34.335988",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: api.github.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:39.836850",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:40.918721",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:41.058446",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: update.windows.com"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:42.485144",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "📡 LLDP advertisement sent to switch"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:49.253903",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [random] Beacon: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:49.928800",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: bitcoin-pool.mining.cc → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:50.484631",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: bitcoin-pool.mining.cc → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:50.962006",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:51.037310",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: malware-download.xyz → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:51.675270",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: admin.suspicious-iot.ru → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:52.053365",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:52.266109",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: vpn.corporate.example → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:52.976124",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:53.573136",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: c2.malware-test.org → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:54.141698",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: malware-download.xyz → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:54.417393",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: api.github.com"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:54.685178",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: vpn.corporate.example → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:09:55.278510",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:10:02.189162",
+            "device_id": "axiscomm_camera_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:10:02.868685",
+            "device_id": "axiscomm_camera_001",
+            "level": "info",
+            "message": "⏹️ Simulation stopped"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rockwell_control_syst_001",
+      "name": "Rockwell Automation Control System Engineering Workstation",
+      "vendor": "Rockwell Automation",
+      "type": "Control System Engineering Workstation",
+      "mac": "5c:88:16:ed:fd:1a",
+      "ip_start": "192.168.207.55",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http"
+      ],
+      "enabled": true,
+      "traffic_interval": 266,
+      "description": "Control System Engineering Workstation — Industrial — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Control System Engineering Workstation",
+          "vendor_class_id": "Rockwell Automation",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            12,
+            15,
+            28,
+            51,
+            54
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "f5networ_network_equi_001",
+      "name": "F5 Networks Device XXX F5",
+      "vendor": "F5 Networks",
+      "type": "Network Equipment",
+      "mac": "00:94:a1:e5:42:86",
+      "ip_start": "192.168.207.56",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "lldp"
+      ],
+      "enabled": true,
+      "traffic_interval": 262,
+      "description": "F5 Networks Device — Network Devices — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "F5 Networks Device",
+          "vendor_class_id": "F5 Networks",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            15,
+            28,
+            51,
+            58,
+            59
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "brightsi_digital_sign_001",
+      "name": "BrightSign XT1144",
+      "vendor": "BrightSign",
+      "type": "Digital Signage",
+      "mac": "90:ac:3f:24:2a:59",
+      "ip_start": "192.168.207.57",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "ntp"
+      ],
+      "enabled": true,
+      "traffic_interval": 75,
+      "description": "BrightSign Signage Media Player — Office — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "BrightSign Signage Media Player",
+          "vendor_class_id": "BrightSign",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            15,
+            28,
+            51,
+            58,
+            59,
+            119
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "axiscomm_camera_002",
+      "name": "Axis Communications M3057",
+      "vendor": "Axis Communications",
+      "type": "Camera",
+      "mac": "ac:cc:8e:bf:55:d5",
+      "ip_start": "192.168.207.58",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "lldp",
+        "ntp",
+        "rtsp"
+      ],
+      "enabled": true,
+      "traffic_interval": 220,
+      "description": "Axis Communications Network Camera — Office — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Axis Communications Network Camera",
+          "vendor_class_id": "AXIS Network Camera",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            12,
+            15,
+            28,
+            42,
+            43,
+            51,
+            54,
+            58,
+            59,
+            119
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "carefusi_infusion_sys_001",
+      "name": "Carefusion Carefusion Infusion Pump Base Station",
+      "vendor": "Carefusion",
+      "type": "Infusion System",
+      "mac": "00:17:23:41:50:f1",
+      "ip_start": "192.168.207.59",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http"
+      ],
+      "enabled": true,
+      "traffic_interval": 241,
+      "description": "Carefusion Infusion Pump Base Station — Medical — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Carefusion Infusion Pump Base Station",
+          "vendor_class_id": "CareFusion Alaris",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            15,
+            28,
+            51,
+            58,
+            59
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "ge_x_ray_machin_001",
+      "name": "GE GE X-Ray Machine",
+      "vendor": "GE",
+      "type": "X-Ray Machine",
+      "mac": "d4:85:64:b9:9b:81",
+      "ip_start": "192.168.207.60",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http"
+      ],
+      "enabled": true,
+      "traffic_interval": 141,
+      "description": "GE X-Ray Machine — Medical — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "GE X-Ray Machine",
+          "vendor_class_id": "Generic IoT Device",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            15,
+            28,
+            51,
+            58,
+            59
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "rockwell_industrial_a_001",
+      "name": "Rockwell Rockwell Automation Device",
+      "vendor": "Rockwell",
+      "type": "Industrial Automation",
+      "mac": "00:1d:9c:d7:0a:82-slot-2",
+      "ip_start": "192.168.207.61",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "lldp"
+      ],
+      "enabled": true,
+      "traffic_interval": 182,
+      "description": "Rockwell Automation Device — Industrial — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Rockwell Cell 1 PLC - slot-2",
+          "vendor_class_id": "Rockwell Automation",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            12,
+            15,
+            28,
+            51,
+            54
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "siemensa_ct_scanner_001",
+      "name": "Siemens AG SOMATOM Definition AS+",
+      "vendor": "Siemens AG",
+      "type": "CT Scanner",
+      "mac": "90:1b:0e:ea:86:a8",
+      "ip_start": "192.168.207.62",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http"
+      ],
+      "enabled": true,
+      "traffic_interval": 101,
+      "description": "Siemens CT Scanner — Medical — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Siemens CT Scanner",
+          "vendor_class_id": "Generic IoT Device",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            15,
+            28,
+            51,
+            58,
+            59
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": false,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      },
+      "running": false,
+      "status": {
+        "running": false,
+        "stats": {
+          "packets_sent": 129,
+          "bytes_sent": 7787,
+          "current_ip": "192.168.207.62",
+          "uptime_seconds": 201,
+          "protocols": {
+            "arp": 0,
+            "dhcp": 0,
+            "dns": 0,
+            "http": 2,
+            "bad_beacon": 39,
+            "bad_dns": 88
+          },
+          "bad_behavior_active": true
+        },
+        "logs": [
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:33.216897",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: torrent-tracker.net"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:34.258334",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:34.954190",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: malware-download.xyz → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:35.295403",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:35.528941",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:36.097230",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:36.688684",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:37.307896",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: phishing-site.bad → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:38.139954",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: torrent-tracker.net → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:38.881552",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:39.472868",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:40.025260",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: gitlab.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:40.580637",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: api.github.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:43.333464",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: gitlab.com"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:45.398103",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:46.469211",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:55.519348",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:56.133373",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: docker.io → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:56.547366",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:56.690119",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: docker.io → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:57.312030",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: gitlab.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:57.596408",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:57.962341",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: gitlab.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:58.529662",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:59.170631",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: admin.suspicious-iot.ru → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:59:59.804814",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: phishing-site.bad → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:00.542987",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "⚠️ No gateway, skipping beacon HTTP"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:01.599458",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: torrent-tracker.net → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:02.296210",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:03.278476",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: docker.io → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:07.653827",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:08.749041",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:11.765917",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "debug",
+            "message": "📤 HTTP SYN sent to None:80"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:13.682614",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [random] Beacon: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:18.931451",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [random] Beacon: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:18.990115",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:19.553540",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:20.164970",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:20.231963",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:20.845960",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: c2.malware-test.org → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:21.413910",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:22.276164",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: phishing-site.bad → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:23.073096",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: bitcoin-pool.mining.cc → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:23.681409",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: torrent-tracker.net → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:24.014052",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: vpn.corporate.example"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:24.391550",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:25.094939",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: gitlab.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:25.819040",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: bitcoin-pool.mining.cc → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:30.273183",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:31.318286",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:39.089926",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [random] Beacon: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:41.368926",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:41.491495",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:42.111310",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:42.433183",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:42.708822",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: gitlab.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:43.334676",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: malware-download.xyz → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:43.936280",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:44.576999",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:46.019772",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: phishing-site.bad → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:46.594269",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: admin.suspicious-iot.ru → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:47.328771",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:48.189066",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: gitlab.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:51.170300",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: vpn.corporate.example"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:52.501236",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:00:53.589601",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:03.874898",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: gitlab.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:03.892566",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:04.458617",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: bitcoin-pool.mining.cc → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:04.961978",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:05.104994",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:05.245803",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: api.github.com"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:06.060965",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:06.674164",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: api.github.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:07.278708",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:07.829760",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:08.437190",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: admin.suspicious-iot.ru → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:09.361583",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: bitcoin-pool.mining.cc → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:10.094656",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: api.github.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:15.022571",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:16.076212",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:17.418303",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [random] Beacon: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:25.672835",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: torrent-tracker.net → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:26.113105",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:26.214914",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: docker.io → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:26.768814",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: torrent-tracker.net → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:27.144409",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:28.006592",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: docker.io → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:28.418502",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "⚠️ No gateway, skipping beacon HTTP"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:28.574658",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: bitcoin-pool.mining.cc → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:29.469423",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: docker.io → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:30.080375",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:30.786135",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: malware-download.xyz → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:32.092124",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:32.677916",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: phishing-site.bad → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:37.184864",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:37.493949",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [random] Beacon: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:38.241529",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:46.494857",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "warning",
+            "message": "⚠️ No gateway, skipping beacon HTTP"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T17:01:46.718186",
+            "device_id": "siemensa_ct_scanner_001",
+            "level": "info",
+            "message": "⏹️ Simulation stopped"
+          }
+        ]
+      }
+    },
+    {
+      "id": "philips_ultrasound_m_001",
+      "name": "Philips Philips UltraSound Machine",
+      "vendor": "Philips",
+      "type": "UltraSound Machine",
+      "mac": "28:b9:d9:e1:29:9e",
+      "ip_start": "192.168.207.63",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http"
+      ],
+      "enabled": true,
+      "traffic_interval": 84,
+      "description": "Philips UltraSound Machine — Medical — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Philips UltraSound Machine",
+          "vendor_class_id": "Generic IoT Device",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            15,
+            28,
+            51,
+            58,
+            59
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "dell_personal_com_001",
+      "name": "Dell Dell Computer",
+      "vendor": "Dell",
+      "type": "Personal Computer",
+      "mac": "00:1b:71:22:01:92",
+      "ip_start": "192.168.207.64",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "ntp"
+      ],
+      "enabled": true,
+      "traffic_interval": 156,
+      "description": "Dell Computer — Traditional IT — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Ops-Support-PC-1A",
+          "vendor_class_id": "Generic IoT Device",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            15,
+            28,
+            51,
+            58,
+            59
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "siemens_industrial_c_001",
+      "name": "Siemens Siemens PLC",
+      "vendor": "Siemens",
+      "type": "Industrial Controller",
+      "mac": "ac:64:17:95:4c:19",
+      "ip_start": "192.168.207.65",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "lldp"
+      ],
+      "enabled": true,
+      "traffic_interval": 245,
+      "description": "Siemens PLC — Industrial — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Siemens Cell 3 PLC",
+          "vendor_class_id": "Generic IoT Device",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            15,
+            28,
+            51,
+            58,
+            59
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "rockwell_industrial_a_002",
+      "name": "Rockwell Rockwell Automation Device",
+      "vendor": "Rockwell",
+      "type": "Industrial Automation",
+      "mac": "00:1d:9c:d7:0a:82-slot-3",
+      "ip_start": "192.168.207.66",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "lldp"
+      ],
+      "enabled": true,
+      "traffic_interval": 283,
+      "description": "Rockwell Automation Device — Industrial — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Rockwell Cell 1 PLC - slot-3",
+          "vendor_class_id": "Rockwell Automation",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            12,
+            15,
+            28,
+            51,
+            54
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "rockwell_industrial_a_003",
+      "name": "Rockwell Rockwell Automation Device",
+      "vendor": "Rockwell",
+      "type": "Industrial Automation",
+      "mac": "00:1d:9c:d7:0a:82-slot-4",
+      "ip_start": "192.168.207.67",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "lldp"
+      ],
+      "enabled": true,
+      "traffic_interval": 208,
+      "description": "Rockwell Automation Device — Industrial — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Rockwell Cell 1 PLC - slot-4",
+          "vendor_class_id": "Rockwell Automation",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            12,
+            15,
+            28,
+            51,
+            54
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "siemens_hmi_panel_002",
+      "name": "Siemens Siemens HMI Panel",
+      "vendor": "Siemens",
+      "type": "HMI Panel",
+      "mac": "28:63:36:c0:57:27",
+      "ip_start": "192.168.207.68",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http"
+      ],
+      "enabled": true,
+      "traffic_interval": 244,
+      "description": "Siemens HMI Panel — Industrial — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Siemens Cell 3 HMI",
+          "vendor_class_id": "Generic IoT Device",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            15,
+            28,
+            51,
+            58,
+            59
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "rockwell_industrial_c_004",
+      "name": "Rockwell Rockwell Automation PLC",
+      "vendor": "Rockwell",
+      "type": "Industrial Controller",
+      "mac": "00:1d:9c:d7:0a:82",
+      "ip_start": "192.168.207.69",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "lldp"
+      ],
+      "enabled": true,
+      "traffic_interval": 257,
+      "description": "Rockwell Automation PLC — Industrial — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Rockwell Cell 1 PLC",
+          "vendor_class_id": "Rockwell Automation",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            12,
+            15,
+            28,
+            51,
+            54
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "axis_physical_sec_001",
+      "name": "Axis Axis Communications Video Surveillance",
+      "vendor": "Axis",
+      "type": "Physical Security",
+      "mac": "ac:cc:8e:20:d5:8e",
+      "ip_start": "192.168.207.70",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http"
+      ],
+      "enabled": true,
+      "traffic_interval": 74,
+      "description": "Axis Communications Video Surveillance — Facility — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "ac:cc:8e:20:d5:8e",
+          "vendor_class_id": "AXIS Network Camera",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            12,
+            15,
+            28,
+            42,
+            43,
+            51,
+            54,
+            58,
+            59,
+            119
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "pacsgear_dicom_workst_001",
+      "name": "PACSGEAR PACSGEAR DICOM Workstation",
+      "vendor": "PACSGEAR",
+      "type": "DICOM-Workstation",
+      "mac": "b0:5c:da:36:1c:72",
+      "ip_start": "192.168.207.71",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http"
+      ],
+      "enabled": true,
+      "traffic_interval": 98,
+      "description": "PACSGEAR DICOM Workstation — Medical — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "NYC-RAD-VIEW12",
+          "vendor_class_id": "Generic IoT Device",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            15,
+            28,
+            51,
+            58,
+            59
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "rockwell_industrial_a_005",
+      "name": "Rockwell Rockwell Automation Device",
+      "vendor": "Rockwell",
+      "type": "Industrial Automation",
+      "mac": "00:1d:9c:d7:0a:82-slot-1",
+      "ip_start": "192.168.207.72",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "lldp"
+      ],
+      "enabled": true,
+      "traffic_interval": 99,
+      "description": "Rockwell Automation Device — Industrial — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Rockwell Cell 1 PLC - slot-1",
+          "vendor_class_id": "Rockwell Automation",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            12,
+            15,
+            28,
+            51,
+            54
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "rockwell_industrial_a_006",
+      "name": "Rockwell Rockwell Automation Device",
+      "vendor": "Rockwell",
+      "type": "Industrial Automation",
+      "mac": "00:1d:9c:d7:0a:82-slot-5",
+      "ip_start": "192.168.207.73",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "lldp"
+      ],
+      "enabled": true,
+      "traffic_interval": 291,
+      "description": "Rockwell Automation Device — Industrial — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Rockwell Cell 1 PLC - slot-5",
+          "vendor_class_id": "Rockwell Automation",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            12,
+            15,
+            28,
+            51,
+            54
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "lenovo_personal_com_001",
+      "name": "Lenovo Lenovo Computer",
+      "vendor": "Lenovo",
+      "type": "Personal Computer",
+      "mac": "d8:12:6e:3b:f9:c7",
+      "ip_start": "192.168.207.74",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "ntp"
+      ],
+      "enabled": true,
+      "traffic_interval": 60,
+      "description": "Lenovo Computer — Traditional IT — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Trend-Apex-One",
+          "vendor_class_id": "Generic IoT Device",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            15,
+            28,
+            51,
+            58,
+            59
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "yokogawa_industrial_d_001",
+      "name": "Yokogawa Yokogawa Centum Controller",
+      "vendor": "Yokogawa",
+      "type": "Industrial DCS",
+      "mac": "00:00:64:78:3c:a5",
+      "ip_start": "192.168.207.75",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "lldp"
+      ],
+      "enabled": true,
+      "traffic_interval": 228,
+      "description": "Yokogawa Centum Controller — Industrial — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Yokogawa Centum Controller",
+          "vendor_class_id": "Generic IoT Device",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            15,
+            28,
+            51,
+            58,
+            59
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": false,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      },
+      "running": true,
+      "status": {
+        "running": true,
+        "stats": {
+          "packets_sent": 357,
+          "bytes_sent": 22314,
+          "current_ip": "192.168.207.75",
+          "uptime_seconds": 516,
+          "protocols": {
+            "arp": 0,
+            "dhcp": 0,
+            "dns": 0,
+            "http": 3,
+            "lldp": 17,
+            "bad_dns": 234,
+            "bad_beacon": 103
+          },
+          "bad_behavior_active": true
+        },
+        "logs": [
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:30.249264",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:31.063942",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: torrent-tracker.net"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:31.551997",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:32.481099",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: bitcoin-pool.mining.cc → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:33.302510",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: api.github.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:33.873646",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: c2.malware-test.org → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:34.541414",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: admin.suspicious-iot.ru → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:35.639476",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: admin.suspicious-iot.ru → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:36.228935",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: malware-download.xyz → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:36.761353",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: c2.malware-test.org → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:37.328886",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:37.588103",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "info",
+            "message": "📡 LLDP advertisement sent to switch"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:37.970564",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: vpn.corporate.example → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:38.819301",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:40.216964",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [random] Beacon: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:41.612504",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:42.730655",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:47.282958",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: docker.io"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:52.883929",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:54.088644",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:54.370432",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: vpn.corporate.example → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:55.403813",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [random] Beacon: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:55.492738",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: api.github.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:56.244168",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: torrent-tracker.net → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:56.972075",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:57.977240",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: gitlab.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:58.908525",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: api.github.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:42:59.779191",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: torrent-tracker.net → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:00.411597",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:02.004649",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:02.810078",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:04.388857",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:05.538480",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:07.678733",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "info",
+            "message": "📡 LLDP advertisement sent to switch"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:08.857552",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [random] Beacon: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:15.584756",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:16.727226",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:18.565796",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: vpn.corporate.example → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:18.957570",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: vpn.corporate.example"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:19.296820",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: docker.io → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:20.120618",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: phishing-site.bad → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:21.362435",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:21.953584",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: admin.suspicious-iot.ru → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:22.633578",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:23.795439",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: bitcoin-pool.mining.cc → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:25.181469",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:26.303172",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: admin.suspicious-iot.ru → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:26.821150",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:27.006118",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: api.github.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:28.240505",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:31.096975",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: gitlab.com"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:38.054865",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "info",
+            "message": "📡 LLDP advertisement sent to switch"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:38.331250",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:39.416972",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:41.667154",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "debug",
+            "message": "📤 HTTP SYN sent to None:80"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:42.261894",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [random] Beacon: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:43.357751",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: vpn.corporate.example → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:44.313105",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: vpn.corporate.example → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:45.227129",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:45.971824",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: docker.io → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:46.912440",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: bitcoin-pool.mining.cc → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:47.819269",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: malware-download.xyz → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:48.704752",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: vpn.corporate.example → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:49.605811",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:49.686464",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: admin.suspicious-iot.ru → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:50.270728",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: bitcoin-pool.mining.cc → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:51.017533",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:51.604451",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:43:54.379437",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [random] Beacon: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:01.550443",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:03.936714",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:07.507249",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: vpn.corporate.example"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:07.520442",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: phishing-site.bad → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:08.222027",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:08.237550",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "info",
+            "message": "📡 LLDP advertisement sent to switch"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:08.966359",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: api.github.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:10.148179",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: malware-download.xyz → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:10.797102",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: random-dga-12345.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:12.020876",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: gitlab.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:12.572146",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: api.github.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:13.161890",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: api.github.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:13.863144",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: c2.malware-test.org → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:14.054636",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:14.625616",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: api.github.com → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:15.252026",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:17.700295",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [random] DNS: torrent-tracker.net"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:25.331494",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:26.443510",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:27.704932",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "⚠️ No gateway, skipping beacon HTTP"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:30.288838",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:30.961335",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: update.windows.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:32.311951",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: phishing-site.bad → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:33.328652",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: c2.malware-test.org → 8.8.8.8"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:34.657157",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: admin.suspicious-iot.ru → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:34.542139",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "⚠️ No gateway, skipping beacon HTTP"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:35.734849",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: api.github.com → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:36.756256",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: cryptominer.evil → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:36.997820",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] DNS: c2.malware-test.org"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:37.838441",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [dns_flood] Query: torrent-tracker.net → 1.1.1.1"
+          },
+          {
+            "type": "log",
+            "timestamp": "2026-04-28T16:44:38.156177",
+            "device_id": "yokogawa_industrial_d_001",
+            "level": "warning",
+            "message": "💀 [beacon] HTTP: 198.51.100.66:8443"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rockwell_industrial_c_002",
+      "name": "Rockwell Automation Rockwell Automation PLC",
+      "vendor": "Rockwell Automation",
+      "type": "Industrial Controller",
+      "mac": "34:c0:f9:fb:67:52",
+      "ip_start": "192.168.207.76",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "lldp"
+      ],
+      "enabled": true,
+      "traffic_interval": 135,
+      "description": "Rockwell Automation PLC — Industrial — Risk: High",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Rockwell Cell 2 Safety PLC",
+          "vendor_class_id": "Rockwell Automation",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            12,
+            15,
+            28,
+            51,
+            54
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "macintos_personal_com_001",
+      "name": "Macintosh Macintosh",
+      "vendor": "Macintosh",
+      "type": "Personal Computer",
+      "mac": "33:44:55:66:77:88",
+      "ip_start": "192.168.207.77",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "ntp"
+      ],
+      "enabled": true,
+      "traffic_interval": 132,
+      "description": "Macintosh — Traditional IT — Risk: High",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "QA-Test-Mac-29Q",
+          "vendor_class_id": "Generic IoT Device",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            15,
+            28,
+            51,
+            58,
+            59
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "ipad_smartphone_o_001",
+      "name": "iPad iPad",
+      "vendor": "iPad",
+      "type": "Smartphone or Tablet",
+      "mac": "00:e0:4c:68:07:16",
+      "ip_start": "192.168.207.78",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "ntp"
+      ],
+      "enabled": true,
+      "traffic_interval": 213,
+      "description": "iPad — Traditional IT — Risk: High",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Alex-Work-iPad",
+          "vendor_class_id": "Generic IoT Device",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            15,
+            28,
+            51,
+            58,
+            59
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    },
+    {
+      "id": "iphone_smartphone_o_001",
+      "name": "iPhone iPhone",
+      "vendor": "iPhone",
+      "type": "Smartphone or Tablet",
+      "mac": "00:e0:4c:68:07:17",
+      "ip_start": "192.168.207.79",
+      "protocols": [
+        "arp",
+        "dhcp",
+        "dns",
+        "http",
+        "ntp"
+      ],
+      "enabled": true,
+      "traffic_interval": 79,
+      "description": "iPhone — Traditional IT — Risk: High",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "Chris-Media-iPhone",
+          "vendor_class_id": "Generic IoT Device",
+          "client_id_type": 1,
+          "param_req_list": [
+            1,
+            3,
+            6,
+            15,
+            28,
+            51,
+            58,
+            59
+          ]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": [
+          "random",
+          "dns_flood",
+          "beacon"
+        ]
+      }
+    }
+  ]
+}
