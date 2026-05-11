@@ -9010,9 +9010,14 @@ app.get('/api/iot/devices', authenticateToken, (req, res) => {
 
 app.post('/api/iot/devices', authenticateToken, (req, res) => {
     const devices = getIoTDevices();
-    const newDevice = req.body;
+    const newDevice = { ...req.body };
 
     if (!newDevice.id) return res.status(400).json({ error: 'Device ID is required' });
+
+    // Ensure we don't save runtime state to the config file
+    delete newDevice.running;
+    delete newDevice.status;
+
 
     const index = devices.findIndex(d => d.id === newDevice.id);
     if (index !== -1) {
@@ -9233,12 +9238,24 @@ app.post('/api/iot/config/import', authenticateToken, (req, res) => {
             // Fallback: if it's just an array, wrap it in a default config
             if (Array.isArray(config)) {
                 console.log(`[IOT-REQ] LEGACY DETECTED: Importing flat array of ${config.length} devices`);
-                saveIoTConfig({ network: { interface: 'eth0' }, devices: config });
+                // Sanitize legacy array
+                const cleanArray = config.map((d: any) => {
+                    const { running, status, ...clean } = d;
+                    return clean;
+                });
+                saveIoTConfig({ network: { interface: 'eth0' }, devices: cleanArray });
                 return res.json({ success: true, message: 'Legacy IoT devices imported successfully' });
             }
             console.error('[IOT-REQ] Import failed: Invalid structure');
             return res.status(400).json({ error: 'Invalid config: missing devices array' });
         }
+
+        // Clean up any runtime state from imported config
+        config.devices = config.devices.map((d: any) => {
+            const { running, status, ...clean } = d;
+            return clean;
+        });
+
 
         // Backup current file
         if (fs.existsSync(IOT_DEVICES_FILE)) {
