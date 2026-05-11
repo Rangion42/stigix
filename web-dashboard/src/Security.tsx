@@ -324,18 +324,25 @@ export default function Security({ token }: SecurityProps) {
 
     useEffect(() => {
         const targetsToPing: { host: string, port: number }[] = [];
-        if (cloudEicarUrl) {
-            try { targetsToPing.push({ host: new URL(cloudEicarUrl).hostname, port: 443 }); } catch {}
-        }
+        
         securityTargets.forEach(st => {
             if (!targetsToPing.find(t => t.host === st.host)) {
-                targetsToPing.push({ host: st.host, port: st.ports?.http ?? 8082 }); 
+                // We must ping the Convergence UDP port (default 6200) for reachability, NOT the HTTP port
+                targetsToPing.push({ host: st.host, port: st.ports?.convergence ?? 6200 }); 
             }
         });
 
-        if (!targetsToPing.length) return;
-
         const checkReachability = async () => {
+            // The Cloudflare worker does not respond to UDP pings, we assume it's reachable if configured
+            if (cloudEicarUrl) {
+                try { 
+                    const host = new URL(cloudEicarUrl).hostname;
+                    setTargetReachability(prev => ({ ...prev, [host]: true }));
+                } catch {}
+            }
+
+            if (!targetsToPing.length) return;
+
             for (const t of targetsToPing) {
                 setTargetReachability(prev => ({ ...prev, [t.host]: 'loading' }));
                 try {
