@@ -2452,12 +2452,12 @@ export default function Security({ token }: SecurityProps) {
                                     <table className="w-full">
                                         <thead className="bg-card sticky top-0 z-10">
                                             <tr className="border-b border-border">
-                                                <th className="text-left px-4 py-4 text-[9px] font-black text-text-muted tracking-widest">Descriptor</th>
+                                                <th className="text-left px-4 py-4 text-[9px] font-black text-text-muted tracking-widest">Test ID</th>
                                                 <th className="text-left px-4 py-4 text-[9px] font-black text-text-muted tracking-widest">Timeline</th>
-                                                <th className="text-left px-4 py-4 text-[9px] font-black text-text-muted tracking-widest">List</th>
-                                                <th className="text-left px-4 py-4 text-[9px] font-black text-text-muted tracking-widest">Identity</th>
+                                                <th className="text-left px-4 py-4 text-[9px] font-black text-text-muted tracking-widest">Type</th>
+                                                <th className="text-left px-4 py-4 text-[9px] font-black text-text-muted tracking-widest">Target</th>
                                                 <th className="text-left px-4 py-4 text-[9px] font-black text-text-muted tracking-widest">Change</th>
-                                                <th className="text-right px-4 py-4 text-[9px] font-black text-text-muted tracking-widest">Disposition</th>
+                                                <th className="text-right px-4 py-4 text-[9px] font-black text-text-muted tracking-widest">Result</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border/50">
@@ -2628,7 +2628,7 @@ export default function Security({ token }: SecurityProps) {
                                 <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                                     <Settings size={80} />
                                 </div>
-                                <label className="text-[9px] font-black text-text-muted tracking-[0.2em] mb-3 block opacity-60">Test Descriptor</label>
+                                <label className="text-[9px] font-black text-text-muted tracking-[0.2em] mb-3 block opacity-60">Test ID</label>
                                 <p className="text-lg font-black text-text-primary leading-tight tracking-tight">{selectedTest.name}</p>
                             </div>
 
