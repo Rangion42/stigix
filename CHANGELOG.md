@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.3.0-patch.31] - 2026-05-11
+### Changed
+- **IoT Simulation** 🔧 Replaced dynamic local sample generation with a direct download link to a clean, centralized `iot-devices.json` configuration file hosted on GitHub.
+- **IoT Simulation** 🧹 Sanitized the IoT device persistence logic. Runtime states (like active `running` flags and raw execution logs) are now automatically stripped before saving or exporting configurations, preventing file bloat.
+
+## [v1.3.0-patch.28] - 2026-05-11
+### Added
+- **Security Dashboard** ⚠️ Added visual warnings and disabled Cloud EICAR targets when the `STIGIX_TARGET_MASTER_KEY` is missing, preventing silent execution failures.
+### Fixed
+- **System** 🐛 Resolved a critical Temporal Dead Zone (TDZ) startup crash on fresh installations caused by uninitialized path references in the `fs.writeFileSync` interceptor.
+- **Security Dashboard** 🎨 Cleaned up test detail modals: removed redundant "Disposition Reasoning" blocks, normalized typography, and eliminated excessive uppercase styling.
+- **Security Dashboard** 🔧 Enriched URL diagnostic views with explicit `curl` error classification and consistent command string display.
+
+## [v1.3.0-patch.22] - 2026-05-10
+### Added
+- **Security Dashboard** 📤 Introduced full Import and Export capabilities for Security Profiles, enabling backup and transfer of custom testing catalogs.
+- **Security Framework** ⚙️ Phase 1 of custom security testing: externalized the previously hardcoded test catalog into a standalone `security-profile.json` architecture.
+- **Documentation** 📖 Added a comprehensive Azure deployment guide (`AZURE_INSTALL.md`).
+### Fixed
+- **Security Framework** 🛡️ Implemented auto-generation and self-healing for `security-profile.json` during system upgrades or in case of file corruption.
+- **Security Framework** 🐛 Fixed Temporal Dead Zone (TDZ) ReferenceErrors within `ensureSecurityProfile()`.
+
 ## [v1.3.0-patch.16] - 2026-05-10
 ### Added
 - **Documentation Overhaul** 📖 Massive visual update across all core modules:
