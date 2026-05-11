@@ -1299,9 +1299,11 @@ const EMBEDDED_SECURITY_PROFILE = {
 };
 
 const ensureSecurityProfile = () => {
-    if (fs.existsSync(SECURITY_PROFILE_FILE)) return; // already present, nothing to do
+    // SECURITY_PROFILE_FILE is declared later in the file — inline the path here to avoid TDZ error
+    const profileFile = path.join(APP_CONFIG.configDir, 'security-profile.json');
+    if (fs.existsSync(profileFile)) return; // already present, nothing to do
     try {
-        fs.writeFileSync(SECURITY_PROFILE_FILE, JSON.stringify(EMBEDDED_SECURITY_PROFILE, null, 2), 'utf8');
+        fs.writeFileSync(profileFile, JSON.stringify(EMBEDDED_SECURITY_PROFILE, null, 2), 'utf8');
         log('SYSTEM', 'security-profile.json created from embedded defaults (upgrade detected).');
     } catch (e) {
         log('SYSTEM', `Failed to create security-profile.json: ${e}`, 'error');
