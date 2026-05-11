@@ -286,41 +286,15 @@ export default function Iot({ token }: IotProps) {
                         <div className="flex items-center gap-3">
                             <p className="text-text-muted text-sm">Scale your branch with realistic IoT traffic patterns per vendor.</p>
                             <span className="text-text-muted/30">|</span>
-                            <button
-                                onClick={() => {
-                                    const sample = {
-                                        "network": { "interface": "eth0", "gateway": "192.168.207.1" },
-                                        "devices": [
-                                            {
-                                                "id": "camera_01",
-                                                "name": "Sample Hikvision Camera",
-                                                "vendor": "Hikvision",
-                                                "type": "IP Camera",
-                                                "mac": "00:12:34:56:78:01",
-                                                "ip_start": "192.168.207.100",
-                                                "protocols": ["dhcp", "arp", "http", "rtsp", "cloud"],
-                                                "enabled": true,
-                                                "traffic_interval": 60,
-                                                "dhcp_fingerprint": {
-                                                    "hostname": "hikvision-cam-01",
-                                                    "vendor_class_id": "dhcpcd-5.5.6",
-                                                    "parameter_request_list": "1,3,6,15,28,33,42"
-                                                }
-                                            }
-                                        ]
-                                    };
-                                    const blob = new Blob([JSON.stringify(sample, null, 2)], { type: 'application/json' });
-                                    const url = URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = 'iot-sample.json';
-                                    a.click();
-                                    URL.revokeObjectURL(url);
-                                }}
+                            <a
+                                href="https://raw.githubusercontent.com/jsuzanne/stigix/main/sample%20config/iot-devices.json"
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="text-blue-400 hover:text-blue-300 text-xs font-bold transition-colors flex items-center gap-1"
+                                title="Download Full IoT Sample Configuration"
                             >
                                 <ExternalLink size={12} /> Download Sample
-                            </button>
+                            </a>
                             <span className="text-text-muted/30">|</span>
                             <a
                                 href="https://github.com/jsuzanne/stigix/blob/main/docs/IOT_DEVICE_GENERATOR.md"
