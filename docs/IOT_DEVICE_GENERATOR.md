@@ -593,6 +593,27 @@ python import_prisma_devices.py -i "iot device bad sources.csv" -o devices.json 
 python import_prisma_devices.py -i "iot device bad sources.csv" -o devices.json --security-percentage 30
 ```
 
+### Real-World Example Output
+
+Running against a real Prisma IoT Security export from a customer environment:
+
+```text
+$ python import_prisma_devices.py -i "iot device bad sources.csv" --max-devices 100 -o iotv2.json
+
+📂 Read 163 rows from CSV
+🔢 Limiting to top 100 devices by risk level
+✅ Exported 100 devices → iotv2.json
+   Bad-behavior devices: 64
+```
+
+**What this tells us:**
+- The customer had **163 devices** detected by Prisma IoT Security
+- After filtering to the **top 100 by risk**, 64% were classified as `Critical` or `High`
+- Those 64 devices will automatically emit DNS flood, C2 beacon, and randomized attack traffic
+- The remaining 36 devices simulate normal IoT behavior
+
+> This kind of real-world data is far more impactful for a demo than a synthetic dataset — the customer recognizes their own devices and sees exactly which ones are being flagged.
+
 ---
 
 ### Command Line Options
