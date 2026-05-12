@@ -43,24 +43,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v1.3.0-patch.31] - 2026-05-11
 ### Changed
 - **IoT Simulation** 🔧 Replaced dynamic local sample generation with a direct download link to a clean, centralized `iot-devices.json` configuration file hosted on GitHub.
-- **IoT Simulation** 🧹 Sanitized the IoT device persistence logic. Runtime states (like active `running` flags and raw execution logs) are now automatically stripped before saving or exporting configurations, preventing file bloat.
+
+## [v1.3.0-patch.30] - 2026-05-11
+### Fixed
+- **IoT Simulation** 🧹 Sanitized IoT device persistence logic: runtime states (`running` flags and raw execution logs) are now automatically stripped before saving or exporting configurations, preventing config file bloat and import issues.
+
+## [v1.3.0-patch.29] - 2026-05-11
+### Refactored
+- **IoT Simulation** 🔄 Replaced dynamic local sample generation with a direct GitHub download link for the sample `iot-devices.json`. Renamed the uploaded sample config for clarity.
 
 ## [v1.3.0-patch.28] - 2026-05-11
 ### Added
-- **Security Dashboard** ⚠️ Added visual warnings and disabled Cloud EICAR targets when the `STIGIX_TARGET_MASTER_KEY` is missing, preventing silent execution failures.
+- **Security Dashboard** ⚠️ Added visual warnings and disabled Cloud EICAR targets when the `STIGIX_TARGET_MASTER_KEY` environment variable is missing, preventing silent execution failures.
+
+## [v1.3.0-patch.27] - 2026-05-10
 ### Fixed
 - **System** 🐛 Resolved a critical Temporal Dead Zone (TDZ) startup crash on fresh installations caused by uninitialized path references in the `fs.writeFileSync` interceptor.
-- **Security Dashboard** 🎨 Cleaned up test detail modals: removed redundant "Disposition Reasoning" blocks, normalized typography, and eliminated excessive uppercase styling.
-- **Security Dashboard** 🔧 Enriched URL diagnostic views with explicit `curl` error classification and consistent command string display.
+
+## [v1.3.0-patch.26] - 2026-05-10
+### Fixed
+- **Security Dashboard** 🎨 Cleaned up test detail modal typography: consistent `curl` command display formatting and removed excessive uppercase styling from modal content.
+
+## [v1.3.0-patch.25] - 2026-05-10
+### Fixed
+- **Security Dashboard** 🧹 Removed duplicate "Disposition Reasoning" block that appeared twice in the Security Test Details modal.
+
+## [v1.3.0-patch.24] - 2026-05-10
+### Fixed
+- **Security Dashboard** 🔡 Removed `text-transform: uppercase` from modal content in Security test details for improved readability of long URLs and hostnames.
+
+## [v1.3.0-patch.23] - 2026-05-10
+### Fixed
+- **Security Dashboard** 🔧 Enriched URL test diagnostic views with explicit `curl` error classification (connection refused, timeout, SSL error, HTTP code) and consistent curl command string display in the execution log.
 
 ## [v1.3.0-patch.22] - 2026-05-10
 ### Added
-- **Security Dashboard** 📤 Introduced full Import and Export capabilities for Security Profiles, enabling backup and transfer of custom testing catalogs.
-- **Security Framework** ⚙️ Phase 1 of custom security testing: externalized the previously hardcoded test catalog into a standalone `security-profile.json` architecture.
-- **Documentation** 📖 Added a comprehensive Azure deployment guide (`AZURE_INSTALL.md`).
+- **Security Dashboard** 📤 Introduced full Import and Export capabilities for Security Profiles, enabling backup and transfer of custom testing catalogs between Stigix instances.
+
+## [v1.3.0-patch.21] - 2026-05-10
 ### Fixed
-- **Security Framework** 🛡️ Implemented auto-generation and self-healing for `security-profile.json` during system upgrades or in case of file corruption.
-- **Security Framework** 🐛 Fixed Temporal Dead Zone (TDZ) ReferenceErrors within `ensureSecurityProfile()`.
+- **Security Framework** 🛡️ Used `EMBEDDED_SECURITY_PROFILE` as fallback in `getSecurityProfile()` when the JSON file is missing or corrupted, preventing a blank security profile on upgrade.
+
+## [v1.3.0-patch.20] - 2026-05-10
+### Fixed
+- **Security Framework** 🔄 Force-overwrite `security-profile.json` if the file exists but is empty or malformed (e.g. after a failed upgrade), ensuring a valid catalog is always present.
+
+## [v1.3.0-patch.19] - 2026-05-10
+### Fixed
+- **Security Framework** 🐛 Fixed a `TDZ ReferenceError` (`Cannot access 'X' before initialization`) in `ensureSecurityProfile()` caused by a circular import ordering issue on Node.js startup.
+
+## [v1.3.0-patch.18] - 2026-05-10
+### Fixed
+- **Security Framework** 🔁 Added automatic `security-profile.json` generation on container upgrade: if the file is absent (first install or upgrade from older version), it is bootstrapped from the embedded catalog without requiring a manual reset.
+
+## [v1.3.0-patch.17] - 2026-05-10
+### Added
+- **Security Framework** ⚙️ Phase 1 — Externalized the previously hardcoded security test catalog into a standalone `security-profile.json` file. Enables per-instance customization of test targets, categories, and expected verdicts without rebuilding the image.
+### Documentation
+- **Documentation** 📖 Added a comprehensive Azure deployment guide (`AZURE_INSTALL.md`) covering VM sizing, NSG rules, Docker setup, and one-liner install.
 
 ## [v1.3.0-patch.16] - 2026-05-10
 ### Added
@@ -71,6 +111,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - **VyOS Control**: Added 6 screenshots showcasing automated impairment missions, sequence editing, and live mission timelines.
 - **Documentation Style** 🎨 Harmonized all visual assets with descriptive, premium-style captions for improved technical clarity.
 - **README** 📊 Updated Statistics and VoIP counts in the main project gallery to reflect the new documentation depth.
+
+## [v1.3.0-patch.15] - 2026-05-10
+### Added
+- **Network Status** 🌍 Added a country flag emoji next to the Public IP address in the Network Status widget, derived from a geo-IP lookup, for instant visual identification of the egress region.
+
+## [v1.3.0-patch.14] - 2026-05-10
+### Fixed
+- **Connectivity Dashboard** 🎨 Fixed vertical alignment of `TYPE` and `STATUS` badge elements in the Connectivity probes table so they align consistently across all row heights.
+
+## [v1.3.0-patch.13] - 2026-05-10
+### Fixed
+- **Connectivity Dashboard** 📐 Fixed text alignment of metrics values (Avg/Min/Max scores) displayed in the Last Score column to ensure consistent right-alignment and prevent visual misalignment on varying screen widths.
 
 ## [v1.3.0-patch.12] - 2026-05-10
 ### Changed

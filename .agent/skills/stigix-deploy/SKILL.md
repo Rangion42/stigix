@@ -48,6 +48,35 @@ All three files must always stay in sync.
 > [!IMPORTANT]
 > **Mandatory step** — `CHANGELOG.md` must be updated before every code commit. Never ship a patch without a changelog entry.
 
+#### Step A — Audit for undocumented versions (ALWAYS run this first)
+
+Before writing the new entry, run this command to compare git tags with CHANGELOG entries:
+
+```bash
+# List all v1.x tags
+git tag | grep "^v" | sort -V
+
+# List all documented versions in CHANGELOG
+grep "^## \[v" CHANGELOG.md | head -20
+
+# Find the gap: last documented version
+grep "^## \[v" CHANGELOG.md | head -1
+```
+
+If `git tag` shows versions that do NOT appear in the CHANGELOG, you MUST add entries for ALL missing versions before proceeding. Use `git log --oneline` to reconstruct what changed:
+
+```bash
+# Get commits for a specific range (replace TAG_A and TAG_B)
+git log --oneline TAG_A..TAG_B
+
+# Or get the full history since v1.3.0 in chronological order
+git log --oneline --reverse v1.3.0..HEAD
+```
+
+**Add one CHANGELOG entry per tagged version.** Do not group multiple patches into one entry unless they are truly inseparable.
+
+#### Step B — Write the new entry
+
 Open `/Users/jsuzanne/Github/stigix/CHANGELOG.md` and **prepend** a new entry at the very top (after the file header), following this exact format:
 
 ```markdown
@@ -60,13 +89,7 @@ Open `/Users/jsuzanne/Github/stigix/CHANGELOG.md` and **prepend** a new entry at
 - Use the correct date (`YYYY-MM-DD` in local time).
 - Group bullet points under the appropriate heading(s): `Added`, `Fixed`, `Changed`, `Performance`, `Refactored`, `Removed`, `Documentation`.
 - Be concise but specific — mention the file/component affected and the user-visible impact.
-- If multiple patches were done in the same session and the changelog is behind, catch up **all** missing entries in one go using `git log --oneline` to reconstruct what changed.
-
-**Catch-up check**: Before writing the entry, verify the last documented patch:
-```bash
-grep "## \[v" CHANGELOG.md | head -1
-```
-If it is more than 1 patch behind the new version, add all the missing entries.
+- **One entry per tagged version** — never aggregate multiple patches into one block.
 
 ### 3 — Stage, commit, and push
 
@@ -104,5 +127,6 @@ You should see the run name labeled with `🚀 Release $NEW_VER`.
 - **Prefix**: Never forget the `$NEW_VER:` prefix in the commit message.
 - **Sync**: VERSION files and the git tag must always match exactly.
 - **Timing**: Always bump version **before** the tag push.
-- **Changelog Verification**: You MUST verify at every deploy that `CHANGELOG.md` is fully up to date. It must never be behind, and all changes from the current session MUST be well-documented before committing.
+- **Changelog Verification**: You MUST run the CHANGELOG audit (Step 2bis-A) at every deploy. Compare `git tag` output against documented entries in `CHANGELOG.md`. All missing versions MUST be backfilled — one entry per version — before committing.
+- **No Grouping**: Never merge multiple patch versions into a single CHANGELOG entry unless they were released as a single atomic tag.
 - **Doc-only**: Skip versioning for README/Documentation-only changes.
