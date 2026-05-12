@@ -536,22 +536,250 @@ jq -r '.devices[] | select(.fingerprint.dhcp == null) | .id' iot-devices.json
 
 ---
 
-## Comparison: Python Script vs LLM Generation
+---
 
-| Feature | Python Script | LLM Generation |
-|---------|---------------|----------------|
-| Speed | Instant (< 1 second) | 30-60 seconds |
-| Consistency | Deterministic | Varies per run |
-| Internet Required | No | Yes (API calls) |
-| Cost | Free | API costs |
-| Customization | Preset + custom mix | Fully flexible prompts |
-| Industry Context | Generic categories | Industry-specific |
-| Validation | Pre-validated | Requires manual check |
-| Learning Curve | Command-line only | Prompt engineering |
+## 📥 Prisma / IoT Security CSV Import
+
+### Overview
+
+`import_prisma_devices.py` converts a **Palo Alto IoT Security** or **Prisma Access Device Security** CSV export into a fully-featured Stigix IoT emulator JSON config.
+
+This is the **most realistic** approach because the source data comes from devices actually observed on a customer network — real MAC addresses, real vendor profiles, real application telemetry, and real risk scores.
+
+> 💡 **When to use this method:** Your customer or prospect already has Palo Alto IoT Security or Prisma Access deployed. Export their device inventory and replay it on a Stigix lab node. The simulated devices will have the exact DHCP fingerprints and protocol behaviors that IoT Security originally classified.
+
+---
+
+### How to Export the CSV from Palo Alto IoT Security
+
+1. Log into **Prisma Access** → **IoT Security** → **Devices**
+2. Apply filters if desired (e.g., Risk = Critical, Vertical = IoT)
+3. Click **Export** → **CSV**
+4. Save the file locally (e.g., `iot device bad sources.csv`)
+
+The CSV includes columns such as: `hostname`, `ip address`, `mac address`, `category`, `profile`, `profile_vertical`, `ml_risk_level`, `display_apps`, `subnets`, `baseline`.
+
+---
+
+### Installation
+
+```bash
+# No external dependencies required
+python3 --version   # 3.7+
+cd stigix/iot
+```
+
+---
+
+### Quick Start
+
+```bash
+# Basic import — all devices
+python import_prisma_devices.py -i "iot device bad sources.csv" -o devices.json
+
+# IoT devices only (exclude PCs, VMs, tablets)
+python import_prisma_devices.py -i "iot device bad sources.csv" -o iot-only.json --only-iot
+
+# Top 30 riskiest devices (Critical > High > Medium)
+python import_prisma_devices.py -i "iot device bad sources.csv" -o devices.json --max-devices 30
+
+# Top 30 IoT only + bad behavior auto-enabled for Critical/High
+python import_prisma_devices.py -i "iot device bad sources.csv" -o devices.json --only-iot --max-devices 30
+
+# Force bad behavior for ALL devices
+python import_prisma_devices.py -i "iot device bad sources.csv" -o devices.json --enable-security
+
+# Enable bad behavior for 30% of devices (random selection)
+python import_prisma_devices.py -i "iot device bad sources.csv" -o devices.json --security-percentage 30
+```
+
+---
+
+### Command Line Options
+
+```text
+usage: import_prisma_devices.py [OPTIONS]
+
+Required:
+  -i, --input FILE          Prisma CSV export file
+  -o, --output FILE         Output JSON file
+
+Optional:
+  --only-iot                Only export IoT devices (exclude PCs, VMs, tablets)
+                            Filters on profile_vertical == "IoT"
+
+  --enable-security         Enable bad_behavior for ALL devices
+
+  --security-percentage N   Enable bad_behavior for N% of devices (random)
+
+  --max-devices N           Limit to top N devices, sorted Critical > High > Medium > Low
+
+  --gateway IP              Override gateway IP (default: derived from CSV subnet CIDR)
+
+  -h, --help                Show help
+```
+
+---
+
+### Bad Behavior Logic
+
+The importer applies bad behavior **automatically** based on the risk level in the CSV:
+
+| CSV `ml_risk_level` | Behavior |
+|---------------------|----------|
+| `Critical` | `bad_behavior: true` automatically |
+| `High` | `bad_behavior: true` automatically |
+| `Medium` | No bad behavior (unless `--enable-security` or `--security-percentage`) |
+| `Low` | No bad behavior |
+| `Informational` | No bad behavior |
+
+When bad behavior is enabled, the device emits:
+```json
+"security": {
+  "bad_behavior": true,
+  "behavior_type": ["random", "dns_flood", "beacon"]
+}
+```
+
+---
+
+### Protocol Mapping
+
+Protocols are extracted from the `display_apps` column of the CSV (the actual applications observed by Prisma). If the field is empty or only generic traffic was seen, a category-based default is applied.
+
+| Prisma App ID | Stigix Protocol |
+|---------------|-----------------|
+| `dhcp` | `dhcp` |
+| `dns`, `dns-base` | `dns` |
+| `ntp-base` | `ntp` |
+| `http`, `https`, `ssl`, `web-browsing` | `http` |
+| `rtsp` | `rtsp` |
+| `mqtt` | `mqtt` |
+| `mdns`, `ssdp`, `upnp` | `mdns` |
+| `lldp` | `lldp` |
+| `arp` | `arp` |
+
+`dhcp`, `arp`, and `dns` are always included regardless.
+
+`lldp` is automatically added for cameras, industrial devices, SCADA, and PLCs.
+
+---
+
+### DHCP Fingerprint Generation
+
+The importer generates realistic DHCP fingerprints per vendor using built-in templates:
+
+| Vendor | `vendor_class_id` | Notes |
+|--------|-------------------|-------|
+| Hikvision | `HIKVISION` | Includes NTP (opt 42) |
+| Axis | `AXIS Network Camera` | Longest param list, opt 43 (vendor-specific) |
+| Dahua | `Dahua IP Camera` | Similar to Hikvision |
+| Apple | `Apple iOS Device` | Unique: opts 95, 44, 46 (NetBIOS, LDAP) |
+| Rockwell | `Rockwell Automation` | Industrial: shorter list, no NTP |
+| OSIsoft | `OSIsoft PI Server` | OT data historian |
+| CareFusion | `CareFusion Alaris` | Medical infusion pump |
+| F5 | `F5 Networks` | Network load balancer |
+| BrightSign | `BrightSign` | Digital signage, includes domain search |
+| Samsung | `Samsung SmartThings` | Consumer IoT |
+| VMware | `VMware Virtual Platform` | VMs / workstations |
+| Default | `Generic IoT Device` | Fallback for unknown vendors |
+
+The hostname is taken directly from the CSV `hostname` column, so it matches exactly what Prisma observed on the wire.
+
+---
+
+### Output JSON Format
+
+The importer produces `{ "devices": [...] }` (no `network` wrapper, unlike `generate_iot_devices.py`).
+
+```json
+{
+  "devices": [
+    {
+      "id": "hikvisi_camera_001",
+      "name": "Hikvision DS-2CD2042FWD",
+      "vendor": "Hikvision",
+      "type": "Camera",
+      "mac": "00:12:34:56:78:01",
+      "protocols": ["arp", "dhcp", "dns", "http", "lldp", "ntp", "rtsp"],
+      "enabled": true,
+      "traffic_interval": 147,
+      "description": "Hikvision Camera — IoT — Risk: Critical",
+      "fingerprint": {
+        "dhcp": {
+          "hostname": "DS-2CD2042FWD",
+          "vendor_class_id": "HIKVISION",
+          "client_id_type": 1,
+          "param_req_list": [1, 3, 6, 12, 15, 28, 42, 51, 54, 58, 59]
+        }
+      },
+      "security": {
+        "bad_behavior": true,
+        "behavior_type": ["random", "dns_flood", "beacon"]
+      }
+    }
+  ]
+}
+```
+
+**Notable differences vs `generate_iot_devices.py` output:**
+
+| Field | `generate_iot_devices.py` | `import_prisma_devices.py` |
+|-------|---------------------------|-----------------------------|
+| `ip_start` | ✅ Present (static IP assigned) | ❌ Absent (device uses DHCP) |
+| `network.gateway` | ✅ Present | ❌ Absent |
+| `type` | Stigix category (e.g. `Security Cameras`) | Prisma category (e.g. `Camera`) |
+| `description` | Model + category | Prisma profile + vertical + risk |
+| `mac` | Generated from vendor OUI | Real MAC from CSV |
+| Bad behavior | Manual flag only | Auto from `ml_risk_level` |
+
+---
+
+### Full Workflow Example
+
+```text
+1. Prisma IoT Security Dashboard
+   └── Devices → Export CSV
+           │
+           ▼
+2. iot device bad sources.csv
+   └── python import_prisma_devices.py -i ".../iot device bad sources.csv" \
+                                          -o devices.json \
+                                          --only-iot \
+                                          --max-devices 30
+           │
+           ▼
+3. devices.json (30 riskiest IoT devices, bad_behavior on Critical/High)
+   └── Dashboard → IoT Tab → Import → Paste JSON
+           │
+           ▼
+4. Stigix emulates real customer devices on the wire
+   └── Palo Alto IoT Security sees familiar MAC + DHCP fingerprints
+   └── Threat detection validated against Critical/High risk device traffic
+```
+
+---
+
+## Comparison: All Three Methods
+
+| Feature | `generate_iot_devices.py` | LLM Generation | `import_prisma_devices.py` |
+|---------|--------------------------|----------------|----------------------------|
+| Speed | Instant | 30-60 seconds | Instant |
+| Data source | Built-in database | AI-generated | Real customer network |
+| MAC addresses | Vendor OUI prefix | AI-generated | Real device MACs |
+| DHCP fingerprints | Per-vendor templates | AI-generated | Per-vendor templates |
+| Protocols | Category defaults | AI-generated | Observed telemetry |
+| Bad behavior | Manual flag | Manual flag | Auto from risk level |
+| Risk-based filtering | ❌ | ❌ | ✅ (`--max-devices`) |
+| IoT-only filter | ❌ | ❌ | ✅ (`--only-iot`) |
+| Internet required | No | Yes | No |
+| Realism | High | High | Highest |
+| Use case | Lab testing | Custom scenarios | Customer demo, real data |
 
 **Recommendation:**
-- **Use Python script for:** Quick testing, reproducible configs, offline work
-- **Use LLM generation for:** Customer-specific demos, industry narratives, unique scenarios
+- **`generate_iot_devices.py`:** Quick lab setup, offline, reproducible
+- **LLM Generation:** Narrative-driven, industry-specific, fully flexible
+- **`import_prisma_devices.py`:** Real customer data, highest fidelity, automatic risk mapping
 
 ---
 

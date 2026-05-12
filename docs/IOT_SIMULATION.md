@@ -99,7 +99,7 @@ Each device in the JSON array follows this structure:
 
 ### 🤖 Device Configuration Generation
 
-You have **two methods** to generate realistic IoT device configurations:
+You have **three methods** to generate realistic IoT device configurations:
 
 #### 1. Python Script Generator (Recommended for Speed)
 Use the `generate_iot_devices.py` script for fast, deterministic device generation with built-in DHCP fingerprints.
@@ -137,6 +137,31 @@ Use ChatGPT, Claude, or Gemini to generate industry-specific device configuratio
 Copy the prompt template from `iot/IOT_PROMPT.txt` and customize for your use case.
 
 📖 **Full Documentation:** [IOT_LLM_GENERATION.md](IOT_LLM_GENERATION.md)
+
+---
+
+#### 3. Prisma / IoT Security CSV Import (Recommended for Real Environments)
+
+If your customer already has **Palo Alto IoT Security** or **Prisma Access** deployed, you can export a real device inventory CSV and convert it directly into a Stigix emulator config. This produces the most accurate simulation because it is based on real devices observed on the customer's network.
+
+**Features:**
+- ✅ Uses real MAC addresses, hostnames, and vendor profiles from the customer network
+- ✅ Extracts protocols from observed `display_apps` telemetry
+- ✅ Automatically enables `bad_behavior` for `Critical` and `High` risk devices
+- ✅ Sorts devices by risk level (Critical first) for `--max-devices` filtering
+- ✅ Generates credible DHCP fingerprints per vendor (Hikvision, Axis, Apple, Rockwell…)
+- ✅ Filters IoT-only devices (excludes PCs, VMs, tablets with `--only-iot`)
+
+**Quick Start:**
+```bash
+# Export device list from Prisma IoT Security dashboard as CSV, then:
+python iot/import_prisma_devices.py -i "iot device bad sources.csv" -o devices.json
+
+# IoT devices only, top 30 riskiest
+python iot/import_prisma_devices.py -i "iot device bad sources.csv" -o devices.json --only-iot --max-devices 30
+```
+
+📖 **Full Documentation:** [IOT_DEVICE_GENERATOR.md → Prisma CSV Import](IOT_DEVICE_GENERATOR.md#-prisma--iot-security-csv-import)
 
 ---
 
