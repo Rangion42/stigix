@@ -32,7 +32,7 @@
 
   /* Improved font stack: SF Pro (macOS), Segoe UI (Windows), system-ui elsewhere */
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.5;
 }
 
@@ -91,3 +91,13 @@ body {
 .animate-blink-slow {
   animation: blink-slow 2s ease-in-out infinite;
 }
+
+/* ─── Proportional tiny-text floor ─────────────────────────────────────────
+   Tailwind's arbitrary pixel sizes don't scale with the rem base.
+   These overrides keep them proportional with the 16→17px base bump (~6%).
+   Hierarchy is preserved: 9px stays smaller than 10px stays smaller than 11px.
+──────────────────────────────────────────────────────────────────────────── */
+.text-\[8px\]  { font-size: 9px; }
+.text-\[9px\]  { font-size: 10px; }
+.text-\[10px\] { font-size: 11px; }
+.text-\[11px\] { font-size: 12px; }
