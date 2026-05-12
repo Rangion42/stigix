@@ -1532,7 +1532,12 @@ export default function App() {
         <ConnectivityPerformance token={token!} uiConfig={uiConfig} onManage={() => setView('settings')} />
       )}
       {view === 'topology' && <Topology token={token!} />}
-      {view === 'security' && <Security token={token!} />}
+      {view === 'security' && <Security token={token!} onGoToCloudSettings={() => {
+        setView('settings');
+        setTimeout(() => {
+          document.getElementById('cloud-target-security')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+      }} />}
       {view === 'vyos' && <Vyos token={token!} />}
       {view === 'iot' && <Iot token={token!} />}
       {view === 'voice' && <Voice token={token!} externalStatus={globalVoiceStatus} />}

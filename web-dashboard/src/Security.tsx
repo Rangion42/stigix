@@ -15,6 +15,7 @@ function cn(...inputs: ClassValue[]) {
 
 interface SecurityProps {
     token: string;
+    onGoToCloudSettings?: () => void;
 }
 
 interface TestResult {
@@ -127,7 +128,7 @@ const SchedulerSettings = ({
     );
 };
 
-export default function Security({ token }: SecurityProps) {
+export default function Security({ token, onGoToCloudSettings }: SecurityProps) {
     const {
         scores, loading: scoresLoading,
         urlBaseline, dnsBaseline, threatBaseline,
@@ -1735,7 +1736,18 @@ export default function Security({ token }: SecurityProps) {
                                                         <p className="text-[9px] text-text-muted font-mono mt-0.5 truncate">{cloudEicarUrl}</p>
                                                         {disabled && (
                                                             <p className="text-[8px] text-amber-600 dark:text-amber-500 mt-1">
-                                                                Configure your key in Settings → Cloud Target to enable this endpoint.
+                                                                Configure your key in{' '}
+                                                                {onGoToCloudSettings ? (
+                                                                    <button
+                                                                        onClick={onGoToCloudSettings}
+                                                                        className="underline underline-offset-2 hover:text-amber-400 transition-colors font-black"
+                                                                    >
+                                                                        Settings → Cloud Target Security
+                                                                    </button>
+                                                                ) : (
+                                                                    <span>Settings → Cloud Target Security</span>
+                                                                )}{' '}
+                                                                to enable this endpoint.
                                                             </p>
                                                         )}
                                                     </div>
