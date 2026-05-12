@@ -881,8 +881,8 @@ export default function App() {
         <button
           onClick={() => setView('dashboard')}
           className={cn(
-            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-xs border-b-2 transition-all",
-            view === 'dashboard' ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-text-muted hover:text-text-primary"
+            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-sm border-b-2 transition-all",
+            view === 'dashboard' ? "border-blue-600 text-blue-600 dark:text-blue-300" : "border-transparent text-text-muted hover:text-text-primary"
           )}
         >
           <LayoutDashboard size={18} /> Traffic Control
@@ -891,8 +891,8 @@ export default function App() {
         <button
           onClick={() => setView('performance')}
           className={cn(
-            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-xs border-b-2 transition-all",
-            view === 'performance' ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-text-muted hover:text-text-primary"
+            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-sm border-b-2 transition-all",
+            view === 'performance' ? "border-blue-600 text-blue-600 dark:text-blue-300" : "border-transparent text-text-muted hover:text-text-primary"
           )}
         >
           <Gauge size={18} /> Digital Experience
@@ -903,8 +903,8 @@ export default function App() {
           <button
             onClick={() => setView('speedtest')}
             className={cn(
-              "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-xs border-b-2 transition-all",
-              view === 'speedtest' ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-text-muted hover:text-text-primary"
+              "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-sm border-b-2 transition-all",
+              view === 'speedtest' ? "border-blue-600 text-blue-600 dark:text-blue-300" : "border-transparent text-text-muted hover:text-text-primary"
             )}
           >
             <Activity size={18} /> Bandwidth Test
@@ -914,8 +914,8 @@ export default function App() {
         <button
           onClick={() => setView('security')}
           className={cn(
-            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-xs border-b-2 transition-all",
-            view === 'security' ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-text-muted hover:text-text-primary"
+            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-sm border-b-2 transition-all",
+            view === 'security' ? "border-blue-600 text-blue-600 dark:text-blue-300" : "border-transparent text-text-muted hover:text-text-primary"
           )}
         >
           <Shield size={18} /> Security
@@ -924,8 +924,8 @@ export default function App() {
         <button
           onClick={() => setView('iot')}
           className={cn(
-            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-xs border-b-2 transition-all",
-            view === 'iot' ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-text-muted hover:text-text-primary"
+            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-sm border-b-2 transition-all",
+            view === 'iot' ? "border-blue-600 text-blue-600 dark:text-blue-300" : "border-transparent text-text-muted hover:text-text-primary"
           )}
         >
           <Cpu size={18} /> IoT Simulation
@@ -934,8 +934,8 @@ export default function App() {
         <button
           onClick={() => setView('voice')}
           className={cn(
-            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-xs border-b-2 transition-all",
-            view === 'voice' ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-text-muted hover:text-text-primary"
+            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-sm border-b-2 transition-all",
+            view === 'voice' ? "border-blue-600 text-blue-600 dark:text-blue-300" : "border-transparent text-text-muted hover:text-text-primary"
           )}
         >
           <Phone size={18} /> Voice
@@ -944,8 +944,8 @@ export default function App() {
         <button
           onClick={() => setView('convergence')}
           className={cn(
-            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-xs border-b-2 transition-all",
-            view === 'convergence' ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-text-muted hover:text-text-primary"
+            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-sm border-b-2 transition-all",
+            view === 'convergence' ? "border-blue-600 text-blue-600 dark:text-blue-300" : "border-transparent text-text-muted hover:text-text-primary"
           )}
         >
           <Zap size={18} /> Failover Monitoring
@@ -954,8 +954,8 @@ export default function App() {
         <button
           onClick={() => setView('topology')}
           className={cn(
-            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-xs border-b-2 transition-all",
-            view === 'topology' ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-text-muted hover:text-text-primary"
+            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-sm border-b-2 transition-all",
+            view === 'topology' ? "border-blue-600 text-blue-600 dark:text-blue-300" : "border-transparent text-text-muted hover:text-text-primary"
           )}
         >
           <Network size={18} /> Topology <span className="px-1 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 ml-1">Beta</span>
@@ -964,8 +964,8 @@ export default function App() {
         <button
           onClick={() => setView('vyos')}
           className={cn(
-            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-xs border-b-2 transition-all",
-            view === 'vyos' ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-text-muted hover:text-text-primary"
+            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-sm border-b-2 transition-all",
+            view === 'vyos' ? "border-blue-600 text-blue-600 dark:text-blue-300" : "border-transparent text-text-muted hover:text-text-primary"
           )}
         >
           <Monitor size={18} /> VyOS Control
@@ -974,8 +974,8 @@ export default function App() {
         <button
           onClick={() => setView('events')}
           className={cn(
-            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-xs border-b-2 transition-all",
-            view === 'events' ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-text-muted hover:text-text-primary"
+            "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-sm border-b-2 transition-all",
+            view === 'events' ? "border-blue-600 text-blue-600 dark:text-blue-300" : "border-transparent text-text-muted hover:text-text-primary"
           )}
         >
           <Terminal size={18} /> Live Events
@@ -986,8 +986,8 @@ export default function App() {
           <button
             onClick={() => setView('settings')}
             className={cn(
-              "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-xs border-b-2 transition-all",
-              view === 'settings' ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-text-muted hover:text-text-primary"
+              "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-sm border-b-2 transition-all",
+              view === 'settings' ? "border-blue-600 text-blue-600 dark:text-blue-300" : "border-transparent text-text-muted hover:text-text-primary"
             )}
           >
             <Settings size={18} /> Settings
@@ -1024,7 +1024,7 @@ export default function App() {
                     <div className="flex items-center justify-between px-1">
                       <div className="flex items-center gap-1.5">
                         <span className="text-[10px] font-black text-text-muted tracking-widest uppercase">Traffic Speed</span>
-                        <span className="text-[9px] font-black text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20 uppercase tracking-tighter">
+                        <span className="text-[10px] font-black text-blue-700 dark:text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20 uppercase tracking-tighter">
                           {trafficRate <= 0.5 ? '🚀 Turbo' : trafficRate <= 2 ? '⚡ Fast' : trafficRate <= 5 ? '📱 Normal' : '🐢 Slow'}
                         </span>
                       </div>
@@ -1052,7 +1052,7 @@ export default function App() {
                     <div className="flex items-center justify-between px-1">
                       <div className="flex items-center gap-1.5">
                         <span className="text-[10px] font-black text-text-muted tracking-widest uppercase">Traffic Density</span>
-                        <span className="text-[9px] font-black text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20 uppercase tracking-tighter">
+                        <span className="text-[10px] font-black text-purple-700 dark:text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20 uppercase tracking-tighter">
                           {trafficClientCount} {trafficClientCount > 1 ? 'Clients' : 'Client'}
                         </span>
                       </div>
@@ -1110,7 +1110,7 @@ export default function App() {
 
                   {/* Network Badges */}
                   {(publicIp || gatewayIp || siteInfo?.local_ip) && (
-                    <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 border border-blue-500/20 rounded text-[10px] font-black text-blue-600 dark:text-blue-400 tracking-widest">
+                    <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 border border-blue-500/20 rounded text-[10px] font-black text-blue-700 dark:text-blue-300 tracking-widest">
                       <Globe size={10} />
                       {siteInfo?.local_ip && <span className="mr-1 border-r border-blue-500/30 pr-2">IP: {siteInfo.local_ip}</span>}
                       {gatewayIp && <span className="mr-1 border-r border-blue-500/30 pr-2">GW: {gatewayIp}</span>}
@@ -1157,7 +1157,7 @@ export default function App() {
 
                   <button
                     onClick={() => setView('settings')}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 transition-all shadow-sm"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest bg-blue-600/10 hover:bg-blue-600/20 text-blue-700 dark:text-blue-300 border border-blue-500/20 transition-all shadow-sm"
                   >
                     <Plus size={14} />
                     Manage
