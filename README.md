@@ -2,7 +2,7 @@
 
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/jsuzanne/sdwan-traffic-gen)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.3.0--patch.12-blue.svg)](https://github.com/jsuzanne/stigix/releases)
+[![Version](https://img.shields.io/badge/Version-1.3.0--patch.38-blue.svg)](https://github.com/jsuzanne/stigix/releases)
 
 A modern web-based SD-WAN traffic generator with real-time monitoring, customizable traffic patterns, and comprehensive security testing. Perfect for testing SD-WAN deployments, network QoS policies, and application performance.
 
@@ -115,8 +115,12 @@ The project is evolving rapidly with new features and refinements added in every
 - **AI Security Tests (AISA)** 🤖 — 5 Palo Alto AI Security simulation scenarios based on a real-world PowerShell POC script. Targets ChatGPT, Grok, Gemini, Perplexity + 24 AI apps for volume telemetry. Includes a dedicated AI scheduler. [Read docs](docs/SECURITY_TESTING.md)
 - **Security Score Dashboard** 📊 — Per-module security posture scoring (URL, DNS, Threat Prevention) with 24h trend charts, baseline pinning, gap analysis, and Latest Changes diff between consecutive runs.
 - **IoT Daemon Architecture** ⚡ — Migrated from N-processes to a single threaded Python daemon. RAM drops from ~600MB to ~50MB for 30 devices. Supports 100+ devices. New Global Bad Behavior toggle, BPF kernel filter for DHCP, and gratuitous ARP for IoT classification.
+- **Prisma CSV Importer** 📥 — `import_prisma_devices.py` converts a real Palo Alto IoT Security CSV export into a Stigix emulator config with real MAC addresses, risk-based bad behavior (auto on Critical/High), and per-vendor DHCP fingerprints. [Read docs](docs/IOT_DEVICE_GENERATOR.md#-prisma--iot-security-csv-import)
 - **VyOS Orchestration** 🔌 — Full sequence management with Clone-to-Reverse, intelligent sorting, dynamic search/filter, and comprehensive history.
 - **Multi-Client Traffic Scaling** 📈 — Dynamically spawn 1–10 parallel traffic workers. Live density slider in the Traffic Control panel.
+- **Security Test Headers** 🏷️ — Renamed table columns for clarity: Test ID → Type, Disposition → Result for better readability at a glance.
+- **Beta Install Script** 🧪 — New `install-latest-beta.sh` script for testing pre-release deployments using the `latest` Docker image tag.
+- **UI Readability** 🎨 — Dark-mode contrast improvements (`--text-muted` token brightened), SF Pro/Segoe UI font stack, proportional font scale (base 16→17px) for better legibility across all widgets.
 - **Configurable Port** 🔧 — `PORT` environment variable now correctly overrides the default 8080 port across all internal services.
 
 [View full changelog with all version details →](CHANGELOG.md)

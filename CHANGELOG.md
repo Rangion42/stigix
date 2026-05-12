@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-05-12
+### Documentation
+- **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
+- **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
+
+## [v1.3.0-patch.38] - 2026-05-12
+### Changed
+- **UI Readability** 🎨 Proportional font scale: bumped base `font-size` from `16px` to `17px` so all rem-based Tailwind sizes (text-xs, text-sm, text-base, KPI numbers) scale ~6% together. Added CSS overrides for hardcoded pixel sizes (`text-[9px]` → 10px, `text-[10px]` → 11px, `text-[11px]` → 12px) to preserve visual hierarchy across widget labels.
+
+## [v1.3.0-patch.37] - 2026-05-12
+### Changed
+- **UI Readability** 🎨 Dark-mode contrast improvements: brightened `--text-muted` CSS token (from `#64748b` to `#7c8fa8`) for improved legibility of secondary labels. Updated font stack to use native system fonts (SF Pro on macOS, Segoe UI on Windows) for sharper text rendering. Navigation tabs bumped from `text-xs` (12px) to `text-sm` (14px). Accent pills and active tab colors updated to `blue-300`/`purple-300` variants for better contrast on dark backgrounds.
+
+## [v1.3.0-patch.36] - 2026-05-12
+### Changed
+- **Security Dashboard** 🏷️ Renamed test history table headers for better semantic clarity: "Test #" → "Type" (showing URL/DNS/EICAR/C2/AI badge), "Disposition" → "Result" for more intuitive reading of test outcomes.
+
+## [v1.3.0-patch.35] - 2026-05-12
+### Fixed
+- **Deploy** 🐛 Corrected `COMPOSE_URL` override in `install-latest-beta.sh` to point to the correct beta compose file instead of the production stable one.
+
+## [v1.3.0-patch.34] - 2026-05-12
+### Added
+- **Deploy** 🧪 New `install-latest-beta.sh` script for testing pre-release deployments. Uses the `latest` Docker image tag and a dedicated beta compose file to allow safe testing of new features before stable promotion.
+### Fixed
+- **Deploy** 🔑 Applied `JWT_SECRET` auto-generation fix to `install.sh` to prevent fresh installs from using an empty or default secret.
+
+## [v1.3.0-patch.33] - 2026-05-12
+### Fixed
+- **Security** 🛡️ Resolved a false-positive "offline" status for EICAR targets. Reachability checks now use the UDP convergence port instead of a generic HTTP probe, eliminating incorrect offline classification for EICAR cloud targets.
+
+## [v1.3.0-patch.32] - 2026-05-11
+### Documentation
+- **Changelog** 📝 Backfilled CHANGELOG with all patches since `patch.16`, bringing the release history up to date.
+
 ## [v1.3.0-patch.31] - 2026-05-11
 ### Changed
 - **IoT Simulation** 🔧 Replaced dynamic local sample generation with a direct download link to a clean, centralized `iot-devices.json` configuration file hosted on GitHub.
