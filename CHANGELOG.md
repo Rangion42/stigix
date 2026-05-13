@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.55] - 2026-05-13
+### Added
+- **IoT** 🧬 Prisma CSV import — three enrichment improvements to `import_prisma_devices.py`:
+  1. **OS-aware DHCP fingerprinting**: added `OS_DHCP_FINGERPRINTS` dict (Windows → `MSFT 5.0`, iOS → `dhcpcd-9.4.1`, Linux/Embedded → `udhcp`, Enea OSE, FortiOS, macOS). OS fingerprint overrides vendor-based default when `os group` or `OS` column is populated.
+  2. **Fix protocol column**: switched from `display_apps` (always empty in real exports) to `Applications` → `display_apps` → `display_protos` fallback chain. Devices now get much richer protocol sets.
+  3. **Asset Criticality as secondary bad-behavior signal**: when `ml_risk_level` is missing, `Asset Criticality = Critical|High` triggers bad behavior.
+  4. **Enriched description**: now includes OS, risk level, criticality, wire/wireless, and VLAN info.
+### Changed
+- **Docs** 📖 Updated `docs/IOT_SIMULATION.md` Prisma CSV Import section to document OS-aware DHCP, UI import button, enriched description, and correct CLI examples.
+
 ## [v1.3.0-patch.54] - 2026-05-13
 ### Fixed
 - **IoT** 🔤 Prisma CSV import: fixed vendor name duplication in generated device names ("HP HP Computer" → "HP Computer", "Atlas Atlas Copco" → "Atlas Copco Torque Controller"). Added `make_name()` helper that checks if the model string already starts with the vendor first-word (case-insensitive, ignoring punctuation like commas) before prepending it.

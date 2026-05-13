@@ -146,31 +146,51 @@ If your customer already has **Palo Alto IoT Security** or **Prisma Access** dep
 
 **Features:**
 - ✅ Uses real MAC addresses, hostnames, and vendor profiles from the customer network
-- ✅ Extracts protocols from observed `display_apps` telemetry
+- ✅ Extracts protocols from observed `Applications` telemetry (Prisma's real column name)
+- ✅ **OS-aware DHCP fingerprinting** — overrides generic vendor defaults with actual OS signatures:
+  - Windows → `MSFT 5.0` + Windows-specific Option 55
+  - iOS → `dhcpcd-9.4.1` + iOS Option 55
+  - Linux / Embedded → `udhcp` variants
+  - Enea OSE (medical infusion pumps) → `Enea OSE`
+  - FortiOS → `FortiGate`
+  - macOS → `AAPLBSDPC/i386`
+- ✅ **Asset Criticality** used as secondary bad-behavior signal (when `ml_risk_level` is missing)
 - ✅ Automatically enables `bad_behavior` for `Critical` and `High` risk devices
 - ✅ Sorts devices by risk level (Critical first) for `--max-devices` filtering
 - ✅ Generates credible DHCP fingerprints per vendor (Hikvision, Axis, Apple, Rockwell…)
 - ✅ Filters IoT-only devices (excludes PCs, VMs, tablets with `--only-iot`)
+- ✅ Enriched `description` field: profile | OS | Risk level | Criticality | Wire/Wireless | VLAN
 
-**Quick Start:**
+**Import via UI (Recommended):**
+
+Go to **IoT Simulation** → click **Import Prisma CSV** in the header toolbar.
+Select your CSV file, choose options (max devices, IoT-only filter, bad behavior mode, merge vs replace) and click **Convert & Import** — no CLI required.
+
+> The UI validates the CSV format client-side before sending to the server, rejecting non-Prisma files immediately.
+
+**Or via CLI:**
 ```bash
 # Export device list from Prisma IoT Security dashboard as CSV, then:
 python iot/import_prisma_devices.py -i "iot device bad sources.csv" -o devices.json
 
 # IoT devices only, top 30 riskiest
 python iot/import_prisma_devices.py -i "iot device bad sources.csv" -o devices.json --only-iot --max-devices 30
+
+# Force bad behavior on 40% of devices
+python iot/import_prisma_devices.py -i "iot device bad sources.csv" -o devices.json --security-percentage 40
 ```
 
 📖 **Full Documentation:** [IOT_DEVICE_GENERATOR.md → Prisma CSV Import](IOT_DEVICE_GENERATOR.md#-prisma--iot-security-csv-import)
 
 ---
 
-**Then:**
+**Then (CLI workflow only):**
 1. Copy the generated JSON
 2. Go to the **IoT Tab** in the dashboard
-3. Click **Import**
+3. Click **Import Json**
 4. Paste the JSON
 5. Start simulating!
+
 
 
 ### Protocol Support Details

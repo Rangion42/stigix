@@ -129,6 +129,48 @@ VENDOR_DHCP_FINGERPRINTS = {
     },
 }
 
+# OS group / OS name → DHCP fingerprint override
+# These are prioritised over vendor-based fingerprints when OS data is available
+# and are more accurate for Palo Alto IoT Security identification.
+OS_DHCP_FINGERPRINTS = {
+    "windows": {
+        "vendor_class_id": "MSFT 5.0",
+        "param_req_list": [1, 15, 3, 6, 44, 46, 47, 31, 33, 249, 43, 252],
+    },
+    "ios": {
+        "vendor_class_id": "dhcpcd-9.4.1",
+        "param_req_list": [1, 121, 3, 6, 15, 119, 252, 95, 44, 46],
+    },
+    "macos": {
+        "vendor_class_id": "AAPLBSDPC/i386",
+        "param_req_list": [1, 121, 3, 6, 15, 119, 252, 95, 44, 46],
+    },
+    "linux": {
+        "vendor_class_id": "udhcp 1.30.0",
+        "param_req_list": [1, 28, 2, 3, 15, 6, 119, 12, 44, 47],
+    },
+    "embedded": {
+        "vendor_class_id": "udhcp 0.9.8",
+        "param_req_list": [1, 3, 6, 12, 15, 28, 51, 58, 59],
+    },
+    "enea ose": {
+        "vendor_class_id": "Enea OSE",
+        "param_req_list": [1, 3, 6, 12, 28, 51, 58, 59],
+    },
+    "fortios": {
+        "vendor_class_id": "FortiGate",
+        "param_req_list": [1, 3, 6, 12, 15, 28, 51, 54, 58, 59],
+    },
+    "proconos": {
+        "vendor_class_id": "ProConOS Runtime",
+        "param_req_list": [1, 3, 6, 12, 15, 28, 51, 58, 59],
+    },
+    "brightsign": {
+        "vendor_class_id": "BrightSign",
+        "param_req_list": [1, 3, 6, 15, 28, 51, 58, 59, 119],
+    },
+}
+
 
 # ─── Helper functions ─────────────────────────────────────────────────────────
 
@@ -187,11 +229,26 @@ def extract_protocols_from_apps(apps_str):
     return sorted(protocols)
 
 
-def get_dhcp_fingerprint(vendor, hostname, model):
-    """Generate DHCP fingerprint for a device."""
-    fp_template = VENDOR_DHCP_FINGERPRINTS.get("default", {})
+def get_dhcp_fingerprint(vendor, hostname, model, os_group=""):
+    """
+    Generate DHCP fingerprint for a device.
+    Priority: OS-based fingerprint > vendor-based fingerprint > default.
+    OS-based fingerprints are more accurate for Palo Alto IoT Security identification.
+    """
+    # 1. OS-based override (highest accuracy)
+    if os_group:
+        os_lower = os_group.lower().strip()
+        for os_key, os_fp in OS_DHCP_FINGERPRINTS.items():
+            if os_key in os_lower:
+                return {
+                    "hostname": hostname or f"{vendor}-device",
+                    "vendor_class_id": os_fp["vendor_class_id"],
+                    "client_id_type": 1,
+                    "param_req_list": os_fp["param_req_list"],
+                }
 
-    # Match vendor keyword
+    # 2. Vendor keyword match
+    fp_template = VENDOR_DHCP_FINGERPRINTS.get("default", {})
     for key, fp in VENDOR_DHCP_FINGERPRINTS.items():
         if key.lower() in vendor.lower():
             fp_template = fp
@@ -287,15 +344,26 @@ def convert(
             skipped += 1
             continue
 
-        hostname = safe(row, "hostname")
-        ip_raw   = safe(row, "ip address") or safe(row, "ip")
-        mac      = safe(row, "mac address").lower()
-        subnet   = safe(row, "subnets")
-        category = safe(row, "category") or "Unknown"
+        hostname   = safe(row, "hostname")
+        ip_raw     = safe(row, "ip address") or safe(row, "ip")
+        mac        = safe(row, "mac address").lower()
+        subnet     = safe(row, "subnets")
+        category   = safe(row, "category") or "Unknown"
         risk_level = safe(row, "ml_risk_level")
-        apps_str = safe(row, "display_apps")
-        profile  = safe(row, "profile")
-        vertical = safe(row, "profile_vertical")
+        profile    = safe(row, "profile")
+        vertical   = safe(row, "profile_vertical")
+
+        # Protocol data: real Prisma exports use 'Applications' (not 'display_apps').
+        # Fallback chain: Applications → display_apps → display_protos
+        apps_str = (safe(row, "Applications")
+                    or safe(row, "display_apps")
+                    or safe(row, "display_protos"))
+
+        # Enrichment fields
+        os_group         = safe(row, "os group") or safe(row, "OS")      # e.g. "Windows", "iOS", "Enea OSE"
+        asset_criticality = safe(row, "Asset Criticality")                # "Critical", "High", "Medium"
+        wire_wireless    = safe(row, "wire or wireless")                  # "wireless" | "wired"
+        vlan_desc        = safe(row, "VLAN Description")                  # e.g. "Clinical and IT"
 
         vendor = extract_vendor(row)
         model  = extract_model(row)
@@ -319,8 +387,8 @@ def convert(
             if "lldp" not in protocols:
                 protocols.append("lldp")
 
-        # DHCP fingerprint
-        dhcp_fp = get_dhcp_fingerprint(vendor, hostname, model)
+        # DHCP fingerprint — OS-aware when available
+        dhcp_fp = get_dhcp_fingerprint(vendor, hostname, model, os_group=os_group)
 
         # Unique counter per vendor
         counters[vendor] = counters.get(vendor, 0) + 1
@@ -335,7 +403,14 @@ def convert(
             "protocols": sorted(set(protocols)),
             "enabled": True,
             "traffic_interval": random.randint(60, 300),
-            "description": f"{profile} — {vertical} — Risk: {risk_level or 'N/A'}",
+            "description": " | ".join(filter(None, [
+                profile or None,
+                f"OS: {os_group}" if os_group else None,
+                f"Risk: {risk_level}" if risk_level else None,
+                f"Criticality: {asset_criticality}" if asset_criticality else None,
+                f"{wire_wireless.capitalize()}" if wire_wireless else None,
+                f"VLAN: {vlan_desc}" if vlan_desc else None,
+            ])),
             "fingerprint": {
                 "dhcp": dhcp_fp
             },
@@ -353,7 +428,10 @@ def convert(
         elif enable_security:
             is_bad = True
         elif risk_level in RISK_TO_BAD_BEHAVIOR:
-            # Auto-enable bad behavior for Critical/High risk devices
+            # Primary signal: Prisma ml_risk_level Critical/High
+            is_bad = True
+        elif not risk_level and asset_criticality in RISK_TO_BAD_BEHAVIOR:
+            # Secondary signal: Asset Criticality when ml_risk_level is missing
             is_bad = True
 
         if is_bad:
