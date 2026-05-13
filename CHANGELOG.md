@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.54] - 2026-05-13
+### Fixed
+- **IoT** 🔤 Prisma CSV import: fixed vendor name duplication in generated device names ("HP HP Computer" → "HP Computer", "Atlas Atlas Copco" → "Atlas Copco Torque Controller"). Added `make_name()` helper that checks if the model string already starts with the vendor first-word (case-insensitive, ignoring punctuation like commas) before prepending it.
+
 ## [v1.3.0-patch.53] - 2026-05-13
 ### Fixed
 - **IoT** 🐛 Prisma CSV import: script path now uses `PROJECT_ROOT` (same mechanism as other Python scripts) instead of `__dirname`-relative path. Fixes `No such file or directory` error in Docker where `__dirname = /app` and `../iot/` resolved to `/iot/` instead of `/app/iot/`.

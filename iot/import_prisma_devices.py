@@ -234,6 +234,25 @@ def make_device_id(vendor, category, counter):
     return f"{v}_{c}_{counter:03d}"
 
 
+def make_name(vendor, model, hostname, device_id):
+    """
+    Build a human-readable device name without vendor duplication.
+    e.g. vendor='Atlas', model='Atlas Copco Torque Controller'
+         → 'Atlas Copco Torque Controller'  (not 'Atlas Atlas Copco...')
+    e.g. vendor='HP', model='HP Computer'  → 'HP Computer'
+    e.g. vendor='Cisco', model='ISR4431'   → 'Cisco ISR4431'
+    """
+    if not model or model == "Unknown Model":
+        return hostname or device_id
+    # Normalise: strip trailing punctuation/comma from vendor (e.g. "VMware, Inc." → "vmware")
+    v_norm = re.sub(r'[^a-z0-9 ]', '', vendor.lower()).split()[0] if vendor else ''
+    m_lower = model.lower()
+    # If model already starts with the vendor first-word, use model as-is
+    if v_norm and m_lower.startswith(v_norm):
+        return model
+    return f"{vendor} {model}"
+
+
 # ─── Main conversion ──────────────────────────────────────────────────────────
 
 def convert(
@@ -309,7 +328,7 @@ def convert(
 
         device = {
             "id": device_id,
-            "name": f"{vendor} {model}" if model and model != "Unknown Model" else hostname or device_id,
+            "name": make_name(vendor, model, hostname, device_id),
             "vendor": vendor,
             "type": category,
             "mac": mac,
