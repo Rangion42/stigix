@@ -549,9 +549,9 @@ export default function Iot({ token }: IotProps) {
                                     </div>
                                 )}
 
-                                {!isCompact && device.security?.bad_behavior && (
-                                    <div className="flex items-center gap-1.5 flex-wrap mb-2">
-                                        {(device.security.behavior_type || []).map(bt => (
+                                {!isCompact && (
+                                    <div className="flex items-center gap-1.5 flex-wrap mb-2 min-h-[22px]">
+                                        {device.security?.bad_behavior && (device.security.behavior_type || []).map(bt => (
                                             <span key={bt} className="bg-red-500/10 text-red-400 text-[8px] font-black px-1.5 py-0.5 rounded border border-red-500/20 uppercase tracking-tight">
                                                 {bt.replace(/_/g, ' ')}
                                             </span>
