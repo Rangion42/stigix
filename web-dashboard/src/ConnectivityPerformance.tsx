@@ -838,7 +838,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                     </div>
                                     <div className="h-[250px] w-full bg-card-secondary/20 p-4 rounded-xl border border-border shadow-inner">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart data={selectedEndpointResults.slice(0, 30).reverse().map(r => ({
+                                            <AreaChart data={selectedEndpointResults.slice(0, maxCaptures).reverse().map(r => ({
                                                 time: new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                                                 DNS: Math.round(r.metrics.dns_ms || 0),
                                                 TCP: Math.round(r.metrics.tcp_ms || 0),

@@ -1437,8 +1437,8 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                     <div className="space-y-1">
                                         <p className="text-[10px] font-black text-blue-600/80 uppercase tracking-widest">Refresh Awareness</p>
                                         <p className="text-[11px] font-bold text-text-secondary leading-relaxed opacity-80">
-                                            Probes now run at a harmonized frequency of <strong className="text-blue-500">1 minute</strong>.
-                                            Increasing the display limit shows more historical context but may slightly increase page load time for deep diagnostics.
+                                            This setting controls how many data points are shown in the <strong className="text-blue-500">Recent Captures table</strong> and <strong className="text-blue-500">latency breakdown graph</strong> inside each probe&#39;s detail modal.
+                                            Probe frequency is fixed at <strong className="text-blue-500">1 minute</strong> server-side and cannot be changed from this UI — it requires a container restart with a different scheduler configuration.
                                         </p>
                                     </div>
                                 </div>
