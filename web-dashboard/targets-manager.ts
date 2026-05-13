@@ -122,9 +122,14 @@ export class TargetsManager {
         const targets = this.loadTargets();
         const initialLength = targets.length;
         const filtered = targets.filter(t => t.id !== id);
-        
+
         if (filtered.length !== initialLength) {
+            const deleted = targets.find(t => t.id === id)!;
             this.saveTargets(filtered);
+            // Also clean up source config files to prevent the host from
+            // re-appearing as a synthesized target on the next getMergedTargets() call.
+            this.removeFromConvergenceEndpoints(deleted.host);
+            this.removeFromVoiceConfig(deleted.host);
             return true;
         }
 
@@ -132,20 +137,91 @@ export class TargetsManager {
         const merged = this.getMergedTargets();
         const synthTarget = merged.find(t => t.id === id);
         if (synthTarget) {
-            // "Delete" a synthesized target by promoting it and explicitly disabling it
-            const disabledTarget: TargetDefinition = {
-                ...synthTarget,
-                id: makeId(),
-                enabled: false,
-                source: 'managed'
-            };
-            delete disabledTarget.meta;
-            targets.push(disabledTarget);
-            this.saveTargets(targets);
-            return true;
+            // For local-config synthesized targets: delete from the source file directly.
+            // This prevents the infinite re-appear cycle caused by the old
+            // "promote + disable" trick (disabled entry was itself deletable, revealing the source again).
+            if (synthTarget.id.startsWith('syn-conv-')) {
+                return this.removeFromConvergenceEndpoints(synthTarget.host);
+            }
+            if (synthTarget.id.startsWith('syn-voice-')) {
+                return this.removeFromVoiceConfig(synthTarget.host);
+            }
+            if (synthTarget.id.startsWith('syn-security-') || synthTarget.id.startsWith('syn-xfr-')) {
+                // These are derived from env vars / security-config — not easily editable.
+                // Fall back to promote+disable so the target at least appears hidden.
+                const disabledTarget: TargetDefinition = {
+                    ...synthTarget,
+                    id: makeId(),
+                    enabled: false,
+                    source: 'managed'
+                };
+                delete disabledTarget.meta;
+                targets.push(disabledTarget);
+                this.saveTargets(targets);
+                return true;
+            }
+            // Registry targets (reg-*): promote + disable so they stay hidden even
+            // after a discovery refresh (the registry re-synthesizes them on every cycle).
+            if (synthTarget.id.startsWith('reg-')) {
+                const disabledTarget: TargetDefinition = {
+                    ...synthTarget,
+                    id: makeId(),
+                    enabled: false,
+                    source: 'managed'
+                };
+                delete disabledTarget.meta;
+                targets.push(disabledTarget);
+                this.saveTargets(targets);
+                return true;
+            }
         }
 
         return false;
+    }
+
+    /** Remove a host entry from convergence-endpoints.json, if present. */
+    private removeFromConvergenceEndpoints(host: string): boolean {
+        const file = path.join(this.configDir, 'convergence-endpoints.json');
+        try {
+            if (!fs.existsSync(file)) return false;
+            const endpoints: any[] = JSON.parse(fs.readFileSync(file, 'utf-8'));
+            const h = host.toLowerCase().trim();
+            const filtered = endpoints.filter(ep => (ep.target || '').toLowerCase().trim() !== h);
+            if (filtered.length !== endpoints.length) {
+                fs.writeFileSync(file, JSON.stringify(filtered, null, 2), 'utf-8');
+                log('TARGETS', `Removed host ${host} from convergence-endpoints.json`);
+                return true;
+            }
+            return false;
+        } catch (e: any) {
+            log('TARGETS', `Failed to remove ${host} from convergence-endpoints.json: ${e.message}`, 'warn');
+            return false;
+        }
+    }
+
+    /** Remove a host entry from voice-config.json servers list, if present. */
+    private removeFromVoiceConfig(host: string): boolean {
+        const file = path.join(this.configDir, 'voice-config.json');
+        try {
+            if (!fs.existsSync(file)) return false;
+            const config = JSON.parse(fs.readFileSync(file, 'utf-8'));
+            if (!Array.isArray(config.servers)) return false;
+            const h = host.toLowerCase().trim();
+            const filtered = config.servers.filter((s: any) => {
+                const [sHost] = String(s.target || '').split(':');
+                return sHost.toLowerCase().trim() !== h;
+            });
+            if (filtered.length !== config.servers.length) {
+                config.servers = filtered;
+                fs.writeFileSync(file, JSON.stringify(config, null, 2), 'utf-8');
+                log('TARGETS', `Removed host ${host} from voice-config.json`);
+                return true;
+            }
+            return false;
+        } catch (e: any) {
+            log('TARGETS', `Failed to remove ${host} from voice-config.json: ${e.message}`, 'warn');
+            return false;
+        }
     }
 
     // ─── Synthesis from legacy configs ─────────────────────────────────────────

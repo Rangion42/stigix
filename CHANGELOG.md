@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.51] - 2026-05-13
+### Fixed
+- **Targets** 🐛 Fixed infinite re-appear cycle when deleting a target that was also present in `convergence-endpoints.json` or `voice-config.json`. `deleteTarget()` now removes the host directly from those source files instead of relying on a "promote + disable" workaround that users could break by deleting the disabled entry. The promote+disable path is preserved only for registry (`reg-*`) and env-var-derived targets that cannot be edited locally.
+
+## [v1.3.0-patch.50] - 2026-05-13
+### Fixed
+- **IoT** 📐 Device cards in the grid view now maintain consistent height whether or not bad behavior badges are shown. The behavior badge container always renders with `min-h-[22px]`, preventing the Start button from shifting down on cards with active attack types.
+
 ## [v1.3.0-patch.49] - 2026-05-13
 ### Fixed
 - **Registry** 🛡️ Defense-in-depth self-exclusion in `getPeers()` — node now explicitly skips its own `instance_id` from the peer cache, regardless of whether the registry (local or Cloudflare) filtered it out. Prevents inflated `peer_count`, loopback XFR/Voice/Convergence tests, and self-loops in the topology view.
