@@ -9351,6 +9351,92 @@ app.post('/api/iot/config/import', authenticateToken, (req, res) => {
 });
 
 
+
+/** POST /api/iot/import-prisma-csv — Convert a Prisma IoT Security CSV export and import it */
+app.post('/api/iot/import-prisma-csv', authenticateToken, async (req, res) => {
+    const { csv_content, max_devices, only_iot, enable_security, security_percentage, merge } = req.body;
+    if (!csv_content) return res.status(400).json({ error: 'csv_content is required' });
+
+    const ts = Date.now();
+    const tmpCsv  = path.join(APP_CONFIG.configDir, `prisma-import-${ts}.csv`);
+    const tmpJson = path.join(APP_CONFIG.configDir, `prisma-import-${ts}.json`);
+
+    const cleanup = () => {
+        try { if (fs.existsSync(tmpCsv))  fs.unlinkSync(tmpCsv);  } catch {}
+        try { if (fs.existsSync(tmpJson)) fs.unlinkSync(tmpJson); } catch {}
+    };
+
+    try {
+        fs.writeFileSync(tmpCsv, csv_content, 'utf-8');
+
+        // Script at <repo>/iot/import_prisma_devices.py
+        // __dirname in production = /app/web-dashboard/dist, dev = /app/web-dashboard
+        const scriptPath = path.join(__dirname, '..', 'iot', 'import_prisma_devices.py');
+        const pythonBin  = process.env.PYTHON_PATH || 'python3';
+
+        const args = [scriptPath, '--input', tmpCsv, '--output', tmpJson];
+        if (max_devices  && Number(max_devices) > 0)  args.push('--max-devices', String(Number(max_devices)));
+        if (only_iot)        args.push('--only-iot');
+        if (enable_security) args.push('--enable-security');
+        if (security_percentage != null && Number(security_percentage) > 0)
+            args.push('--security-percentage', String(Number(security_percentage)));
+
+        log('IOT', `Running Prisma CSV import: ${pythonBin} ${args.join(' ')}`);
+
+        const scriptOutput = await new Promise<string>((resolve, reject) => {
+            const proc = spawn(pythonBin, args, { env: { ...process.env } });
+            let stdout = '';
+            let stderr = '';
+            proc.stdout.on('data', (d: Buffer) => stdout += d.toString());
+            proc.stderr.on('data', (d: Buffer) => stderr += d.toString());
+            proc.on('close', (code: number) => {
+                if (code === 0) resolve(stdout);
+                else reject(new Error(stderr || stdout || `Script exited with code ${code}`));
+            });
+        });
+
+        if (!fs.existsSync(tmpJson))
+            throw new Error('Script ran but produced no output file');
+
+        const parsed = JSON.parse(fs.readFileSync(tmpJson, 'utf-8'));
+        const newDevices: any[] = (parsed.devices || parsed || []).map((d: any) => {
+            const { running, status, ...clean } = d;
+            return clean;
+        });
+
+        if (merge) {
+            const existing = loadIoTConfig();
+            const existingIds = new Set((existing.devices || []).map((d: any) => d.id));
+            const merged = [
+                ...(existing.devices || []),
+                ...newDevices.filter((d: any) => !existingIds.has(d.id))
+            ];
+            saveIoTConfig({ ...existing, devices: merged });
+            log('IOT', `Prisma CSV import merged: +${newDevices.length} devices`);
+        } else {
+            if (fs.existsSync(IOT_DEVICES_FILE)) {
+                fs.copyFileSync(IOT_DEVICES_FILE, IOT_DEVICES_FILE + '.backup');
+            }
+            saveIoTConfig({ network: { interface: 'eth0' }, devices: newDevices });
+            log('IOT', `Prisma CSV import replaced: ${newDevices.length} devices`);
+        }
+
+        const badBehaviorCount = newDevices.filter((d: any) => d.security?.bad_behavior).length;
+        cleanup();
+
+        res.json({
+            success: true,
+            imported: newDevices.length,
+            bad_behavior: badBehaviorCount,
+            script_output: scriptOutput.trim(),
+        });
+    } catch (e: any) {
+        cleanup();
+        log('IOT', `Prisma CSV import failed: ${e.message}`, 'error');
+        res.status(500).json({ error: 'Prisma CSV import failed', detail: e.message });
+    }
+});
+
 if (process.env.NODE_ENV === 'production') {
     // Static files
     app.use(express.static(path.join(__dirname, 'dist')));

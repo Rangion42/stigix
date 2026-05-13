@@ -6,7 +6,7 @@ import {
     Search, CheckSquare, Square as SquareIcon,
     ArrowUpRight, Clock, AlertCircle, ChevronRight,
     LayoutGrid, List, Terminal, X, ExternalLink,
-    Power, Edit2, AlertTriangle
+    Power, Edit2, AlertTriangle, FileSpreadsheet, CheckCircle2, Loader2
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import LogViewer from './components/LogViewer';
@@ -50,6 +50,17 @@ export default function Iot({ token }: IotProps) {
     const [activeLogDevice, setActiveLogDevice] = useState<IoTDevice | null>(null);
     const [daemonFailed, setDaemonFailed] = useState<string | null>(null);
     const [badBehaviorEnabled, setBadBehaviorEnabled] = useState(false);
+    const [showPrismaModal, setShowPrismaModal] = useState(false);
+    const [prismaFile, setPrismaFile] = useState<File | null>(null);
+    const [prismaOpts, setPrismaOpts] = useState({
+        max_devices: 100,
+        only_iot: false,
+        bad_behavior: 'auto' as 'auto' | 'all' | 'none' | 'percentage',
+        security_percentage: 30,
+        merge: false,
+    });
+    const [prismaLoading, setPrismaLoading] = useState(false);
+    const [prismaResult, setPrismaResult] = useState<{ imported: number; bad_behavior: number } | null>(null);
 
     // Listen for daemon crash notification
     useEffect(() => {
@@ -240,6 +251,67 @@ export default function Iot({ token }: IotProps) {
         }
     };
 
+
+    // Required Prisma IoT Security CSV columns (subset — at least these must be present)
+    const PRISMA_REQUIRED_COLS = ['hostname', 'mac address', 'category', 'profile_vertical'];
+
+    const handlePrismaImport = async () => {
+        if (!prismaFile) return;
+        setPrismaLoading(true);
+        setPrismaResult(null);
+
+        try {
+            const csv_content = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target?.result as string);
+                reader.onerror = reject;
+                reader.readAsText(prismaFile);
+            });
+
+            // ── Client-side CSV format validation ─────────────────────────────
+            const firstLine = csv_content.split(/\r?\n/)[0] || '';
+            const headers = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+            const missing = PRISMA_REQUIRED_COLS.filter(col => !headers.includes(col));
+            if (missing.length > 0) {
+                alert(
+                    `❌ Invalid CSV format.\n\nThis doesn't look like a Prisma IoT Security export.\n\nMissing columns: ${missing.join(', ')}\n\nExpected columns include: ${PRISMA_REQUIRED_COLS.join(', ')}`
+                );
+                setPrismaLoading(false);
+                return;
+            }
+            // ──────────────────────────────────────────────────────────────────
+
+            const body: Record<string, any> = {
+                csv_content,
+                merge: prismaOpts.merge,
+            };
+            if (prismaOpts.max_devices > 0)               body.max_devices = prismaOpts.max_devices;
+            if (prismaOpts.only_iot)                       body.only_iot = true;
+            if (prismaOpts.bad_behavior === 'all')         body.enable_security = true;
+            if (prismaOpts.bad_behavior === 'none')        body.security_percentage = 0;
+            if (prismaOpts.bad_behavior === 'percentage')  body.security_percentage = prismaOpts.security_percentage;
+            // 'auto' = default (script uses CSV risk level) — no extra flag needed
+
+            const res = await fetch('/api/iot/import-prisma-csv', {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify(body),
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                setPrismaResult({ imported: data.imported, bad_behavior: data.bad_behavior });
+                fetchDevices();
+            } else {
+                alert('❌ Import failed: ' + (data.detail || data.error));
+            }
+        } catch (e: any) {
+            alert('❌ Import error: ' + e.message);
+        } finally {
+            setPrismaLoading(false);
+        }
+    };
+
     const filteredDevices = Array.isArray(devices) ? devices.filter(d => {
         const query = (searchQuery || '').toLowerCase();
         const name = (d.name || '').toLowerCase();
@@ -351,6 +423,14 @@ export default function Iot({ token }: IotProps) {
                         <Plus size={18} /> Import Json
                         <input type="file" accept=".json" className="hidden" onChange={handleImportJson} />
                     </label>
+
+                    <button
+                        onClick={() => { setPrismaFile(null); setPrismaResult(null); setShowPrismaModal(true); }}
+                        className="flex items-center gap-2 bg-card-secondary hover:bg-purple-500/20 text-text-secondary hover:text-purple-400 px-4 py-2.5 rounded-xl text-sm font-bold transition-all border border-border"
+                        title="Import Prisma IoT Security CSV"
+                    >
+                        <FileSpreadsheet size={18} /> Import Prisma CSV
+                    </button>
 
                     <button
                         onClick={() => { setEditingDevice({ enabled: true, protocols: ['dhcp', 'arp', 'http'], traffic_interval: 60 }); setShowAddModal(true); }}
@@ -637,6 +717,177 @@ export default function Iot({ token }: IotProps) {
                             <p className="text-text-muted text-sm mt-1">Try adjusting your filters or add a new device.</p>
                         </div>
                     )}
+                </div>
+            )}
+
+
+            {/* Prisma IoT Security CSV Import Modal */}
+            {showPrismaModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+                    <div className="bg-card border border-border rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
+                        <div className="p-6 border-b border-border flex items-center justify-between bg-card-secondary">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-purple-500/20 rounded-xl">
+                                    <FileSpreadsheet size={20} className="text-purple-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-foreground">Import Prisma IoT CSV</h3>
+                                    <p className="text-xs text-text-muted">Prisma Access / IoT Security device export</p>
+                                </div>
+                            </div>
+                            <button onClick={() => { setShowPrismaModal(false); setPrismaResult(null); }} className="text-text-muted hover:text-foreground transition-colors">
+                                <X size={22} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-5">
+                            {/* File picker */}
+                            <label className={cn(
+                                "flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-all",
+                                prismaFile ? "border-purple-500/50 bg-purple-500/5" : "border-border hover:border-purple-500/40 hover:bg-purple-500/5"
+                            )}>
+                                <FileSpreadsheet size={28} className={prismaFile ? "text-purple-400" : "text-text-muted"} />
+                                {prismaFile ? (
+                                    <div className="text-center">
+                                        <p className="text-sm font-bold text-purple-400">{prismaFile.name}</p>
+                                        <p className="text-xs text-text-muted mt-0.5">{(prismaFile.size / 1024).toFixed(1)} KB</p>
+                                    </div>
+                                ) : (
+                                    <div className="text-center">
+                                        <p className="text-sm font-bold text-text-secondary">Drop CSV file or click to browse</p>
+                                        <p className="text-xs text-text-muted mt-0.5">Prisma IoT Security device export (.csv)</p>
+                                    </div>
+                                )}
+                                <input
+                                    type="file"
+                                    accept=".csv,text/csv"
+                                    className="hidden"
+                                    onChange={e => { setPrismaFile(e.target.files?.[0] || null); setPrismaResult(null); }}
+                                />
+                            </label>
+
+                            {/* Options */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Max Devices</label>
+                                    <div className="flex gap-1 flex-wrap">
+                                        {[30, 50, 100, 0].map(n => (
+                                            <button
+                                                key={n}
+                                                onClick={() => setPrismaOpts(o => ({ ...o, max_devices: n }))}
+                                                className={cn(
+                                                    "px-2.5 py-1 rounded-lg text-xs font-bold border transition-all",
+                                                    prismaOpts.max_devices === n
+                                                        ? "bg-purple-600 border-transparent text-white"
+                                                        : "bg-card-secondary border-border text-text-muted hover:border-purple-500/50"
+                                                )}
+                                            >
+                                                {n === 0 ? 'All' : n}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Device Filter</label>
+                                    <div className="flex gap-1">
+                                        {[{ v: false, l: 'All devices' }, { v: true, l: 'IoT only' }].map(({ v, l }) => (
+                                            <button
+                                                key={l}
+                                                onClick={() => setPrismaOpts(o => ({ ...o, only_iot: v }))}
+                                                className={cn(
+                                                    "px-2.5 py-1 rounded-lg text-xs font-bold border transition-all",
+                                                    prismaOpts.only_iot === v
+                                                        ? "bg-purple-600 border-transparent text-white"
+                                                        : "bg-card-secondary border-border text-text-muted hover:border-purple-500/50"
+                                                )}
+                                            >{l}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Bad Behavior</label>
+                                <div className="flex gap-1 flex-wrap">
+                                    {[
+                                        { v: 'auto',       l: 'Auto (risk level)' },
+                                        { v: 'all',        l: 'All devices' },
+                                        { v: 'percentage', l: 'Percentage' },
+                                        { v: 'none',       l: 'None' },
+                                    ].map(({ v, l }) => (
+                                        <button
+                                            key={v}
+                                            onClick={() => setPrismaOpts(o => ({ ...o, bad_behavior: v as any }))}
+                                            className={cn(
+                                                "px-2.5 py-1 rounded-lg text-xs font-bold border transition-all",
+                                                prismaOpts.bad_behavior === v
+                                                    ? "bg-red-600 border-transparent text-white"
+                                                    : "bg-card-secondary border-border text-text-muted hover:border-red-500/50"
+                                            )}
+                                        >{l}</button>
+                                    ))}
+                                </div>
+                                {prismaOpts.bad_behavior === 'percentage' && (
+                                    <div className="flex items-center gap-3 pt-1 animate-in fade-in duration-200">
+                                        <input
+                                            type="range" min={1} max={100}
+                                            value={prismaOpts.security_percentage}
+                                            onChange={e => setPrismaOpts(o => ({ ...o, security_percentage: Number(e.target.value) }))}
+                                            className="flex-1 accent-red-500"
+                                        />
+                                        <span className="text-xs font-black text-red-400 w-10 text-right">{prismaOpts.security_percentage}%</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 bg-card-secondary rounded-2xl border border-border">
+                                <div>
+                                    <p className="text-xs font-bold text-text-secondary">Import mode</p>
+                                    <p className="text-[10px] text-text-muted">{prismaOpts.merge ? 'Add to existing devices (dedup by ID)' : 'Replace all existing devices'}</p>
+                                </div>
+                                <button
+                                    onClick={() => setPrismaOpts(o => ({ ...o, merge: !o.merge }))}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-xl text-xs font-bold border transition-all",
+                                        prismaOpts.merge
+                                            ? "bg-green-500/20 border-green-500/40 text-green-400"
+                                            : "bg-orange-500/20 border-orange-500/40 text-orange-400"
+                                    )}
+                                >
+                                    {prismaOpts.merge ? '➕ Merge' : '🔄 Replace'}
+                                </button>
+                            </div>
+
+                            {/* Result banner */}
+                            {prismaResult && (
+                                <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-2xl px-4 py-3 animate-in fade-in duration-300">
+                                    <CheckCircle2 size={18} className="text-green-400 shrink-0" />
+                                    <div>
+                                        <p className="text-sm font-bold text-green-400">Import successful!</p>
+                                        <p className="text-xs text-text-muted">{prismaResult.imported} devices imported — {prismaResult.bad_behavior} with bad behavior</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="px-6 pb-6 flex gap-3">
+                            <button
+                                onClick={() => { setShowPrismaModal(false); setPrismaResult(null); }}
+                                className="flex-1 px-4 py-3 bg-card-secondary border border-border text-text-muted font-bold rounded-xl hover:bg-card-hover transition-all tracking-widest text-xs"
+                            >
+                                {prismaResult ? 'Close' : 'Cancel'}
+                            </button>
+                            {!prismaResult && (
+                                <button
+                                    onClick={handlePrismaImport}
+                                    disabled={!prismaFile || prismaLoading}
+                                    className="flex-1 px-4 py-3 bg-purple-600 text-white font-black rounded-xl hover:bg-purple-500 transition-all shadow-lg shadow-purple-900/20 uppercase tracking-widest text-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {prismaLoading ? <><Loader2 size={16} className="animate-spin" /> Converting...</> : <><FileSpreadsheet size={16} /> Convert & Import</>}
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
 
