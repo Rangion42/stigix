@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.59] - 2026-05-13
+### Changed
+- **Docs** 🖼️ Reduced screenshot sizes in `docs/IOT_SIMULATION.md` for better readability.
+
 ## [v1.3.0-patch.58] - 2026-05-13
 ### Changed
 - **Settings** 📐 Traffic Distribution Overview: reverted 2-column grid in favour of **maximised single-column bars** — label column narrowed `w-56` → `w-32` (128px) giving bars ~80% more horizontal room. Bar height raised `h-5` → `h-7`. App label threshold lowered (icon+text visible at >12% instead of >18%, icon-only at >3% instead of >6%) so more apps show their favicon and name directly in the bar.

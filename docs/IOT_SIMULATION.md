@@ -54,7 +54,7 @@ On macOS, Windows, and WSL2, IoT simulation runs in **Bridge Mode** with these l
 IoT devices are managed via the **IoT Tab** in the Dashboard. The configuration is stored in `config/iot-devices.json`.
 
 *Device gallery displaying all simulated IoT hardware with their current network status:*
-![IoT Device Gallery](screenshots/05-IOT/04-iot-device-gallery.png)
+<img src="screenshots/05-IOT/04-iot-device-gallery.png" width="700" alt="IoT Device Gallery" />
 
 
 
@@ -92,7 +92,7 @@ Each device in the JSON array follows this structure:
 - `param_req_list` - DHCP Option 55 (Parameter Request List)
 
 *Configuration modal for defining device identity, MAC address, and supported protocols:*
-![IoT Device Configuration Modal](screenshots/05-IOT/01-iot-edit-device-basic.png)
+<img src="screenshots/05-IOT/01-iot-edit-device-basic.png" width="700" alt="IoT Device Configuration Modal" />
 
 
 
@@ -211,7 +211,7 @@ When **Bad Behavior** is enabled, the simulated device will generate traffic pat
 - **PAN Test Domains**: Generates traffic to official Palo Alto test domains for guaranteed detection.
 
 *Security testing dashboard for triggering malicious traffic patterns and C2 beaconing:*
-![IoT Bad Behavior Configuration](screenshots/05-IOT/02-iot-edit-device-bad-behavior.png)
+<img src="screenshots/05-IOT/02-iot-edit-device-bad-behavior.png" width="700" alt="IoT Bad Behavior Configuration" />
 
 
 
@@ -278,7 +278,7 @@ Launches multiple attack threads simultaneously for high complexity.
 When a device starts, you can monitor the "Real-on-the-Wire" interaction in the UI logs via the **Real-time Analysis** modal:
 
 *Real-time analysis logs showing low-level Scapy packet interaction and DHCP handshakes:*
-![IoT Real-time Analysis Logs](screenshots/05-IOT/03-iot-realtime-logs-dhcp.png)
+<img src="screenshots/05-IOT/03-iot-realtime-logs-dhcp.png" width="700" alt="IoT Real-time Analysis Logs" />
 
 
 
