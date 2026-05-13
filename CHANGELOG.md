@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.43] - 2026-05-13
+### Added
+- **Traffic Distribution** 📊 New **Distribution Overview** panel above the sliders — one compact row per category showing a stacked horizontal bar. Each segment is proportional to the app's global traffic weight, displays the app favicon + domain name (adaptive to segment width), and shows a tooltip with exact % on hover.
+
 ## [v1.3.0-patch.42] - 2026-05-13
 ### Fixed
 - **Navigation UX** 🧭 The "Manage Probes" button in Digital Experience now correctly selects the **Synthetic Probes** sub-menu when navigating to Settings, instead of defaulting to Traffic Distribution.

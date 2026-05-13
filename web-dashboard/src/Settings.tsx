@@ -1813,6 +1813,92 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                             </div>
                         </div>
 
+                        {/* ── Traffic Distribution Overview ─────────────────────────────── */}
+                        {(() => {
+                            const APP_COLORS = [
+                                '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444',
+                                '#06b6d4', '#ec4899', '#6366f1', '#84cc16', '#f97316',
+                                '#14b8a6', '#a855f7', '#fb923c', '#22c55e', '#e879f9',
+                            ];
+                            const totalWeight = categories.reduce((s, c) =>
+                                s + c.apps.reduce((a, ap) => a + ap.weight, 0), 0) || 1;
+
+                            return (
+                                <div className="bg-card-secondary/30 border border-border rounded-2xl p-5 space-y-2.5">
+                                    <div className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                                        <BarChart3 size={12} className="text-blue-500" />
+                                        Distribution Overview
+                                    </div>
+                                    {categories.map((category) => {
+                                        const catWeight = category.apps.reduce((s, a) => s + a.weight, 0);
+                                        const catPct = Math.round((catWeight / totalWeight) * 100);
+                                        let colorIdx = 0;
+                                        return (
+                                            <div key={category.name} className="flex items-center gap-3 group">
+                                                {/* Group label */}
+                                                <div className="w-40 flex-shrink-0 flex items-center justify-between gap-2">
+                                                    <span className="text-[10px] font-black text-text-primary truncate tracking-tight">{category.name}</span>
+                                                    <span className="text-[9px] font-black text-blue-500 flex-shrink-0">{catPct}%</span>
+                                                </div>
+                                                {/* Global weight bar background */}
+                                                <div className="flex-1 h-6 bg-card-secondary rounded-lg overflow-hidden border border-border/60 flex relative">
+                                                    {/* Category fill — proportional to global weight */}
+                                                    <div
+                                                        className="h-full flex"
+                                                        style={{ width: `${catPct}%`, minWidth: catPct > 0 ? '2px' : 0 }}
+                                                    >
+                                                        {category.apps.map((app) => {
+                                                            const appPctOfCat = catWeight > 0 ? (app.weight / catWeight) * 100 : 0;
+                                                            const appPctGlobal = Math.round((app.weight / totalWeight) * 100);
+                                                            const color = APP_COLORS[colorIdx++ % APP_COLORS.length];
+                                                            return (
+                                                                <div
+                                                                    key={app.domain}
+                                                                    className="h-full relative group/seg flex items-center justify-center overflow-hidden"
+                                                                    style={{
+                                                                        width: `${appPctOfCat}%`,
+                                                                        backgroundColor: color,
+                                                                        minWidth: appPctOfCat > 0 ? '1px' : 0,
+                                                                    }}
+                                                                    title={`${app.domain} — ${appPctGlobal}% global`}
+                                                                >
+                                                                    {/* Favicon + label — adaptive to segment width */}
+                                                                    {appPctOfCat > 18 && (
+                                                                        <div className="flex items-center gap-1 px-1.5 pointer-events-none select-none min-w-0">
+                                                                            <div className="flex-shrink-0 w-3.5 h-3.5 rounded-[3px] overflow-hidden bg-white/20 flex items-center justify-center">
+                                                                                <Favicon domain={app.domain} size={12} />
+                                                                            </div>
+                                                                            <span className="text-[8px] font-black text-white/90 truncate drop-shadow">
+                                                                                {app.domain.replace(/^www\./, '').split('.')[0]}
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
+                                                                    {appPctOfCat > 6 && appPctOfCat <= 18 && (
+                                                                        <div className="flex-shrink-0 w-3.5 h-3.5 rounded-[3px] overflow-hidden bg-white/20 flex items-center justify-center pointer-events-none">
+                                                                            <Favicon domain={app.domain} size={12} />
+                                                                        </div>
+                                                                    )}
+                                                                    {/* Hover tooltip with favicon */}
+                                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-[#0f172a] border border-[#1e293b] rounded-lg text-[9px] font-bold text-white shadow-xl opacity-0 group-hover/seg:opacity-100 transition-opacity pointer-events-none z-20 whitespace-nowrap flex items-center gap-1.5">
+                                                                        <Favicon domain={app.domain} size={10} />
+                                                                        {app.domain}
+                                                                        <span className="text-blue-300">{appPctGlobal}%</span>
+                                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-[#1e293b]" />
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    {/* Unused space */}
+                                                    <div className="flex-1 h-full bg-transparent" />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })()}
+
                         <div className="max-w-7xl mx-auto space-y-4">
                             {categories.map(category => {
                                 const categoryWeight = category.apps.reduce((s, a) => s + a.weight, 0);
