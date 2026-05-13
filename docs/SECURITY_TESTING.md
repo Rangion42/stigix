@@ -45,7 +45,7 @@ The Security Testing feature enables controlled testing of Palo Alto Networks / 
 ### C2 Attack Scenarios
 ![C2 Attack Scenarios](screenshots/03-security/14-c2-attack-scenarios.png)
 
-*7 attack simulation scenarios — SQL Injection, DNS C2, Greyware DNS, Compromised DNS, Sliver C2, EICAR over HTTPS, DNS Tunneling Burst — with real-time Enforced / Bypass / Inconclusive verdicts and C2 scheduler controls*
+*7 attack simulation scenarios — SQL Injection, DNS C2, Greyware DNS, Compromised DNS, Sliver C2, EICAR over HTTPS, DNS Tunneling Burst — with real-time Blocked / Allowed / Inconclusive verdicts and C2 scheduler controls*
 
 ### AI Security Tests
 ![AI Security Tests](screenshots/03-security/13-ai-security-panel.png)
@@ -55,11 +55,11 @@ The Security Testing feature enables controlled testing of Palo Alto Networks / 
 ### Security Test Log — AIS & C2S Badges
 ![AI Security Log](screenshots/03-security/15-ai-security-log.png)
 
-*Security Test History showing AIS (cyan) badges for AI Security results — Completed (volume), Enforced, Bypass, and Inconclusive dispositions*
+*Security Test History showing AIS (cyan) badges for AI Security results — Completed (volume), Blocked, Allowed, and Inconclusive dispositions*
 
 ![C2 Security Log](screenshots/03-security/16-c2-security-log.png)
 
-*Security Test History showing C2S (red) badges for C2 scenario results — Enforced, Bypass, and Inconclusive dispositions*
+*Security Test History showing C2S (red) badges for C2 scenario results — Blocked, Allowed, and Inconclusive dispositions*
 
 ---
 
@@ -993,19 +993,19 @@ docker-compose restart stigix
 
 ![C2 Security Log](screenshots/03-security/16-c2-security-log.png)
 
-*C2S badge (red) in the Security Test Log — each row shows the scenario name, timestamp, and disposition. Bypass entries highlight policy gaps requiring immediate attention.*
+*C2S badge (red) in the Security Test Log — each row shows the scenario name, timestamp, and disposition. Allowed (not blocked) entries highlight policy gaps requiring immediate attention.*
 
-The C2 module fires **real network traffic** from the Stigix container. Whether the firewall intercepts it determines the verdict. This is intentional — if your policies are correct, all 7 scenarios should return **Enforced**.
+The C2 module fires **real network traffic** from the Stigix container. Whether the firewall intercepts it determines the verdict. This is intentional — if your policies are correct, all 7 scenarios should return **Blocked**.
 
 ### Verdict Logic (Inverted from standard tests)
 
 | Verdict | Meaning | Color |
 |---------|---------|-------|
-| 🟢 **Enforced** | Threat was blocked/sinkholed by the firewall | Green |
-| 🔴 **Bypass** | Threat was NOT blocked — policy gap detected | Red |
+| 🔴 **Blocked** | Threat was blocked/sinkholed by the firewall | Red |
+| 🟢 **Allowed** | Threat was NOT blocked — policy gap detected | Green |
 | 🟠 **Inconclusive** | Network/tool error, result undetermined | Orange |
 
-> **Important:** Unlike URL/DNS tests where "allowed" is neutral, for C2 scenarios **Bypass is bad** — it means the attack payload reached its destination.
+> **Important:** Unlike URL/DNS tests where "Allowed" means the site is reachable, for C2 scenarios **Allowed is bad** — it means the attack payload reached its destination. **Blocked is the desired outcome.**
 
 ---
 
@@ -1036,12 +1036,12 @@ Invoke-WebRequest -Uri "http://www.google.com/?id=1' OR '1'='1" -Method Get -Tim
 #### Verdict rules
 | HTTP Code | Verdict | Reason |
 |-----------|---------|--------|
-| `0` (connection reset) | **Enforced** ✓ | Firewall sent TCP RST — inline block |
-| `403` | **Enforced** ✓ | Firewall block page served |
-| `200` | **Bypass** ⊗ | Payload passed — Vuln Protection not triggered |
+| `0` (connection reset) | **Blocked** ✓ | Firewall sent TCP RST — inline block |
+| `403` | **Blocked** ✓ | Firewall block page served |
+| `200` | **Allowed** ⊗ | Payload passed — Vuln Protection not triggered |
 | Other | **Inconclusive** | Unexpected response, check connectivity |
 
-#### Common false Bypass cause
+#### Common false Allowed cause
 - Vulnerability Protection profile not attached to the egress security rule
 - Profile in alert-only mode instead of block
 
@@ -1082,9 +1082,9 @@ Invoke-WebRequest -Uri "http://test-dns-infiltration.testpanw.com" -TimeoutSec 5
 #### Verdict rules (DNS step drives the verdict)
 | DNS Result | Verdict | Reason |
 |------------|---------|--------|
-| NXDOMAIN | **Enforced** ✓ | Firewall blocked the query |
-| Sinkhole IP (`198.135.184.22`) | **Enforced** ✓ | Firewall redirected to PAN sinkhole |
-| Real IP resolved | **Bypass** ⊗ | DNS query was not intercepted |
+| NXDOMAIN | **Blocked** ✓ | Firewall blocked the query |
+| Sinkhole IP (`198.135.184.22`) | **Blocked** ✓ | Firewall redirected to PAN sinkhole |
+| Real IP resolved | **Allowed** ⊗ | DNS query was not intercepted |
 | Tool error | **Inconclusive** | `nslookup` unavailable or DNS timeout |
 
 ---

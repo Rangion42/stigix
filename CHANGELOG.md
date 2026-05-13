@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.41] - 2026-05-13
+### Changed
+- **Security Dashboard** 🏷️ Unified all test verdict labels under a single vocabulary: `Blocked` / `Allowed` / `Inconclusive` — applies to URL Filtering, DNS Security, EICAR, C2 Scenarios, and AI Security tests.
+  - `Enforced` (C2/AI) → displayed as **Blocked** (red)
+  - `Bypass` (C2/AI) → displayed as **Allowed** (green)
+  - `Inconclusive` and `Completed` added as proper states in the unified `getStatusBadge` component
+  - Removed `getAIVerdictBadge` / `getC2VerdictBadge` — all test types now use a single `getStatusBadge`
+  - Fixed "Bypass" label in EICAR statistics card and Cloud probe summary → now reads "Allowed"
+  - Toast notifications for C2/AI results updated accordingly
+- **docs/SECURITY_TESTING.md** 📖 Updated all verdict tables and descriptions to reflect the new Blocked/Allowed vocabulary.
+
 ## [v1.3.0-patch.40] - 2026-05-13
 ### Fixed
 - **URL Filtering Tests** 🔍 Added `preDnsCheck` pre-resolution step before every curl URL test. A fast `nslookup -timeout=4` now runs first; if the hostname is unresolvable (NXDOMAIN or DNS timeout), the test immediately returns `dns_error` without launching curl. This eliminates the "first test = misleading 10s CONNECTION_TIMEOUT, second test = correct DNS_RESOLUTION_FAILURE" artifact caused by slow first-query DNS proxy resolution in the container.

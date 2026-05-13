@@ -712,22 +712,9 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
 
     // ── C2 Attack Scenarios ───────────────────────────────────────────────────
     // ── AI Security verdict badge (also used for C2 — shared logic) ──────────
-    const getAIVerdictBadge = (result: any) => {
-        if (!result) return null;
-        const status = result.status;
-        if (status === 'enforced') {
-            return <span className="flex items-center gap-1 text-green-400 text-sm"><CheckCircle size={14} /> Enforced</span>;
-        } else if (status === 'bypass') {
-            return <span className="flex items-center gap-1 text-red-400 text-sm"><XCircle size={14} /> Bypass</span>;
-        } else if (status === 'completed') {
-            return <span className="flex items-center gap-1 text-cyan-400 text-sm"><CheckCircle size={14} /> Completed{result.reached_count != null ? ` ${result.reached_count}/${result.total_count}` : ''}</span>;
-        } else if (status === 'inconclusive') {
-            return <span className="flex items-center gap-1 text-orange-400 text-sm"><AlertTriangle size={14} /> Inconclusive</span>;
-        }
-        return <span className="text-text-muted text-sm">—</span>;
-    };
-
-    const getC2VerdictBadge = getAIVerdictBadge; // alias for backward compat
+    // Unified verdict badge — covers URL/DNS/EICAR (blocked/allowed/sinkholed)
+    // AND C2/AI (enforced→Blocked, bypass→Allowed, inconclusive, completed)
+    // Single source of truth for all test types.
 
     const runC2Test = async (scenario: C2Scenario) => {
         setTesting(prev => ({ ...prev, [`c2-${scenario.id}`]: true }));
@@ -744,7 +731,7 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
             });
             const data = await res.json();
             if (data.status) {
-                const label = data.status === 'enforced' ? '✓ Enforced' : data.status === 'bypass' ? '⊗ Bypass' : '⚠ Inconclusive';
+                const label = data.status === 'enforced' ? '✓ Blocked' : data.status === 'bypass' ? '⊗ Allowed' : '⚠ Inconclusive';
                 showToast(`${scenario.name}: ${label}`, data.status === 'enforced' ? 'success' : data.status === 'bypass' ? 'error' : 'info');
             }
             await fetchResults();
@@ -807,7 +794,7 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
             const data = await res.json();
             if (data.result?.status) {
                 const s = data.result.status;
-                const label = s === 'enforced' ? '✓ Enforced' : s === 'bypass' ? '⊗ Bypass' : s === 'completed' ? '✓ Completed' : '⚠ Inconclusive';
+                const label = s === 'enforced' ? '✓ Blocked' : s === 'bypass' ? '⊗ Allowed' : s === 'completed' ? '✓ Completed' : '⚠ Inconclusive';
                 showToast(`${scenario.name}: ${label}`, s === 'enforced' || s === 'completed' ? 'success' : s === 'bypass' ? 'error' : 'info');
             }
             await fetchResults();
@@ -1041,19 +1028,21 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
 
         const status = result.status || (result.success ? 'allowed' : 'blocked');
 
-        if (status === 'blocked') {
+        if (status === 'blocked' || status === 'enforced') {
             return <span className="flex items-center gap-1 text-red-400 text-sm"><XCircle size={14} /> Blocked</span>;
         } else if (status === 'sinkholed') {
             return <span className="flex items-center gap-1 text-yellow-400 text-sm"><AlertTriangle size={14} /> Sinkholed</span>;
-        } else if (status === 'allowed' || status === 'resolved') {
-            return <span className="flex items-center gap-1 text-green-400 text-sm"><CheckCircle size={14} /> Allowed </span>;
+        } else if (status === 'allowed' || status === 'resolved' || status === 'bypass') {
+            return <span className="flex items-center gap-1 text-green-400 text-sm"><CheckCircle size={14} /> Allowed</span>;
+        } else if (status === 'completed') {
+            return <span className="flex items-center gap-1 text-cyan-400 text-sm"><CheckCircle size={14} /> Completed{result.reached_count != null ? ` ${result.reached_count}/${result.total_count}` : ''}</span>;
+        } else if (status === 'inconclusive') {
+            return <span className="flex items-center gap-1 text-orange-400 text-sm"><AlertTriangle size={14} /> Inconclusive</span>;
         } else if (status === 'unreachable') {
             return <span className="flex items-center gap-1 text-orange-400 text-sm"><AlertTriangle size={14} /> Unreachable</span>;
         } else if (status === 'error') {
             return <span className="flex items-center gap-1 text-orange-400 text-sm"><XCircle size={14} /> Error</span>;
         } else {
-            // This should never happen - log it for debugging
-            console.warn('Unknown test status:', status);
             return <span className="flex items-center gap-1 text-text-muted text-sm"><Clock size={14} /> Unknown</span>;
         }
     };
@@ -1329,7 +1318,7 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                                 <div className="w-px h-8 bg-border/50" />
                                 <div>
                                     <div className="text-3xl font-black text-green-600 dark:text-green-400 tabular-nums tracking-tighter">{config.statistics.threat_tests_allowed}</div>
-                                    <div className="text-[10px] font-black text-text-muted tracking-widest opacity-60">Bypass</div>
+                                    <div className="text-[10px] font-black text-text-muted tracking-widest opacity-60">Allowed</div>
                                 </div>
                             </div>
                         </div>
@@ -1951,7 +1940,7 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                {lastResult && getC2VerdictBadge(lastResult.result)}
+                                                {lastResult && getStatusBadge(lastResult.result)}
                                                 <div className="flex gap-1.5 ml-2 p-1 bg-card-secondary/50 rounded-lg border border-border/50">
                                                     <button
                                                         onClick={() => copyToClipboard(scenario.cliHint)}
@@ -2107,7 +2096,7 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                                             {lastResult && (
                                                 <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-between">
                                                     <span className="text-[8px] text-text-muted">Last result:</span>
-                                                    <div className="scale-75 origin-right">{getAIVerdictBadge(lastResult.result)}</div>
+                                                    <div className="scale-75 origin-right">{getStatusBadge(lastResult.result)}</div>
                                                 </div>
                                             )}
                                         </div>
@@ -2316,7 +2305,7 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                                                         </div>
                                                         <div className="w-px h-4 bg-border/50" />
                                                         <div className="flex flex-col">
-                                                            <span className="text-text-muted opacity-60 font-medium">Bypass</span>
+                                                            <span className="text-text-muted opacity-60 font-medium">Allowed</span>
                                                             <span className="text-green-600 dark:text-green-400">{summary.allowedCount}</span>
                                                         </div>
                                                         <div className="w-px h-4 bg-border/50" />
@@ -2548,7 +2537,7 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                                                         </td>
                                                         <td className="px-4 py-4 text-right">
                                                             <div className="flex justify-end">
-                                                                {result.testType === 'c2_scenario' || result.testType === 'ai_security' ? getAIVerdictBadge(result.result) : getStatusBadge(result.result)}
+                                                                {getStatusBadge(result.result)}
                                                             </div>
                                                         </td>
                                                     </tr>
