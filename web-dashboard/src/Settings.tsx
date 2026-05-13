@@ -1819,6 +1819,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                         </div>
 
                         {/* ── Traffic Distribution Overview ─────────────────────────────── */}
+                        <div className="max-w-7xl mx-auto">
                         {(() => {
                             const APP_COLORS = [
                                 '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444',
@@ -1841,7 +1842,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                         return (
                                             <div key={category.name} className="flex items-center gap-3 group">
                                                 {/* Group label */}
-                                                <div className="w-40 flex-shrink-0 flex items-center justify-between gap-2">
+                                                <div className="w-56 flex-shrink-0 flex items-center justify-between gap-2">
                                                     <span className="text-[10px] font-black text-text-primary truncate tracking-tight">{category.name}</span>
                                                     <span className="text-[9px] font-black text-blue-500 flex-shrink-0">{catPct}%</span>
                                                 </div>
@@ -1903,6 +1904,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                 </div>
                             );
                         })()}
+                        </div>
 
                         <div className="max-w-7xl mx-auto space-y-3">
                             {categories.map(category => {
