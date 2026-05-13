@@ -163,7 +163,7 @@ If your customer already has **Palo Alto IoT Security** or **Prisma Access** dep
 
 **Import via UI (Recommended):**
 
-Go to **IoT Simulation** → click **Import Prisma CSV** in the header toolbar.
+Go to **IoT Simulation** → click **IoT Security CSV** in the header toolbar.
 Select your CSV file, choose options (max devices, IoT-only filter, bad behavior mode, merge vs replace) and click **Convert & Import** — no CLI required.
 
 > The UI validates the CSV format client-side before sending to the server, rejecting non-Prisma files immediately.

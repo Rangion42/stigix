@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.56] - 2026-05-13
+### Changed
+- **IoT** 🏷️ Renamed "Import Prisma CSV" button to **"IoT Security CSV"** — clearer reference to the actual Palo Alto product (Prisma Access → Device Security → IoT Security). Updated button label, modal title, and doc.
+
 ## [v1.3.0-patch.55] - 2026-05-13
 ### Added
 - **IoT** 🧬 Prisma CSV import — three enrichment improvements to `import_prisma_devices.py`:

@@ -427,9 +427,9 @@ export default function Iot({ token }: IotProps) {
                     <button
                         onClick={() => { setPrismaFile(null); setPrismaResult(null); setShowPrismaModal(true); }}
                         className="flex items-center gap-2 bg-card-secondary hover:bg-purple-500/20 text-text-secondary hover:text-purple-400 px-4 py-2.5 rounded-xl text-sm font-bold transition-all border border-border"
-                        title="Import Prisma IoT Security CSV"
+                        title="IoT Security CSV"
                     >
-                        <FileSpreadsheet size={18} /> Import Prisma CSV
+                        <FileSpreadsheet size={18} /> IoT Security CSV
                     </button>
 
                     <button
@@ -731,8 +731,8 @@ export default function Iot({ token }: IotProps) {
                                     <FileSpreadsheet size={20} className="text-purple-400" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold text-foreground">Import Prisma IoT CSV</h3>
-                                    <p className="text-xs text-text-muted">Prisma Access / IoT Security device export</p>
+                                    <h3 className="text-lg font-bold text-foreground">IoT Security CSV</h3>
+                                    <p className="text-xs text-text-muted">Palo Alto IoT Security device export</p>
                                 </div>
                             </div>
                             <button onClick={() => { setShowPrismaModal(false); setPrismaResult(null); }} className="text-text-muted hover:text-foreground transition-colors">
