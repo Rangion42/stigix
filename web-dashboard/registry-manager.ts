@@ -418,10 +418,15 @@ export class RegistryManager {
     getPeers(): RegistryInstance[] {
         const now = Date.now();
         const GRACE_PERIOD_MS = 15 * 60 * 1000; // 15 minutes
+        const ownInstanceId = this.client.getConfig().instanceId;
 
         const activePeers: RegistryInstance[] = [];
         for (const [id, entry] of this.peerCache.entries()) {
             if (now - entry.lastSeen < GRACE_PERIOD_MS) {
+                // Defense in depth: never include self, even if registry didn't filter it
+                if (entry.instance.instance_id === ownInstanceId) {
+                    continue;
+                }
                 activePeers.push(entry.instance);
             } else {
                 // Cleanup old entries

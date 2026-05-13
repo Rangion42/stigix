@@ -10,6 +10,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.49] - 2026-05-13
+### Fixed
+- **Registry** 🛡️ Defense-in-depth self-exclusion in `getPeers()` — node now explicitly skips its own `instance_id` from the peer cache, regardless of whether the registry (local or Cloudflare) filtered it out. Prevents inflated `peer_count`, loopback XFR/Voice/Convergence tests, and self-loops in the topology view.
+
+## [v1.3.0-patch.48] - 2026-05-13
+### Changed
+- **Traffic Control** 🌐 Renamed `Speedtest` button to `Internet Speedtest` and replaced the `Gauge` icon with `Globe` to clearly distinguish it from the XFR/iperf internal bandwidth test.
+
+## [v1.3.0-patch.47] - 2026-05-13
+### Added
+- **Traffic Control** ⚡ Added a `Configure Distribution` shortcut button below the Traffic Generation status line. Clicking it deep-links directly to Settings → Traffic Distribution — same mechanism as the "Manage Probes" button.
+
+## [v1.3.0-patch.46] - 2026-05-13
+### Fixed
+- **Traffic Distribution** 📐 Distribution Overview panel now wrapped in `max-w-7xl mx-auto` to align with the slider blocks below it. Group name column widened from `w-40` (160px) to `w-56` (224px) to prevent truncation of long category names.
+
+## [v1.3.0-patch.45] - 2026-05-13
+### Added
+- **Traffic Distribution** 🗂️ Category groups are now collapsible — click the header to fold/unfold. App count badge visible in header even when collapsed. Chevron rotates on state change.
+### Fixed
+- **Traffic Distribution** 🔓 Removed the artificial 4-app limit per group. All apps now render with individual sliders regardless of group size.
+
+## [v1.3.0-patch.44] - 2026-05-13
+### Fixed
+- **Build** 🐛 Docker build failure: `Cannot find name 'BarChart3'` — added missing `BarChart3` import from `lucide-react` in `Settings.tsx`.
+
 ## [v1.3.0-patch.43] - 2026-05-13
 ### Added
 - **Traffic Distribution** 📊 New **Distribution Overview** panel above the sliders — one compact row per category showing a stacked horizontal bar. Each segment is proportional to the app's global traffic weight, displays the app favicon + domain name (adaptive to segment width), and shows a tooltip with exact % on hover.
