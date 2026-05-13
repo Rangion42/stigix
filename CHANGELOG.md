@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.53] - 2026-05-13
+### Fixed
+- **IoT** 🐛 Prisma CSV import: script path now uses `PROJECT_ROOT` (same mechanism as other Python scripts) instead of `__dirname`-relative path. Fixes `No such file or directory` error in Docker where `__dirname = /app` and `../iot/` resolved to `/iot/` instead of `/app/iot/`.
+
 ## [v1.3.0-patch.52] - 2026-05-13
 ### Added
 - **IoT** 📥 New **Import Prisma CSV** button in the IoT Simulation header. Uploads a Prisma Access / IoT Security device export CSV, runs `import_prisma_devices.py` server-side, and imports the resulting devices directly — no manual CLI steps required. Options: max devices (30/50/100/All), IoT-only filter, bad behavior mode (Auto from risk level / All / Percentage / None), and Merge vs Replace. Includes client-side CSV header validation to detect invalid or wrong file format before the backend is called.

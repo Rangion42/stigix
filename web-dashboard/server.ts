@@ -9369,9 +9369,10 @@ app.post('/api/iot/import-prisma-csv', authenticateToken, async (req, res) => {
     try {
         fs.writeFileSync(tmpCsv, csv_content, 'utf-8');
 
-        // Script at <repo>/iot/import_prisma_devices.py
-        // __dirname in production = /app/web-dashboard/dist, dev = /app/web-dashboard
-        const scriptPath = path.join(__dirname, '..', 'iot', 'import_prisma_devices.py');
+        // Use PROJECT_ROOT — the same mechanism all other scripts (engines/, iot/) use
+        const scriptPath = path.join(PROJECT_ROOT, 'iot', 'import_prisma_devices.py');
+        if (!fs.existsSync(scriptPath)) throw new Error(`import_prisma_devices.py not found at ${scriptPath}`);
+
         const pythonBin  = process.env.PYTHON_PATH || 'python3';
 
         const args = [scriptPath, '--input', tmpCsv, '--output', tmpJson];
