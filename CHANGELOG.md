@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.62] - 2026-05-13
+### Fixed
+- **VyOS History CLI** 🐛 Correction du CLI généré pour `deny-traffic` / `allow-traffic` / `clear-all-blocks` : le mécanisme réel utilise des **routes blackhole statiques avec tag 999** (et non des règles firewall). Les commandes affichées sont maintenant :
+  - Block : `set protocols static route <prefix> blackhole tag 999`
+  - Unblock : `delete protocols static route <prefix>`
+  - Clear all : `delete protocols static route <prefix>` (une par route)
+
 ## [v1.3.0-patch.61] - 2026-05-13
 ### Added
 - **VyOS History** 🖥️ CLI accordion expand: click any row in the History table to reveal a dark terminal panel with the exact VyOS CLI commands pushed. Works in both flat and grouped views.

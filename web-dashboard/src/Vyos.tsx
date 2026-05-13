@@ -234,20 +234,26 @@ export default function Vyos(props: VyosProps) {
                 break;
             case 'deny-traffic':
             case 'simple-block': {
-                const ip = parameters?.ip || '0.0.0.0/0';
-                cmds.push(`set firewall name BLOCK-${i} default-action accept`);
-                cmds.push(`set firewall name BLOCK-${i} rule 10 action drop`);
-                cmds.push(`set firewall name BLOCK-${i} rule 10 source address ${ip}`);
-                cmds.push(`set interfaces ethernet ${i} firewall out name BLOCK-${i}`);
+                // Blackhole static route with tag 999 — no interface involved
+                const ip = parameters?.ip || '<prefix>';
+                cmds.push(`set protocols static route ${ip} blackhole`);
+                cmds.push(`set protocols static route ${ip} blackhole tag 999`);
                 break;
             }
             case 'allow-traffic':
-            case 'simple-unblock':
-                cmds.push(`delete firewall name BLOCK-${i}`);
+            case 'simple-unblock': {
+                // Remove the blackhole route entirely
+                const ip = parameters?.ip || '<prefix>';
+                cmds.push(`delete protocols static route ${ip}`);
                 break;
+            }
             case 'clear-all-blocks':
             case 'clear-blocks':
-                cmds.push('delete firewall');
+                // Removes all blackhole routes with tag 999 — no single-prefix variant
+                cmds.push('# Removes all static routes with blackhole tag 999');
+                cmds.push('delete protocols static route <prefix1>');
+                cmds.push('delete protocols static route <prefix2>');
+                cmds.push('# (one delete per blocked prefix)');
                 break;
             default:
                 cmds.push(`# ${command} — no CLI template available`);
