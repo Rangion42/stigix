@@ -2400,11 +2400,11 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                                         onChange={(e) => setTestTypeFilter(e.target.value as any)}
                                         className="pl-9 pr-8 py-3 bg-card-secondary border border-border text-text-primary rounded-xl text-xs font-bold tracking-widest outline-none focus:ring-1 focus:ring-blue-500 transition-all appearance-none"
                                     >
-                                        <option value="all">All Lists</option>
-                                        <option value="url">URL Lists</option>
-                                        <option value="dns">DNS Lists</option>
-                                        <option value="threat">Threat Lists</option>
-                                        <option value="c2_scenario">C2 Scenarios</option>
+                                        <option value="all">All Types</option>
+                                        <option value="url">URL Filtering</option>
+                                        <option value="dns">DNS Security</option>
+                                        <option value="threat">Threat Prevention</option>
+                                        <option value="c2_scenario">C2 Scenario</option>
                                         <option value="ai_security">AI Security</option>
 
                                     </select>
@@ -2457,7 +2457,7 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                                                 <th className="text-left px-4 py-4 text-[9px] font-black text-text-muted tracking-widest">Timeline</th>
                                                 <th className="text-left px-4 py-4 text-[9px] font-black text-text-muted tracking-widest">Type</th>
                                                 <th className="text-left px-4 py-4 text-[9px] font-black text-text-muted tracking-widest">Target</th>
-                                                <th className="text-left px-4 py-4 text-[9px] font-black text-text-muted tracking-widest">Change</th>
+                                                <th className="text-left px-4 py-4 text-[9px] font-black text-text-muted tracking-widest">Delta</th>
                                                 <th className="text-right px-4 py-4 text-[9px] font-black text-text-muted tracking-widest">Result</th>
                                             </tr>
                                         </thead>
@@ -2648,6 +2648,85 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                                                 <span className="text-xs font-mono text-text-primary break-all group-hover:text-blue-500 transition-colors">{selectedTest.details.url}</span>
                                             </div>
                                         )}
+
+                                        {/* URL Filtering Verdict Panel — shown for URL tests with a HTTP result */}
+                                        {selectedTest.type === 'url' && selectedTest.details.url && !selectedTest.details.errorType && (() => {
+                                            const httpCode = selectedTest.details.http_code ?? selectedTest.details.httpCode ?? selectedTest.result?.httpCode;
+                                            const isAllowed = selectedTest.status === 'allowed';
+                                            const isTestPage = selectedTest.details.testPageDetected ?? selectedTest.result?.testPageDetected;
+                                            const isBlockPage = selectedTest.details.blockPageDetected ?? selectedTest.result?.blockPageDetected;
+                                            const reason = selectedTest.details.reason ?? selectedTest.result?.reason;
+
+                                            return (
+                                                <div className={`rounded-2xl border overflow-hidden shadow-sm ${isAllowed ? 'border-green-500/30' : 'border-red-500/30'}`}>
+                                                    {/* Header */}
+                                                    <div className={`px-4 py-3 flex items-center justify-between ${isAllowed ? 'bg-green-500/8 border-b border-green-500/20' : 'bg-red-500/8 border-b border-red-500/20'}`}>
+                                                        <div className="flex items-center gap-2">
+                                                            {isAllowed
+                                                                ? <CheckCircle size={14} className="text-green-500" />
+                                                                : <Shield size={14} className="text-red-500" />}
+                                                            <span className="text-[10px] font-black tracking-widest uppercase text-text-primary">
+                                                                {isAllowed ? 'URL Filtering — Allowed' : 'URL Filtering — Blocked'}
+                                                            </span>
+                                                        </div>
+                                                        <span className={`px-2 py-0.5 rounded-md text-[9px] font-black tracking-widest border font-mono ${
+                                                            isAllowed
+                                                                ? 'bg-green-500/10 border-green-500/30 text-green-500'
+                                                                : 'bg-red-500/10 border-red-500/30 text-red-500'
+                                                        }`}>
+                                                            HTTP {httpCode || '—'}
+                                                        </span>
+                                                    </div>
+                                                    {/* Body */}
+                                                    <div className="bg-card-secondary/30 border border-t-0 border-border/50 divide-y divide-border/30">
+                                                        {isAllowed && isTestPage && (
+                                                            <div className="px-4 py-3 grid grid-cols-[160px_1fr] gap-3 items-start">
+                                                                <span className="text-[9px] font-black text-text-muted uppercase tracking-widest pt-0.5">Page Served</span>
+                                                                <span className="text-[11px] text-green-500 font-black">✅ Palo Alto PANDB Test Page</span>
+                                                            </div>
+                                                        )}
+                                                        {isAllowed && !isTestPage && (
+                                                            <div className="px-4 py-3 grid grid-cols-[160px_1fr] gap-3 items-start">
+                                                                <span className="text-[9px] font-black text-text-muted uppercase tracking-widest pt-0.5">Response</span>
+                                                                <span className="text-[11px] text-green-400 font-black">HTTP {httpCode} — Request passed through</span>
+                                                            </div>
+                                                        )}
+                                                        {!isAllowed && isBlockPage && (
+                                                            <div className="px-4 py-3 grid grid-cols-[160px_1fr] gap-3 items-start">
+                                                                <span className="text-[9px] font-black text-text-muted uppercase tracking-widest pt-0.5">Block Mechanism</span>
+                                                                <span className="text-[11px] text-red-400 font-black">🛡 In-band redirect — Palo Alto block page in HTTP body</span>
+                                                            </div>
+                                                        )}
+                                                        {!isAllowed && !isBlockPage && (
+                                                            <div className="px-4 py-3 grid grid-cols-[160px_1fr] gap-3 items-start">
+                                                                <span className="text-[9px] font-black text-text-muted uppercase tracking-widest pt-0.5">Block Mechanism</span>
+                                                                <span className="text-[11px] text-red-400 font-black">HTTP {httpCode} — Request blocked at policy level</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="px-4 py-3 grid grid-cols-[160px_1fr] gap-3 items-start">
+                                                            <span className="text-[9px] font-black text-text-muted uppercase tracking-widest pt-0.5">
+                                                                {isAllowed ? 'Conclusion' : 'Intercepted by'}
+                                                            </span>
+                                                            <span className="text-[11px] text-text-primary leading-relaxed">
+                                                                {isAllowed
+                                                                    ? isTestPage
+                                                                        ? 'This URL category is NOT blocked — the Palo Alto test page was successfully served.'
+                                                                        : 'Request was forwarded. This category may not be in your URL filtering policy.'
+                                                                    : 'Palo Alto NGFW URL Filtering Policy'}
+                                                            </span>
+                                                        </div>
+                                                        {!isAllowed && (
+                                                            <div className="px-4 py-3 grid grid-cols-[160px_1fr] gap-3 items-start bg-card/50">
+                                                                <span className="text-[9px] font-black text-text-muted uppercase tracking-widest pt-0.5">Next Step</span>
+                                                                <span className="text-[10px] text-text-muted leading-relaxed italic">
+                                                                    Check your NGFW URL Filtering logs for category "{selectedTest.name}" around this timestamp.
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
                                         {selectedTest.details.domain && (
                                             <div className="bg-card-secondary/30 rounded-xl p-4 border border-border/50 group">
                                                 <span className="text-[9px] font-black text-text-muted uppercase tracking-widest block mb-2 opacity-60">Destination Host</span>
