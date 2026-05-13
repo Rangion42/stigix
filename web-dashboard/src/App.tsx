@@ -12,7 +12,7 @@ import Vyos from './Vyos';
 import Speedtest from './Speedtest';
 import Topology from './Topology';
 import LiveEvents from './LiveEvents';
-import { Activity, Server, AlertCircle, LayoutDashboard, Settings, LogOut, Key, UserPlus, BarChart3, Wifi, Shield, ChevronDown, ChevronUp, Clock, CheckCircle, XCircle, Play, Pause, Phone, Gauge, Network, Plus, Zap, Monitor, Cpu, Sun, Moon, Globe, Terminal } from 'lucide-react';
+import { Activity, Server, AlertCircle, LayoutDashboard, Settings, LogOut, Key, UserPlus, BarChart3, Wifi, Shield, ChevronDown, ChevronUp, Clock, CheckCircle, XCircle, Play, Pause, Phone, Gauge, Network, Plus, Zap, Monitor, Cpu, Sun, Moon, Globe, Terminal, Sliders } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Toaster } from 'react-hot-toast';
@@ -1020,6 +1020,13 @@ export default function App() {
                     {' • '}
                     Config: <span className={configValid ? "text-green-600 dark:text-green-400" : "text-amber-500"}>{configValid ? 'Valid' : 'Required'}</span>
                   </p>
+                  <button
+                    onClick={() => { setInitialSettingsTab('distribution'); setView('settings'); }}
+                    className="mt-2 flex items-center gap-1.5 text-[9px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-widest transition-colors group"
+                  >
+                    <Sliders size={10} className="group-hover:rotate-90 transition-transform duration-200" />
+                    Configure Distribution
+                  </button>
                 </div>
 
                 <div className="flex-1 max-w-2xl grid grid-cols-1 md:grid-cols-2 gap-4 bg-card-secondary/50 p-3 rounded-lg border border-border/50 shadow-inner">
