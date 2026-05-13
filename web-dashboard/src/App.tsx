@@ -1154,8 +1154,8 @@ export default function App() {
                         : "bg-card-secondary hover:bg-card-hover text-text-muted hover:text-text-primary border-border"
                     )}
                   >
-                    <Gauge size={14} className={runningSpeedtest ? "animate-spin" : ""} />
-                    {runningSpeedtest ? 'Testing...' : 'Speedtest'}
+                    <Globe size={14} className={runningSpeedtest ? "animate-spin" : ""} />
+                    {runningSpeedtest ? 'Testing...' : 'Internet Speedtest'}
                   </button>
 
                   <button
