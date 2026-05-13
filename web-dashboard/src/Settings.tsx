@@ -1830,24 +1830,25 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                 s + c.apps.reduce((a, ap) => a + ap.weight, 0), 0) || 1;
 
                             return (
-                                <div className="bg-card-secondary/30 border border-border rounded-2xl p-5 space-y-2.5">
+                                <div className="bg-card-secondary/30 border border-border rounded-2xl p-5">
                                     <div className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
                                         <BarChart3 size={12} className="text-blue-500" />
                                         Distribution Overview
                                     </div>
+                                    <div className="grid grid-cols-2 gap-x-5 gap-y-1.5">
                                     {categories.map((category) => {
                                         const catWeight = category.apps.reduce((s, a) => s + a.weight, 0);
                                         const catPct = Math.round((catWeight / totalWeight) * 100);
                                         let colorIdx = 0;
                                         return (
-                                            <div key={category.name} className="flex items-center gap-3 group">
-                                                {/* Group label */}
-                                                <div className="w-56 flex-shrink-0 flex items-center justify-between gap-2">
-                                                    <span className="text-[10px] font-black text-text-primary truncate tracking-tight">{category.name}</span>
+                                            <div key={category.name} className="flex items-center gap-2 group">
+                                                {/* Group label — narrower in 2-col layout */}
+                                                <div className="w-40 flex-shrink-0 flex items-center justify-between gap-1.5">
+                                                    <span className="text-[9px] font-black text-text-primary truncate tracking-tight">{category.name}</span>
                                                     <span className="text-[9px] font-black text-blue-500 flex-shrink-0">{catPct}%</span>
                                                 </div>
                                                 {/* Global weight bar background */}
-                                                <div className="flex-1 h-6 bg-card-secondary rounded-lg overflow-hidden border border-border/60 flex relative">
+                                                <div className="flex-1 h-5 bg-card-secondary rounded-md overflow-hidden border border-border/60 flex relative">
                                                     {/* Category fill — proportional to global weight */}
                                                     <div
                                                         className="h-full flex"
@@ -1901,6 +1902,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                             </div>
                                         );
                                     })}
+                                    </div>
                                 </div>
                             );
                         })()}
