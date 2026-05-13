@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.61] - 2026-05-13
+### Added
+- **VyOS History** 🖥️ CLI accordion expand: click any row in the History table to reveal a dark terminal panel with the exact VyOS CLI commands pushed. Works in both flat and grouped views.
+  - New entries store `cli_equivalent` directly in `vyos-history.jsonl` (backend fix in `vyos-scheduler.ts`).
+  - Legacy entries (pre-patch.61) fall back to client-side CLI generation from `command + interface + parameters` via `generateCliEquivalent()`.
+  - Subtle `>_` indicator on each row lights up cyan when the terminal is open.
+  - COPY button clips the commands to clipboard without closing the accordion.
+
 ## [v1.3.0-patch.60] - 2026-05-13
 ### Changed
 - **Settings** 📊 Traffic Distribution Overview: redesigned as **dual-zone bar**. Left zone (w-24, fixed) = blue gradient gauge normalized to the heaviest category — preserves visual comparison between groups. Right zone (flex-1) = always 100% filled with app icons/names — zero wasted gray space. The % label moves inside the gauge. Header hint "◀ weight · apps ▶" explains the two zones.

@@ -198,6 +198,63 @@ export default function Vyos(props: VyosProps) {
     const [activeExecution, setActiveExecution] = useState<{ sequenceId: string, step: string, status: string, error?: string, cliEquivalent?: string[], action?: any } | null>(null);
     const [liveEvents, setLiveEvents] = useState<{ sequenceId: string, step: string, status: string, error?: string, cliEquivalent?: string[], action?: any, ts: number }[]>([]);
     const [showingCli, setShowingCli] = useState<number | null>(null); // index of expanded CLI block
+    const [expandedHistoryRow, setExpandedHistoryRow] = useState<string | null>(null); // key of expanded history row
+
+    // --- generateCliEquivalent -------------------------------------------------
+    // Fallback: reconstruct VyOS CLI commands from command + interface + parameters.
+    // Used for history entries that predate cli_equivalent storage (pre-v1.3.0-patch.61).
+    const generateCliEquivalent = (command: string, iface: string, parameters?: Record<string, any>): string[] => {
+        const i = iface || 'eth0';
+        const cmds: string[] = ['configure'];
+        switch (command) {
+            case 'interface-down':
+            case 'shut':
+                cmds.push(`set interfaces ethernet ${i} disable`);
+                break;
+            case 'interface-up':
+            case 'no-shut':
+                cmds.push(`delete interfaces ethernet ${i} disable`);
+                break;
+            case 'set-qos':
+            case 'set-impairment': {
+                const delay = parameters?.latency ?? parameters?.ms;
+                const loss  = parameters?.loss;
+                const rate  = parameters?.rate;
+                const corr  = parameters?.corrupt ?? parameters?.corruption;
+                if (delay)  cmds.push(`set traffic-policy network-emulator ${i} network-delay ${delay}ms`);
+                if (loss)   cmds.push(`set traffic-policy network-emulator ${i} packet-loss ${loss}%`);
+                if (corr)   cmds.push(`set traffic-policy network-emulator ${i} packet-corruption ${corr}%`);
+                if (rate)   cmds.push(`set traffic-policy network-emulator ${i} bandwidth ${rate}`);
+                cmds.push(`set interfaces ethernet ${i} traffic-policy out ${i}`);
+                break;
+            }
+            case 'clear-qos':
+                cmds.push(`delete interfaces ethernet ${i} traffic-policy`);
+                cmds.push(`delete traffic-policy network-emulator ${i}`);
+                break;
+            case 'deny-traffic':
+            case 'simple-block': {
+                const ip = parameters?.ip || '0.0.0.0/0';
+                cmds.push(`set firewall name BLOCK-${i} default-action accept`);
+                cmds.push(`set firewall name BLOCK-${i} rule 10 action drop`);
+                cmds.push(`set firewall name BLOCK-${i} rule 10 source address ${ip}`);
+                cmds.push(`set interfaces ethernet ${i} firewall out name BLOCK-${i}`);
+                break;
+            }
+            case 'allow-traffic':
+            case 'simple-unblock':
+                cmds.push(`delete firewall name BLOCK-${i}`);
+                break;
+            case 'clear-all-blocks':
+            case 'clear-blocks':
+                cmds.push('delete firewall');
+                break;
+            default:
+                cmds.push(`# ${command} — no CLI template available`);
+        }
+        cmds.push('commit', 'exit');
+        return cmds;
+    };
 
     // Modals
     const [showAddModal, setShowAddModal] = useState(false);
@@ -1445,119 +1502,201 @@ export default function Vyos(props: VyosProps) {
                                                         </div>
                                                     </td>
                                                 </tr>
-                                                {group.map((log, idx) => (
-                                                    <tr key={`${gIdx}-${idx}`} className="hover:bg-card-secondary/30 transition-colors group">
-                                                        <td className="px-6 py-4 pl-12 border-l-2 border-border/50">
-                                                            <div className="text-text-muted font-mono font-bold text-xs tracking-tight">{new Date(log.timestamp).toLocaleTimeString()}</div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="p-1 bg-card rounded border border-border/50">
-                                                                    {getCommandIcon(log.command, 12)}
-                                                                </div>
-                                                                <div className="flex flex-col">
-                                                                    <div className="p-1 px-2 bg-card-secondary rounded font-black text-[9px] uppercase tracking-tighter text-text-muted">Step {idx + 1}</div>
-                                                                    {(() => {
-                                                                        const seq = sequences.find(s => s.id === log.sequence_id);
-                                                                        const action = seq?.actions.find(a => a.id === log.action_id);
-                                                                        if (action && seq && seq.cycle_duration > 0) {
-                                                                            return <span className="text-[8px] text-purple-500 font-black mt-0.5">T+{action.offset_minutes}M</span>;
-                                                                        }
-                                                                        return null;
-                                                                    })()}
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex flex-col">
-                                                                <span className="text-text-secondary font-bold uppercase text-[10px]">{log.router_id}</span>
-                                                                {!['simple-block', 'simple-unblock', 'clear-blocks', 'get-blocks'].includes(log.command) && (
-                                                                    <span className="text-[9px] text-text-muted/60 font-mono">{log.interface || 'global'}</span>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="px-2 py-0.5 bg-card-secondary rounded text-text-secondary font-black uppercase text-[9px] tracking-widest border border-border/50">{log.command}</span>
-                                                                {(() => {
-                                                                    const paramDisplay = formatActionParameters(log.command, log.parameters);
-                                                                    return paramDisplay ? (
-                                                                        <span className="text-[9px] text-blue-400 font-mono">{paramDisplay}</span>
-                                                                    ) : null;
-                                                                })()}
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest flex-shrink-0 ${log.status === 'success' ? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'}`}>
-                                                                    {log.status === 'success' ? <CheckCircle size={10} /> : <AlertCircle size={10} />}
-                                                                    {log.status}
-                                                                </div>
-                                                                {log.error && (
-                                                                    <div className="text-[10px] text-red-500/80 font-mono truncate" title={log.error}>
-                                                                        {log.error}
+                                                {group.map((log, idx) => {
+                                                    const rowKey = `grp-${gIdx}-${log.timestamp}-${log.action_id || idx}`;
+                                                    const isExpanded = expandedHistoryRow === rowKey;
+                                                    const cliCmds: string[] = log.cli_equivalent?.length
+                                                        ? log.cli_equivalent
+                                                        : generateCliEquivalent(log.command, log.interface, log.parameters);
+                                                    return (
+                                                        <React.Fragment key={rowKey}>
+                                                            <tr
+                                                                className={`transition-colors cursor-pointer select-none ${isExpanded ? 'bg-[#0a0f1a]/60' : 'hover:bg-card-secondary/30'}`}
+                                                                onClick={() => setExpandedHistoryRow(isExpanded ? null : rowKey)}
+                                                            >
+                                                                <td className="px-6 py-4 pl-12 border-l-2 border-border/50">
+                                                                    <div className="text-text-muted font-mono font-bold text-xs tracking-tight">{new Date(log.timestamp).toLocaleTimeString()}</div>
+                                                                </td>
+                                                                <td className="px-6 py-4">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="p-1 bg-card rounded border border-border/50">
+                                                                            {getCommandIcon(log.command, 12)}
+                                                                        </div>
+                                                                        <div className="flex flex-col">
+                                                                            <div className="p-1 px-2 bg-card-secondary rounded font-black text-[9px] uppercase tracking-tighter text-text-muted">Step {idx + 1}</div>
+                                                                            {(() => {
+                                                                                const seq = sequences.find(s => s.id === log.sequence_id);
+                                                                                const action = seq?.actions.find(a => a.id === log.action_id);
+                                                                                if (action && seq && seq.cycle_duration > 0) {
+                                                                                    return <span className="text-[8px] text-purple-500 font-black mt-0.5">T+{action.offset_minutes}M</span>;
+                                                                                }
+                                                                                return null;
+                                                                            })()}
+                                                                        </div>
                                                                     </div>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
+                                                                </td>
+                                                                <td className="px-6 py-4">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-text-secondary font-bold uppercase text-[10px]">{log.router_id}</span>
+                                                                        {!['simple-block', 'simple-unblock', 'clear-blocks', 'get-blocks'].includes(log.command) && (
+                                                                            <span className="text-[9px] text-text-muted/60 font-mono">{log.interface || 'global'}</span>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="px-2 py-0.5 bg-card-secondary rounded text-text-secondary font-black uppercase text-[9px] tracking-widest border border-border/50">{log.command}</span>
+                                                                        {(() => {
+                                                                            const paramDisplay = formatActionParameters(log.command, log.parameters);
+                                                                            return paramDisplay ? (
+                                                                                <span className="text-[9px] text-blue-400 font-mono">{paramDisplay}</span>
+                                                                            ) : null;
+                                                                        })()}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest flex-shrink-0 ${log.status === 'success' ? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'}`}>
+                                                                            {log.status === 'success' ? <CheckCircle size={10} /> : <AlertCircle size={10} />}
+                                                                            {log.status}
+                                                                        </div>
+                                                                        {log.error && (
+                                                                            <div className="text-[10px] text-red-500/80 font-mono truncate" title={log.error}>
+                                                                                {log.error}
+                                                                            </div>
+                                                                        )}
+                                                                        <span className={`ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black font-mono border transition-colors ${isExpanded ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'text-text-muted/40 border-border/30 hover:text-green-400 hover:border-green-500/20'}`}>
+                                                                            {'>_'}
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            {isExpanded && (
+                                                                <tr className="bg-[#070c14]">
+                                                                    <td colSpan={5} className="px-0 py-0">
+                                                                        <div className="border-b border-green-500/10 animate-in slide-in-from-top-1 duration-150">
+                                                                            <div className="flex items-center justify-between px-5 py-2 bg-[#0a1020] border-b border-green-500/10">
+                                                                                <span className="text-[8px] font-black tracking-[0.25em] text-cyan-400 uppercase flex items-center gap-1.5">
+                                                                                    <span className="opacity-60">&gt;_</span> VyOS CLI &#8212; Step {idx + 1}
+                                                                                    {!log.cli_equivalent?.length && (
+                                                                                        <span className="text-[7px] font-medium text-text-muted/40 normal-case tracking-normal ml-1">(generated)</span>
+                                                                                    )}
+                                                                                </span>
+                                                                                <button
+                                                                                    onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(cliCmds.join('\n')); }}
+                                                                                    className="text-[8px] font-black tracking-[0.2em] text-text-muted hover:text-white transition-colors uppercase"
+                                                                                >COPY</button>
+                                                                            </div>
+                                                                            <pre className="text-[11px] font-mono text-green-400 leading-relaxed whitespace-pre-wrap px-5 py-3">
+                                                                                {cliCmds.join('\n')}
+                                                                            </pre>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </React.Fragment>
+                                                    );
+                                                })}
                                             </React.Fragment>
                                         ));
                                     }
 
-                                    return filtered.map((log, idx) => (
-                                        <tr key={idx} className="hover:bg-card-secondary/40 transition-colors border-b border-border/30 last:border-0">
-                                            <td className="px-4 py-2.5 whitespace-nowrap">
-                                                <span className="text-text-primary font-mono text-[11px] font-medium">{new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                                                <span className="text-text-muted font-mono text-[9px] ml-2 opacity-50">{new Date(log.timestamp).toLocaleDateString()}</span>
-                                            </td>
-                                            <td className="px-4 py-2.5 max-w-0">
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <div className="p-1 bg-purple-500/10 rounded flex-shrink-0">
-                                                        {getCommandIcon(log.command, 12)}
-                                                    </div>
-                                                    <span className="text-text-primary font-medium text-[11px] truncate" title={log.sequence_name}>{log.sequence_name}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-2.5">
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="text-text-secondary font-medium text-[11px]">{log.router_id}</span>
-                                                    {!['deny-traffic', 'allow-traffic', 'clear-all-blocks', 'show-denied', 'simple-block', 'simple-unblock', 'clear-blocks', 'get-blocks'].includes(log.command) && log.interface && (
-                                                        <span className="px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded font-mono text-[11px] border border-purple-500/20">{log.interface}</span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-2.5 max-w-0">
-                                                <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                                                    <span className="px-2 py-0.5 bg-card-secondary rounded text-text-secondary font-medium text-[10px] border border-border/50 whitespace-nowrap">{getCommandDisplayName(log.command)}</span>
-                                                    {(() => {
-                                                        const paramDisplay = formatActionParameters(log.command, log.parameters);
-                                                        return paramDisplay ? (
-                                                            <span className="text-[10px] text-blue-400 font-mono truncate">{paramDisplay}</span>
-                                                        ) : null;
-                                                    })()}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-2.5">
-                                                <div className="flex items-center gap-3">
-                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-semibold flex-shrink-0 ${
-                                                        log.status === 'success'
-                                                            ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                                                            : 'bg-red-500/10 text-red-400 border-red-500/20'
-                                                    }`}>
-                                                        {log.status === 'success' ? <CheckCircle size={10} /> : <AlertCircle size={10} />}
-                                                        {log.status === 'success' ? 'OK' : 'Failed'}
-                                                    </span>
-                                                    {log.error && (
-                                                        <div className="text-[10px] text-red-500/80 font-mono truncate" title={log.error}>
-                                                            {log.error}
+                                    return filtered.map((log, idx) => {
+                                        const rowKey = `flat-${log.timestamp}-${log.action_id || idx}`;
+                                        const isExpanded = expandedHistoryRow === rowKey;
+                                        // Use stored cli_equivalent (new entries) or generate client-side (legacy)
+                                        const cliCmds: string[] = log.cli_equivalent?.length
+                                            ? log.cli_equivalent
+                                            : generateCliEquivalent(log.command, log.interface, log.parameters);
+                                        const hasCli = cliCmds.length > 0;
+
+                                        return (
+                                            <React.Fragment key={rowKey}>
+                                                <tr
+                                                    className={`transition-colors border-b border-border/30 last:border-0 cursor-pointer select-none ${isExpanded ? 'bg-[#0a0f1a]/60' : 'hover:bg-card-secondary/40'}`}
+                                                    onClick={() => setExpandedHistoryRow(isExpanded ? null : rowKey)}
+                                                >
+                                                    <td className="px-4 py-2.5 whitespace-nowrap">
+                                                        <span className="text-text-primary font-mono text-[11px] font-medium">{new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                                                        <span className="text-text-muted font-mono text-[9px] ml-2 opacity-50">{new Date(log.timestamp).toLocaleDateString()}</span>
+                                                    </td>
+                                                    <td className="px-4 py-2.5 max-w-0">
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            <div className="p-1 bg-purple-500/10 rounded flex-shrink-0">
+                                                                {getCommandIcon(log.command, 12)}
+                                                            </div>
+                                                            <span className="text-text-primary font-medium text-[11px] truncate" title={log.sequence_name}>{log.sequence_name}</span>
                                                         </div>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ));
+                                                    </td>
+                                                    <td className="px-4 py-2.5">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-text-secondary font-medium text-[11px]">{log.router_id}</span>
+                                                            {!['deny-traffic', 'allow-traffic', 'clear-all-blocks', 'show-denied', 'simple-block', 'simple-unblock', 'clear-blocks', 'get-blocks'].includes(log.command) && log.interface && (
+                                                                <span className="px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded font-mono text-[11px] border border-purple-500/20">{log.interface}</span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-2.5 max-w-0">
+                                                        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                                                            <span className="px-2 py-0.5 bg-card-secondary rounded text-text-secondary font-medium text-[10px] border border-border/50 whitespace-nowrap">{getCommandDisplayName(log.command)}</span>
+                                                            {(() => {
+                                                                const paramDisplay = formatActionParameters(log.command, log.parameters);
+                                                                return paramDisplay ? (
+                                                                    <span className="text-[10px] text-blue-400 font-mono truncate">{paramDisplay}</span>
+                                                                ) : null;
+                                                            })()}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-2.5">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-semibold flex-shrink-0 ${
+                                                                log.status === 'success'
+                                                                    ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                                                                    : 'bg-red-500/10 text-red-400 border-red-500/20'
+                                                            }`}>
+                                                                {log.status === 'success' ? <CheckCircle size={10} /> : <AlertCircle size={10} />}
+                                                                {log.status === 'success' ? 'OK' : 'Failed'}
+                                                            </span>
+                                                            {log.error && (
+                                                                <div className="text-[10px] text-red-500/80 font-mono truncate" title={log.error}>
+                                                                    {log.error}
+                                                                </div>
+                                                            )}
+                                                            {hasCli && (
+                                                                <span className={`ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black font-mono border transition-colors ${isExpanded ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'text-text-muted/40 border-border/30 hover:text-green-400 hover:border-green-500/20'}`}>
+                                                                    {'>_'}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                {/* ── CLI Accordion ───────────────────────────────────────── */}
+                                                {isExpanded && (
+                                                    <tr className="bg-[#070c14]">
+                                                        <td colSpan={5} className="px-0 py-0">
+                                                            <div className="border-b border-green-500/10 animate-in slide-in-from-top-1 duration-150">
+                                                                <div className="flex items-center justify-between px-5 py-2 bg-[#0a1020] border-b border-green-500/10">
+                                                                    <span className="text-[8px] font-black tracking-[0.25em] text-cyan-400 uppercase flex items-center gap-1.5">
+                                                                        <span className="opacity-60">&gt;_</span> VyOS CLI Equivalent
+                                                                        {!log.cli_equivalent?.length && (
+                                                                            <span className="text-[7px] font-medium text-text-muted/40 normal-case tracking-normal ml-1">(generated)</span>
+                                                                        )}
+                                                                    </span>
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(cliCmds.join('\n')); }}
+                                                                        className="text-[8px] font-black tracking-[0.2em] text-text-muted hover:text-white transition-colors uppercase"
+                                                                    >COPY</button>
+                                                                </div>
+                                                                <pre className="text-[11px] font-mono text-green-400 leading-relaxed whitespace-pre-wrap px-5 py-3">
+                                                                    {cliCmds.join('\n')}
+                                                                </pre>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
+                                        );
+                                    });
                                 })()}
                                 {history.length === 0 && (
                                     <tr>

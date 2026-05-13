@@ -201,7 +201,7 @@ export class VyosScheduler extends EventEmitter {
                     });
 
                     const duration = Math.round(performance.now() - startTime);
-                    this.logActionExecution(seq.id, action, 'success', undefined, runId, duration);
+                    this.logActionExecution(seq.id, action, 'success', undefined, runId, duration, result?.cliEquivalent);
                     this.emit('sequence:step', { sequenceId: seq.id, step: action.command, status: 'success', action, cliEquivalent: result?.cliEquivalent });
                 } catch (error: any) {
                     const duration = Math.round(performance.now() - startTime);
@@ -316,7 +316,8 @@ export class VyosScheduler extends EventEmitter {
         status: 'success' | 'failed',
         error?: string,
         runId?: string,
-        durationMs?: number
+        durationMs?: number,
+        cliEquivalent?: string[]   // Stored for History CLI viewer
     ) {
         const seq = this.sequences.get(sequenceId);
         const timestamp = Date.now();
@@ -334,7 +335,8 @@ export class VyosScheduler extends EventEmitter {
             parameters: action.parameters,
             status,
             duration_ms: durationMs,
-            error
+            error,
+            cli_equivalent: cliEquivalent  // Persisted for History CLI viewer
         };
 
         // Format parameters for console log
@@ -372,7 +374,7 @@ export class VyosScheduler extends EventEmitter {
         for (const action of seq.actions) {
             const startTime = performance.now();
             try {
-                await this.manager.executeAction(action.router_id, {
+                const result = await this.manager.executeAction(action.router_id, {
                     id: action.id,
                     offset_minutes: action.offset_minutes,
                     router_id: action.router_id,
@@ -380,7 +382,7 @@ export class VyosScheduler extends EventEmitter {
                     params: { ...action.parameters, interface: action.interface }
                 });
                 const duration = Math.round(performance.now() - startTime);
-                this.logActionExecution(seq.id, action, 'success', undefined, runId, duration);
+                this.logActionExecution(seq.id, action, 'success', undefined, runId, duration, result?.cliEquivalent);
             } catch (error: any) {
                 const duration = Math.round(performance.now() - startTime);
                 this.logActionExecution(seq.id, action, 'failed', error.message, runId, duration);
@@ -418,7 +420,7 @@ export class VyosScheduler extends EventEmitter {
             });
 
             const duration = Math.round(performance.now() - startTime);
-            this.logActionExecution(seq.id, action, 'success', undefined, runId, duration);
+            this.logActionExecution(seq.id, action, 'success', undefined, runId, duration, result?.cliEquivalent);
             this.emit('sequence:step', { sequenceId: seq.id, stepIndex, step: action.command, status: 'success', action, cliEquivalent: result?.cliEquivalent });
 
             // Move pointer to next step automatically if successful
