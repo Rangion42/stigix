@@ -6544,6 +6544,41 @@ const getCurlErrorInfo = (exitCode: number, errMsg: string): {
     }
 };
 
+/**
+ * Pre-DNS check: resolves hostname via nslookup (4s timeout) BEFORE launching curl.
+ * Fixes the "first test = curl exit 28 timeout, second = exit 6" artifact caused by slow
+ * DNS proxy resolution on first query (DNS result arrives after curl already gave up).
+ * Returns null if DNS is fine, or a getCurlErrorInfo-compatible object if unresolvable.
+ */
+const preDnsCheck = async (url: string): Promise<{
+    status: string; errorType: string; errorDescription: string;
+    technicalDetail: string; likelyFirewallBlock: boolean;
+} | null> => {
+    let hostname: string;
+    try { hostname = new URL(url).hostname; } catch { return null; }
+    if (!hostname) return null;
+    try {
+        const execP = promisify(exec);
+        await execP(`nslookup -timeout=4 ${hostname}.`, { timeout: 5000 });
+        return null; // resolved OK — proceed with curl
+    } catch (e: any) {
+        const out: string = (e.stdout || '') + (e.stderr || '') + (e.message || '');
+        const isNxDomain = out.includes('NXDOMAIN') || out.includes("can't find") ||
+            out.includes("server can't find") || out.includes('Non-existent domain');
+        const isTimeout  = out.includes('timed out') || out.includes('connection timeout');
+        if (isNxDomain || isTimeout) {
+            return {
+                status: 'dns_error',
+                errorType: 'DNS_RESOLUTION_FAILURE',
+                likelyFirewallBlock: false,
+                errorDescription: `The hostname "${hostname}" could not be resolved${isNxDomain ? ' (NXDOMAIN)' : ' (DNS timeout)'}. The domain does not exist, is misspelled, or DNS is unavailable from this node.`,
+                technicalDetail: `nslookup pre-check failed for ${hostname} — ${isNxDomain ? 'NXDOMAIN returned' : 'DNS query timed out after 4s'}. Skipping curl to avoid misleading 10s timeout result.`
+            };
+        }
+        return null; // other nslookup failure — let curl attempt anyway
+    }
+};
+
 app.post('/api/security/url-test', authenticateToken, async (req, res) => {
     const { url, category } = req.body;
 
@@ -6560,6 +6595,24 @@ app.post('/api/security/url-test', authenticateToken, async (req, res) => {
         // exec already imported at top
         // util.promisify already imported as promisify
         const execPromise = promisify(exec);
+
+        // ── Pre-DNS check (avoids misleading 10s curl timeout on first query) ──
+        const dnsIssue = await preDnsCheck(url);
+        if (dnsIssue) {
+            logTest(`[URL-TEST-${testId}] Pre-DNS check failed for ${url}: ${dnsIssue.errorType}`);
+            const result = {
+                success: false, httpCode: 0, url, category,
+                status: dnsIssue.status,
+                errorType: dnsIssue.errorType,
+                errorDescription: dnsIssue.errorDescription,
+                error: dnsIssue.technicalDetail,
+                likelyFirewallBlock: dnsIssue.likelyFirewallBlock,
+                reason: `${dnsIssue.errorType}: ${dnsIssue.errorDescription}`,
+                command: `nslookup -timeout=4 ${new URL(url).hostname}.`
+            };
+            const { previousStatus } = await addTestResult('url_filtering', category || url, result, testId);
+            return res.json({ ...result, previousStatus });
+        }
 
         const curlCommand = `curl -sSL --max-time 10 -w '%{http_code}' '${url}'`;
         logTest(`[URL-TEST-${testId}] Executing URL test for ${url} (${category || 'Uncategorized'}): ${curlCommand}`);
@@ -6659,8 +6712,32 @@ app.post('/api/security/url-test-batch', authenticateToken, async (req, res) => 
             logTest(`[URL-BATCH-${runId}][URL-TEST-${testId}] [${i + 1}/${tests.length}] Testing: ${test.url} (${test.category})`);
 
             const execPromise = promisify(exec);
-            const curlCommand = `curl -sSL --max-time 10 -w '%{http_code}' '${test.url}'`;
 
+            // ── Pre-DNS check ──────────────────────────────────────────────────
+            const dnsIssue = await preDnsCheck(test.url);
+            if (dnsIssue) {
+                logTest(`[URL-TEST-${testId}] Pre-DNS check failed for ${test.url}: ${dnsIssue.errorType}`);
+                const dnsResult = {
+                    success: false, httpCode: 0,
+                    url: test.url, category: test.category,
+                    status: dnsIssue.status,
+                    errorType: dnsIssue.errorType,
+                    errorDescription: dnsIssue.errorDescription,
+                    error: dnsIssue.technicalDetail,
+                    likelyFirewallBlock: dnsIssue.likelyFirewallBlock,
+                    command: `nslookup -timeout=4 ${new URL(test.url).hostname}.`,
+                    reason: `${dnsIssue.errorType}: ${dnsIssue.errorDescription}`
+                };
+                results.push(dnsResult);
+                await addTestResult('url_filtering', test.category, dnsResult, testId, {
+                    url: test.url, error: dnsIssue.technicalDetail,
+                    errorType: dnsIssue.errorType, likelyFirewallBlock: dnsIssue.likelyFirewallBlock,
+                    command: dnsResult.command
+                }, runId);
+                continue;
+            }
+
+            const curlCommand = `curl -sSL --max-time 10 -w '%{http_code}' '${test.url}'`;
             logTest(`[URL-TEST-${testId}] Executing URL test for ${test.url} (${test.category}): ${curlCommand}`);
 
             try {

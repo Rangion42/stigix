@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.40] - 2026-05-13
+### Fixed
+- **URL Filtering Tests** 🔍 Added `preDnsCheck` pre-resolution step before every curl URL test. A fast `nslookup -timeout=4` now runs first; if the hostname is unresolvable (NXDOMAIN or DNS timeout), the test immediately returns `dns_error` without launching curl. This eliminates the "first test = misleading 10s CONNECTION_TIMEOUT, second test = correct DNS_RESOLUTION_FAILURE" artifact caused by slow first-query DNS proxy resolution in the container.
+
 ## [v1.3.0-patch.39] - 2026-05-12
 ### Added
 - **Security Dashboard** 🔗 The "Requires STIGIX_TARGET_MASTER_KEY" warning on the Stigix Cloud EICAR target is now a clickable link. Clicking it navigates directly to Settings → Cloud Target Security and auto-scrolls to the key configuration panel, eliminating the need for manual navigation.
