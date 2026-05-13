@@ -116,8 +116,13 @@ const BetaBadge = ({ className }: { className?: string }) => (
     </span>
 );
 
-export default function Settings({ token, uiConfig, onUpdateUIConfig }: { token: string, uiConfig?: { maxCaptures: number }, onUpdateUIConfig?: () => void }) {
-    const [activeTab, setActiveTab] = useState<'probes' | 'distribution' | 'maintenance' | 'system' | 'targets' | 'convergence' | 'registry' | 'targetService' | 'mcp' | 'prisma-api' | 'strata'>('distribution');
+export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab }: { 
+    token: string, 
+    uiConfig?: { maxCaptures: number }, 
+    onUpdateUIConfig?: () => void,
+    initialTab?: 'probes' | 'distribution' | 'maintenance' | 'system' | 'targets' | 'convergence' | 'registry' | 'targetService' | 'mcp' | 'prisma-api' | 'strata'
+}) {
+    const [activeTab, setActiveTab] = useState<'probes' | 'distribution' | 'maintenance' | 'system' | 'targets' | 'convergence' | 'registry' | 'targetService' | 'mcp' | 'prisma-api' | 'strata'>(initialTab || 'distribution');
 
     // Shared State
     const [loading, setLoading] = useState(true);

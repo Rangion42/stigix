@@ -59,6 +59,7 @@ export default function App() {
   );
 
   const [features, setFeatures] = useState<{ xfr_enabled: boolean }>({ xfr_enabled: false });
+  const [initialSettingsTab, setInitialSettingsTab] = useState<any>(null);
 
   // --- Theme Management ---
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -984,7 +985,10 @@ export default function App() {
         {/* SRT Tab hidden in v1.1.2-patch.28 */}
         {username === 'admin' && (
           <button
-            onClick={() => setView('settings')}
+            onClick={() => {
+              setInitialSettingsTab(null);
+              setView('settings');
+            }}
             className={cn(
               "group relative px-4 py-3 flex items-center gap-2 font-bold tracking-wider text-sm border-b-2 transition-all",
               view === 'settings' ? "border-blue-600 text-blue-600 dark:text-blue-300" : "border-transparent text-text-muted hover:text-text-primary"
@@ -1529,7 +1533,10 @@ export default function App() {
 
       {/* Other views — conditionally mounted */}
       {view === 'performance' && (
-        <ConnectivityPerformance token={token!} uiConfig={uiConfig} onManage={() => setView('settings')} />
+        <ConnectivityPerformance token={token!} uiConfig={uiConfig} onManage={() => {
+          setInitialSettingsTab('probes');
+          setView('settings');
+        }} />
       )}
       {view === 'topology' && <Topology token={token!} />}
       {view === 'security' && <Security token={token!} onGoToCloudSettings={() => {
@@ -1542,7 +1549,7 @@ export default function App() {
       {view === 'iot' && <Iot token={token!} />}
       {view === 'voice' && <Voice token={token!} externalStatus={globalVoiceStatus} />}
       {(view === 'failover' || view === 'convergence') && <Failover token={token!} externalStatus={globalConvStatus} />}
-      {view === 'settings' && <SettingsComponent token={token!} uiConfig={uiConfig} onUpdateUIConfig={fetchConfigUi} />}
+      {view === 'settings' && <SettingsComponent token={token!} uiConfig={uiConfig} onUpdateUIConfig={fetchConfigUi} initialTab={initialSettingsTab} />}
       {view === 'speedtest' && features.xfr_enabled && <Speedtest token={token!} />}
       {view === 'events' && <LiveEvents token={token!} />}
     </div>
