@@ -246,6 +246,11 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
     const [slsConfig, setSlsConfig] = useState<any>(null);
     const [probeFilterType, setProbeFilterType] = useState('ALL');
     const [maxCaptures, setMaxCaptures] = useState(uiConfig?.maxCaptures || 10);
+    // All groups expanded by default; toggled by clicking the group header
+    const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+    const toggleCategory = (name: string) =>
+        setExpandedCategories(prev => ({ ...prev, [name]: prev[name] === false ? true : false }));
+    const isCategoryExpanded = (name: string) => expandedCategories[name] !== false;
 
     useEffect(() => {
         if (uiConfig?.maxCaptures) setMaxCaptures(uiConfig.maxCaptures);
@@ -1899,18 +1904,30 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                             );
                         })()}
 
-                        <div className="max-w-7xl mx-auto space-y-4">
+                        <div className="max-w-7xl mx-auto space-y-3">
                             {categories.map(category => {
                                 const categoryWeight = category.apps.reduce((s, a) => s + a.weight, 0);
                                 const categoryPercent = Math.round((categoryWeight / GLOBAL_TOTAL) * 100);
+                                const expanded = isCategoryExpanded(category.name);
                                 return (
                                     <div key={category.name} className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-                                        <div className="bg-card-secondary/30 p-5 flex items-center justify-between border-b border-border">
-                                            <div className="flex items-center gap-3 text-[11px] font-black text-text-primary tracking-widest">
+                                        {/* ── Group Header — click to collapse/expand ── */}
+                                        <div
+                                            className="bg-card-secondary/30 px-5 py-4 flex items-center justify-between border-b border-border cursor-pointer select-none hover:bg-card-secondary/50 transition-colors"
+                                            onClick={() => toggleCategory(category.name)}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={cn(
+                                                    "transition-transform duration-200",
+                                                    expanded ? "rotate-0" : "-rotate-90"
+                                                )}>
+                                                    <ChevronDown size={14} className="text-text-muted" />
+                                                </div>
                                                 <Database size={14} className="text-blue-600" />
-                                                {category.name}
+                                                <span className="text-[11px] font-black text-text-primary tracking-widest">{category.name}</span>
+                                                <span className="text-[9px] font-bold text-text-muted opacity-60">{category.apps.length} apps</span>
                                             </div>
-                                            <div className="flex items-center gap-6">
+                                            <div className="flex items-center gap-4" onClick={e => e.stopPropagation()}>
                                                 <span className="text-xs font-black text-blue-600 dark:text-blue-400">{categoryPercent}%</span>
                                                 <input
                                                     type="range"
@@ -1921,29 +1938,32 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                                 />
                                             </div>
                                         </div>
-                                        <div className="p-6 grid gap-4 grid-cols-1 lg:grid-cols-2">
-                                            {category.apps.slice(0, 4).map(app => {
-                                                const appPercent = categoryWeight > 0 ? Math.round((app.weight / categoryWeight) * 100) : 0;
-                                                return (
-                                                    <div key={app.domain} className="bg-card-secondary/20 border border-border rounded-xl p-4 space-y-3">
-                                                        <div className="flex justify-between items-center bg-card mb-2 -mx-4 -mt-4 p-3 border-b border-border/50 rounded-t-xl">
-                                                            <div className="flex items-center gap-2 truncate">
-                                                                <Favicon domain={app.domain} size={14} />
-                                                                <span className="text-[10px] font-black text-text-primary truncate">{app.domain}</span>
+                                        {/* ── Apps Grid — shown when expanded ── */}
+                                        {expanded && (
+                                            <div className="p-6 grid gap-4 grid-cols-1 lg:grid-cols-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                {category.apps.map(app => {
+                                                    const appPercent = categoryWeight > 0 ? Math.round((app.weight / categoryWeight) * 100) : 0;
+                                                    return (
+                                                        <div key={app.domain} className="bg-card-secondary/20 border border-border rounded-xl p-4 space-y-3">
+                                                            <div className="flex justify-between items-center bg-card mb-2 -mx-4 -mt-4 p-3 border-b border-border/50 rounded-t-xl">
+                                                                <div className="flex items-center gap-2 truncate">
+                                                                    <Favicon domain={app.domain} size={14} />
+                                                                    <span className="text-[10px] font-black text-text-primary truncate">{app.domain}</span>
+                                                                </div>
+                                                                <span className="text-[10px] font-black text-blue-600">{appPercent}%</span>
                                                             </div>
-                                                            <span className="text-[10px] font-black text-blue-600">{appPercent}%</span>
+                                                            <input
+                                                                type="range"
+                                                                min="0" max="100"
+                                                                value={appPercent}
+                                                                onChange={(e) => handleAppPercentageChange(category.name, app.domain, parseInt(e.target.value))}
+                                                                className="w-full accent-blue-600 h-1 bg-card border border-border rounded-lg"
+                                                            />
                                                         </div>
-                                                        <input
-                                                            type="range"
-                                                            min="0" max="100"
-                                                            value={appPercent}
-                                                            onChange={(e) => handleAppPercentageChange(category.name, app.domain, parseInt(e.target.value))}
-                                                            className="w-full accent-blue-600 h-1 bg-card border border-border rounded-lg"
-                                                        />
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
