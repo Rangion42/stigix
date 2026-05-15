@@ -96,6 +96,8 @@ if __name__ == "__main__":
                                type=int, default=90000)
     options_group.add_argument("--call-id", help="Call ID to embed in the payload for tracking",
                                type=str, default="NONE")
+    options_group.add_argument("--stream-type", help="Type of stream to simulate (audio, video). Default: audio",
+                               type=str, default="audio", choices=["audio", "video"])
 
 
     
@@ -163,45 +165,62 @@ if __name__ == "__main__":
     t.daemon = True
     t.start()
 
+    # Stream type parameters
+    stream_type = args.get('stream_type', 'audio')
+    if stream_type == 'video':
+        payload_size = 1300
+        pt = 96 # Dynamic/H.264
+        send_interval = 0.01 # 10ms (approx 1 Mbps)
+    else:
+        # Default to high-quality Audio (G.711 @ 20ms)
+        payload_size = 160
+        pt = 8 # PCMA
+        send_interval = 0.02 # 20ms (Standard VoIP)
+
     # Generate jittery random payload padding
     udp_payload_parts = []
-    for i in range(200):
+    for i in range(1500):
         tmp = "{:02x}".format(random.randrange(0, 255))
         udp_payload_parts.append(bytes.fromhex(tmp))
     payload_padding = b"".join(udp_payload_parts)
 
     import sys
     if is_debug_mode:
-        print("[DEBUG MODE] tos=0 (no DSCP) | port=RANDOM | payload=pure random bytes — full legacy mode", file=sys.stderr)
-        final_payload = payload_padding[:200]
+        print(f"[DEBUG MODE] stream={stream_type} | tos=0 | port=RANDOM | payload=pure random", file=sys.stderr)
+        final_payload = payload_padding[:payload_size]
     else:
-        print("[NORMAL MODE] tos=184 (DSCP EF) | port=30000+N | payload=CID-tagged — production mode", file=sys.stderr)
+        print(f"[NORMAL MODE] stream={stream_type} | tos=184 (EF) | port=30000+N | payload=tagged", file=sys.stderr)
         # Create payload with embedded Call ID
         call_id_tag = f"CID:{args.get('call_id', 'NONE')}:".encode()
-        final_payload = (call_id_tag + payload_padding)[:200]
+        final_payload = (call_id_tag + payload_padding)[:payload_size]
     
     timestamp = time.strftime('%H:%M:%S')
     print(f"[{timestamp}] [{args['call_id']}] 🚀 Executing: python3 rtp.py -D {args['destination_ip']} -dport {args['destination_port']} --min-count {args['min_count']} --max-count {args['max_count']} --source-interface {args['source_interface']} --call-id {args['call_id']}", file=sys.stderr)
     print(f"[{timestamp}] [{args['call_id']}] 📞 RTP Engine STARTED: {args['destination_ip']}:{args['destination_port']} | G.711-ulaw | {int(args['min_count'] * 0.03)}s", file=sys.stderr)
 
+    # IP/UDP Length calculation
+    # RTP=12, UDP_HDR=8, IP_HDR=20
+    udp_total_len = payload_size + 12 + 8
+    ip_total_len = udp_total_len + 20
+
     # Pre-build packet template for performance
     if is_debug_mode:
         if args['source_ip'] is None:
-            base_packet = IP(dst=args['destination_ip'], proto=17, len=240)  # tos=0
+            base_packet = IP(dst=args['destination_ip'], proto=17, len=ip_total_len)  # tos=0
         else:
-            base_packet = IP(dst=args['destination_ip'], src=args['source_ip'], proto=17, len=240)  # tos=0
+            base_packet = IP(dst=args['destination_ip'], src=args['source_ip'], proto=17, len=ip_total_len)  # tos=0
     else:
         if args['source_ip'] is None:
-            base_packet = IP(dst=args['destination_ip'], proto=17, len=240, tos=184)  # DSCP EF (46)
+            base_packet = IP(dst=args['destination_ip'], proto=17, len=ip_total_len, tos=184)  # DSCP EF (46)
         else:
-            base_packet = IP(dst=args['destination_ip'], src=args['source_ip'], proto=17, len=240, tos=184)  # DSCP EF (46)
+            base_packet = IP(dst=args['destination_ip'], src=args['source_ip'], proto=17, len=ip_total_len, tos=184)  # DSCP EF (46)
         
-    base_packet = base_packet/UDP(sport=source_port, dport=args['destination_port'], len=220)
+    base_packet = base_packet/UDP(sport=source_port, dport=args['destination_port'], len=udp_total_len)
 
     # Sending loop
     start_time = time.time()
     for i in range(1, count + 1):
-        packet = base_packet/RTP(version=2, payload_type=8, sequence=i, sourcesync=1, timestamp=int(time.time()))
+        packet = base_packet/RTP(version=2, payload_type=pt, sequence=i, sourcesync=1, timestamp=int(time.time()))
         packet = packet/Raw(load=final_payload)
 
         del packet[IP].chksum
@@ -212,7 +231,7 @@ if __name__ == "__main__":
 
         # Send using Layer 3 (Standard IP)
         send(packet, verbose=False)
-        time.sleep(0.03) # ~33 packets per second (Standard G.711 / 30ms)
+        time.sleep(send_interval)
 
     # Wait a bit for the last echo to return
     time.sleep(1.0)
