@@ -219,9 +219,16 @@ if __name__ == "__main__":
 
     # Sending loop
     start_time = time.time()
+    rtp_timestamp = random.randrange(1000, 1000000)
+    ssrc = random.getrandbits(32)
+    ts_increment = 900 if stream_type == 'video' else 160 # 90kHz for video, 8kHz for audio
+
     for i in range(1, count + 1):
-        packet = base_packet/RTP(version=2, payload_type=pt, sequence=i, sourcesync=1, timestamp=int(time.time()))
+        packet = base_packet/RTP(version=2, payload_type=pt, sequence=i, ssrc=ssrc, timestamp=rtp_timestamp)
         packet = packet/Raw(load=final_payload)
+
+        # Increment timestamp for next packet
+        rtp_timestamp += ts_increment
 
         del packet[IP].chksum
         del packet[UDP].chksum
