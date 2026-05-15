@@ -404,20 +404,20 @@ export default function Iot({ token }: IotProps) {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-shrink-0">
                     {selectedIds.length > 0 && (
-                        <div className="flex items-center gap-2 bg-card-secondary/80 px-3 py-1.5 rounded-xl border border-border animate-in slide-in-from-right duration-300">
-                            <span className="text-xs font-bold text-blue-500">{selectedIds.length} selected</span>
-                            <div className="w-px h-4 bg-border mx-1" />
+                        <div className="flex items-center gap-2 bg-blue-600/10 px-4 py-2 rounded-xl border border-blue-500/30 animate-in slide-in-from-right duration-300">
+                            <span className="text-sm font-bold text-blue-400 whitespace-nowrap">{selectedIds.length} selected</span>
+                            <div className="w-px h-5 bg-blue-500/30 mx-1" />
                             <button
                                 onClick={handleBulkStart}
-                                className="flex items-center gap-1.5 text-xs font-bold text-green-400 hover:text-green-300 transition-colors"
+                                className="flex items-center gap-1.5 text-sm font-bold text-green-400 hover:text-green-300 transition-colors whitespace-nowrap px-2 py-1 rounded-lg hover:bg-green-500/10"
                             >
                                 <Play size={14} /> Start
                             </button>
                             <button
                                 onClick={handleBulkStop}
-                                className="flex items-center gap-1.5 text-xs font-bold text-red-400 hover:text-red-300 transition-colors"
+                                className="flex items-center gap-1.5 text-sm font-bold text-red-400 hover:text-red-300 transition-colors whitespace-nowrap px-2 py-1 rounded-lg hover:bg-red-500/10"
                             >
                                 <Square size={14} /> Stop
                             </button>
@@ -696,14 +696,14 @@ export default function Iot({ token }: IotProps) {
                                         onClick={() => toggleDevice(device.id, device.running)}
                                         className={cn(
                                             "flex items-center justify-center transition-all border",
-                                            isCompact ? "p-2 rounded-xl" : "flex-1 py-3 rounded-2xl text-xs font-black",
+                                            isCompact ? "p-2 rounded-xl" : "flex-1 py-3.5 rounded-2xl text-sm font-black",
                                             device.running
                                                 ? "bg-red-500/10 hover:bg-red-500/20 text-red-500 border-red-500/20"
                                                 : "bg-blue-600 hover:bg-blue-500 text-white border-transparent shadow-lg shadow-blue-900/40"
                                         )}
                                         title={device.running ? "Shut Down" : "Initialize"}
                                     >
-                                        <Power size={16} />
+                                        <Power size={18} />
                                         {!isCompact && <span className="ml-2 tracking-widest">{device.running ? 'Shut' : 'Start'}</span>}
                                     </button>
 
