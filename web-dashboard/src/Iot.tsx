@@ -360,22 +360,22 @@ export default function Iot({ token }: IotProps) {
             )}
             {/* Header section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <div className="bg-blue-600/20 p-3 rounded-2xl">
+                <div className="flex items-center gap-4 min-w-0 flex-shrink">
+                    <div className="bg-blue-600/20 p-3 rounded-2xl flex-shrink-0">
                         <Cpu className="text-blue-400" size={32} />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                         <h2 className="text-2xl font-bold text-text-primary flex items-center gap-2">
                             IoT Device Simulation
                         </h2>
-                        <div className="flex items-center gap-3">
-                            <p className="text-text-muted text-sm">Scale your branch with realistic IoT traffic patterns per vendor.</p>
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <p className="text-text-muted text-sm whitespace-nowrap">Scale your branch with realistic IoT traffic patterns per vendor.</p>
                             <span className="text-text-muted/30">|</span>
                             <a
                                 href="https://raw.githubusercontent.com/jsuzanne/stigix/main/sample%20config/iot-devices.json"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-blue-400 hover:text-blue-300 text-xs font-bold transition-colors flex items-center gap-1"
+                                className="text-blue-400 hover:text-blue-300 text-xs font-bold transition-colors flex items-center gap-1 whitespace-nowrap"
                                 title="Download Full IoT Sample Configuration"
                             >
                                 <ExternalLink size={12} /> Download Sample
@@ -385,7 +385,7 @@ export default function Iot({ token }: IotProps) {
                                 href="https://github.com/jsuzanne/stigix/blob/main/docs/IOT_DEVICE_GENERATOR.md"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-blue-400 hover:text-blue-300 text-xs font-bold transition-colors flex items-center gap-1"
+                                className="text-blue-400 hover:text-blue-300 text-xs font-bold transition-colors flex items-center gap-1 whitespace-nowrap"
                                 title="Python Script Generator"
                             >
                                 <ExternalLink size={12} /> Python Generator
@@ -395,7 +395,7 @@ export default function Iot({ token }: IotProps) {
                                 href="https://github.com/jsuzanne/stigix/blob/main/docs/IOT_LLM_GENERATION.md"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-blue-400 hover:text-blue-300 text-xs font-bold transition-colors flex items-center gap-1"
+                                className="text-blue-400 hover:text-blue-300 text-xs font-bold transition-colors flex items-center gap-1 whitespace-nowrap"
                                 title="LLM-based Generation"
                             >
                                 <ExternalLink size={12} /> Llm Guide
@@ -477,17 +477,6 @@ export default function Iot({ token }: IotProps) {
                     >
                         <Plus size={18} /> Add Device
                     </button>
-                </div>
-            </div>
-
-            {/* Info Box */}
-            <div className="bg-blue-600/5 border border-blue-500/20 p-4 rounded-2xl flex items-start gap-3">
-                <Info size={20} className="text-blue-500 dark:text-blue-400 mt-0.5" />
-                <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-blue-600 dark:text-blue-400 tracking-wider">Scale & Monitoring</h4>
-                    <p className="text-xs text-text-muted leading-relaxed max-w-4xl">
-                        Toggle **Compact View** to manage large environments. Click the terminal icon on any running device to view **Live Protocol Logs** (DHCP, LLDP, SNMP).
-                    </p>
                 </div>
             </div>
 
