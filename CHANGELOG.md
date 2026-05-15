@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.67] - 2026-05-15
+### Documentation
+- **IoT Simulation** 📚 Mise à jour de la documentation avec les nouvelles captures d'écran de l'interface d'import.
+- **IoT Simulation** 📖 Amélioration du guide d'importation des actifs Device Security.
+
 ## [v1.3.0-patch.66] - 2026-05-15
 ### Changed
 - **IoT Simulation** 🤖 Refonte de l'interface d'importation : regroupement des actions dans un menu déroulant unique.

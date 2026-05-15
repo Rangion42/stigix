@@ -140,7 +140,7 @@ Copy the prompt template from `iot/IOT_PROMPT.txt` and customize for your use ca
 
 ---
 
-#### 3. Prisma / IoT Security CSV Import (Recommended for Real Environments)
+#### 3. Device Security Asset Import (Recommended for Real Environments)
 
 If your customer already has **Palo Alto IoT Security** or **Prisma Access** deployed, you can export a real device inventory CSV and convert it directly into a Stigix emulator config. This produces the most accurate simulation because it is based on real devices observed on the customer's network.
 
@@ -163,10 +163,19 @@ If your customer already has **Palo Alto IoT Security** or **Prisma Access** dep
 
 **Import via UI (Recommended):**
 
-Go to **IoT Simulation** → click **IoT Security CSV** in the header toolbar.
-Select your CSV file, choose options (max devices, IoT-only filter, bad behavior mode, merge vs replace) and click **Convert & Import** — no CLI required.
+The dashboard provides a unified **Import** dropdown to restore configurations or ingest third-party assets.
 
-> The UI validates the CSV format client-side before sending to the server, rejecting non-Prisma files immediately.
+<img src="screenshots/05-IOT/05-iot-import-dropdown.png" width="450" alt="Import Dropdown" />
+
+1. Go to **IoT Simulation** -> click the **Import** button in the header toolbar.
+2. Select **Device Security Assets** to import from a Palo Alto IoT Security CSV export.
+3. In the modal, drag & drop your CSV file and configure your conversion options (max devices, risk level fallback, etc.).
+
+<img src="screenshots/05-IOT/06-iot-import-assets-modal.png" width="500" alt="Device Security Assets Modal" />
+
+4. Click **Convert & Import** to populate your simulation lab.
+
+> The UI validates the CSV format client-side before sending to the server, rejecting non-compatible files immediately.
 
 **Or via CLI:**
 ```bash
