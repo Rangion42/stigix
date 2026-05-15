@@ -202,9 +202,10 @@ def start_call(server, interface):
         })
         return None
 
-    # Calculate packet count based on duration and 0.03s sleep in rtp.py
-    num_packets = int(server['duration'] / 0.03)
-    
+    # Calculate packet count based on duration and 0.02s send interval (20ms/G.711 audio)
+    num_packets = int(server['duration'] / 0.02)
+    stream_type = server.get('stream_type', 'audio')
+
     cmd = [
         "python3", "rtp.py",
         "-D", host,
@@ -212,7 +213,8 @@ def start_call(server, interface):
         "--min-count", str(num_packets),
         "--max-count", str(num_packets + 1),
         "--source-interface", interface,
-        "--call-id", call_id
+        "--call-id", call_id,
+        "--stream-type", stream_type
     ]
     
     timestamp = time.strftime('%H:%M:%S')
