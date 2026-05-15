@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.65] - 2026-05-15
+### Fixed
+- **rtp.py** 📞 Correction d'un bug d'affichage dans les logs : le port source affichait `31000+N` alors que le code utilisait bien `30000+N`.
+- **rtp.py** 🧹 Nettoyage du code source (suppression des blocs commentés obsolètes) et ajout de logs de debug pour la dérivation du port source via le CALL-ID.
+
 ## [v1.3.0-patch.64] - 2026-05-13
 ### Fixed
 - **ConnectivityPerformance** 📊 Le graphe de décomposition de latence dans le modal de détail d'un probe utilisait `slice(0, 30)` en dur — remplacé par `slice(0, maxCaptures)` pour respecter le paramètre "Number of Recent Captures" configuré dans Settings

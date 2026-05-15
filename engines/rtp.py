@@ -97,17 +97,8 @@ if __name__ == "__main__":
     options_group.add_argument("--call-id", help="Call ID to embed in the payload for tracking",
                                type=str, default="NONE")
 
-#   args = vars(parser.parse_args())
 
-#   # pull args for count.
-#   min_count = args['min_count']
-#   max_count = args['max_count']
-#   count = random.randrange(min_count, max_count)
     
-#   source_port = args['source_port']
-#   if source_port == 0:
-#       # Use a random port but fixed for this entire call session
-#       source_port = random.randrange(10000, 65535)
 
     args = vars(parser.parse_args())
     is_debug_mode = os.environ.get('DEBUG', 'false').lower() == 'true'
@@ -146,6 +137,7 @@ if __name__ == "__main__":
                     
                 except ValueError:
                     target_port = 0
+                    print(f"Warning: Could not parse numeric ID from {call_id}", file=sys.stderr)
 
             if target_port > 0:
                 source_port = target_port
@@ -183,7 +175,7 @@ if __name__ == "__main__":
         print("[DEBUG MODE] tos=0 (no DSCP) | port=RANDOM | payload=pure random bytes — full legacy mode", file=sys.stderr)
         final_payload = payload_padding[:200]
     else:
-        print("[NORMAL MODE] tos=184 (DSCP EF) | port=31000+N | payload=CID-tagged — production mode", file=sys.stderr)
+        print("[NORMAL MODE] tos=184 (DSCP EF) | port=30000+N | payload=CID-tagged — production mode", file=sys.stderr)
         # Create payload with embedded Call ID
         call_id_tag = f"CID:{args.get('call_id', 'NONE')}:".encode()
         final_payload = (call_id_tag + payload_padding)[:200]
