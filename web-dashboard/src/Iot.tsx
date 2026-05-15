@@ -5,8 +5,8 @@ import {
     Thermometer, Speaker, HardDrive, Info,
     Search, CheckSquare, Square as SquareIcon,
     ArrowUpRight, Clock, AlertCircle, ChevronRight,
-    LayoutGrid, List, Terminal, X, ExternalLink,
-    Power, Edit2, AlertTriangle, FileSpreadsheet, CheckCircle2, Loader2
+    LayoutGrid, List, Terminal, X, ExternalLink, ChevronDown, FileJson,
+    Power, Edit2, AlertTriangle, FileSpreadsheet, CheckCircle2, Loader2, DownloadCloud
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import LogViewer from './components/LogViewer';
@@ -61,6 +61,19 @@ export default function Iot({ token }: IotProps) {
     });
     const [prismaLoading, setPrismaLoading] = useState(false);
     const [prismaResult, setPrismaResult] = useState<{ imported: number; bad_behavior: number } | null>(null);
+    const [showImportDropdown, setShowImportDropdown] = useState(false);
+    const importDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (importDropdownRef.current && !importDropdownRef.current.contains(event.target as Node)) {
+                setShowImportDropdown(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     // Listen for daemon crash notification
     useEffect(() => {
@@ -419,18 +432,44 @@ export default function Iot({ token }: IotProps) {
                         <ArrowUpRight size={18} /> Export Json
                     </button>
 
-                    <label className="flex items-center gap-2 bg-card-secondary hover:bg-card-hover text-text-secondary px-4 py-2.5 rounded-xl text-sm font-bold transition-all border border-border cursor-pointer" title="Import JSON Configuration">
-                        <Plus size={18} /> Import Json
-                        <input type="file" accept=".json" className="hidden" onChange={handleImportJson} />
-                    </label>
-
-                    <button
-                        onClick={() => { setPrismaFile(null); setPrismaResult(null); setShowPrismaModal(true); }}
-                        className="flex items-center gap-2 bg-card-secondary hover:bg-purple-500/20 text-text-secondary hover:text-purple-400 px-4 py-2.5 rounded-xl text-sm font-bold transition-all border border-border"
-                        title="IoT Security CSV"
-                    >
-                        <FileSpreadsheet size={18} /> IoT Security CSV
-                    </button>
+                    <div className="relative" ref={importDropdownRef}>
+                        <button
+                            onClick={() => setShowImportDropdown(!showImportDropdown)}
+                            className={cn(
+                                "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all border",
+                                showImportDropdown ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-900/20" : "bg-card-secondary hover:bg-card-hover text-text-secondary border-border"
+                            )}
+                            title="Import Configurations or Assets"
+                        >
+                            <DownloadCloud size={18} /> Import <ChevronDown size={14} className={cn("transition-transform duration-200", showImportDropdown && "rotate-180")} />
+                        </button>
+                        
+                        {showImportDropdown && (
+                            <div className="absolute right-0 mt-2 w-72 bg-card border border-border rounded-2xl shadow-2xl z-50 p-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <label className="flex flex-col gap-1 p-3 hover:bg-blue-600/10 rounded-xl cursor-pointer group transition-colors">
+                                    <div className="flex items-center gap-2 text-blue-400">
+                                        <FileJson size={18} />
+                                        <span className="text-sm font-bold">Stigix JSON Config</span>
+                                    </div>
+                                    <p className="text-[10px] text-text-muted leading-relaxed">Restore a full IoT simulation environment from a previously exported .json file.</p>
+                                    <input type="file" accept=".json" className="hidden" onChange={(e) => { setShowImportDropdown(false); handleImportJson(e); }} />
+                                </label>
+                                
+                                <div className="h-px bg-border my-1 mx-2" />
+                                
+                                <button
+                                    onClick={() => { setShowImportDropdown(false); setPrismaFile(null); setPrismaResult(null); setShowPrismaModal(true); }}
+                                    className="w-full flex flex-col gap-1 p-3 hover:bg-purple-500/10 rounded-xl text-left group transition-colors"
+                                >
+                                    <div className="flex items-center gap-2 text-purple-400">
+                                        <FileSpreadsheet size={18} />
+                                        <span className="text-sm font-bold">Device Security Assets</span>
+                                    </div>
+                                    <p className="text-[10px] text-text-muted leading-relaxed">Import devices from a Palo Alto IoT Security CSV report (Inventory Export).</p>
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
                     <button
                         onClick={() => { setEditingDevice({ enabled: true, protocols: ['dhcp', 'arp', 'http'], traffic_interval: 60 }); setShowAddModal(true); }}
@@ -731,8 +770,8 @@ export default function Iot({ token }: IotProps) {
                                     <FileSpreadsheet size={20} className="text-purple-400" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold text-foreground">IoT Security CSV</h3>
-                                    <p className="text-xs text-text-muted">Palo Alto IoT Security device export</p>
+                                    <h3 className="text-lg font-bold text-foreground">Device Security Assets</h3>
+                                    <p className="text-xs text-text-muted">Import from Palo Alto IoT Security</p>
                                 </div>
                             </div>
                             <button onClick={() => { setShowPrismaModal(false); setPrismaResult(null); }} className="text-text-muted hover:text-foreground transition-colors">
@@ -755,7 +794,7 @@ export default function Iot({ token }: IotProps) {
                                 ) : (
                                     <div className="text-center">
                                         <p className="text-sm font-bold text-text-secondary">Drop CSV file or click to browse</p>
-                                        <p className="text-xs text-text-muted mt-0.5">Prisma IoT Security device export (.csv)</p>
+                                        <p className="text-xs text-text-muted mt-0.5">Palo Alto Device Security inventory export (.csv)</p>
                                     </div>
                                 )}
                                 <input
