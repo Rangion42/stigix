@@ -9262,15 +9262,17 @@ app.post('/api/iot/start-batch', authenticateToken, async (req, res) => {
     if (!Array.isArray(ids)) return res.status(400).json({ error: 'IDs array required' });
 
     const config = getIoTConfig();
-    const devices = config.devices;
     const gateway = config.network?.gateway;
-    const toStart = devices.filter(d => ids.includes(d.id));
+    const toStart = config.devices.filter(d => ids.includes(d.id));
 
     for (const device of toStart) {
-        // Inject gateway from network config
         const deviceWithGateway = { ...device, gateway };
         iotManager.startDevice(deviceWithGateway).catch(err => console.error(`Failed to start ${device.id}:`, err));
     }
+
+    // Persist enabled:true so boot hook knows these were running
+    const updated = config.devices.map(d => ids.includes(d.id) ? { ...d, enabled: true } : d);
+    saveIoTConfig({ ...config, devices: updated });
 
     res.json({ success: true, started: toStart.length });
 });
@@ -9283,6 +9285,11 @@ app.post('/api/iot/stop-batch', authenticateToken, async (req, res) => {
         iotManager.stopDevice(id);
     }
 
+    // Persist enabled:false so boot hook knows these were stopped
+    const config = getIoTConfig();
+    const updated = config.devices.map(d => ids.includes(d.id) ? { ...d, enabled: false } : d);
+    saveIoTConfig({ ...config, devices: updated });
+
     res.json({ success: true, stopped: ids.length });
 });
 
@@ -9294,9 +9301,13 @@ app.post('/api/iot/start/:id', authenticateToken, async (req, res) => {
     if (!device) return res.status(404).json({ error: 'Device not found' });
 
     try {
-        // Inject gateway from network config
         const deviceWithGateway = { ...device, gateway };
         await iotManager.startDevice(deviceWithGateway);
+
+        // Persist enabled:true so boot hook knows this device was running
+        const updated = config.devices.map(d => d.id === req.params.id ? { ...d, enabled: true } : d);
+        saveIoTConfig({ ...config, devices: updated });
+
         res.json({ success: true });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -9305,6 +9316,12 @@ app.post('/api/iot/start/:id', authenticateToken, async (req, res) => {
 
 app.post('/api/iot/stop/:id', authenticateToken, async (req, res) => {
     await iotManager.stopDevice(req.params.id);
+
+    // Persist enabled:false so boot hook knows this device was stopped
+    const config = getIoTConfig();
+    const updated = config.devices.map(d => d.id === req.params.id ? { ...d, enabled: false } : d);
+    saveIoTConfig({ ...config, devices: updated });
+
     res.json({ success: true });
 });
 
