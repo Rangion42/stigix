@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Gauge, Activity, Clock, Filter, Download, Zap, Shield, Search, ChevronRight, BarChart3, AlertCircle, Info, ChevronUp, ChevronDown, Flame, Plus, XCircle, RefreshCw, Globe, Play, Pause } from 'lucide-react';
+import { Gauge, Activity, Clock, Filter, Download, Zap, Shield, Search, ChevronRight, BarChart3, AlertCircle, Info, ChevronUp, ChevronDown, Flame, Plus, XCircle, RefreshCw, Globe, Play, Pause, TrendingUp } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { twMerge } from 'tailwind-merge';
 
@@ -98,6 +98,104 @@ function EndpointTypeGraph({ type, results, color }: { type: string; results: an
 }
 
 
+// Buckets all probe results into time windows and computes the avg global score per bucket
+function GlobalScoreTrendChart({ results, timeRange }: { results: any[]; timeRange: string }) {
+    const chartData = React.useMemo(() => {
+        if (!results.length) return [];
+        const bucketMs =
+            timeRange === '15m' ? 60 * 1000 :
+            timeRange === '1h'  ? 5 * 60 * 1000 :
+            timeRange === '6h'  ? 30 * 60 * 1000 :
+            timeRange === '24h' ? 2 * 60 * 60 * 1000 :
+                                  12 * 60 * 60 * 1000; // 7d
+        const buckets: Record<number, number[]> = {};
+        results.forEach(r => {
+            const b = Math.floor(r.timestamp / bucketMs) * bucketMs;
+            if (!buckets[b]) buckets[b] = [];
+            buckets[b].push(r.score);
+        });
+        const fmt = timeRange === '7d'
+            ? { month: 'short' as const, day: 'numeric' as const }
+            : { hour: '2-digit' as const, minute: '2-digit' as const };
+        return Object.entries(buckets)
+            .sort(([a], [b]) => Number(a) - Number(b))
+            .map(([ts, scores]) => ({
+                time: new Date(Number(ts)).toLocaleTimeString([], fmt),
+                score: Math.round(scores.reduce((s, v) => s + v, 0) / scores.length),
+                samples: scores.length,
+            }));
+    }, [results, timeRange]);
+
+    if (!chartData.length) return (
+        <div className="h-[130px] flex items-center justify-center text-text-muted text-xs italic opacity-60">No data for this period</div>
+    );
+    return (
+        <div className="h-[130px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -28 }}>
+                    <defs>
+                        <linearGradient id="globalScoreGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} vertical={false} />
+                    <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={9} tickLine={false} axisLine={false} />
+                    <YAxis domain={[0, 100]} stroke="var(--text-muted)" fontSize={9} tickLine={false} axisLine={false} width={32} />
+                    <ReTooltip
+                        contentStyle={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.15)' }}
+                        itemStyle={{ color: 'var(--text-primary)', fontSize: '11px', fontWeight: 'bold' }}
+                        labelStyle={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}
+                        formatter={(value: any, name: string) => name === 'score' ? [`${value}/100`, 'Avg Score'] : [value, 'Samples']}
+                    />
+                    <Area type="monotone" dataKey="score" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#globalScoreGrad)" dot={false} activeDot={{ r: 4, fill: '#6366f1' }} />
+                </AreaChart>
+            </ResponsiveContainer>
+        </div>
+    );
+}
+
+// Per-probe score + latency dual-axis chart used inside the detail modal
+function ProbeScoreChart({ results, range, probeType }: { results: any[]; range: string; probeType: string }) {
+    const typeColor = probeType === 'PING' ? '#22c55e' : probeType === 'DNS' ? '#a855f7' : probeType === 'UDP' ? '#f97316' : probeType === 'CLOUD' ? '#6366f1' : '#3b82f6';
+    const chartData = React.useMemo(() => {
+        const rangeMs = range === '1h' ? 60*60*1000 : range === '6h' ? 6*60*60*1000 : 24*60*60*1000;
+        const cutoff = Date.now() - rangeMs;
+        return results
+            .filter(r => r.timestamp >= cutoff)
+            .slice(0, 300)
+            .reverse()
+            .map(r => ({
+                time: new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                score: r.score,
+                latency: Math.round(r.metrics?.total_ms || 0),
+            }));
+    }, [results, range]);
+
+    if (!chartData.length) return (
+        <div className="h-[140px] flex items-center justify-center text-text-muted text-xs italic opacity-60">No data for this period</div>
+    );
+    return (
+        <div className="h-[140px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 4, right: 44, bottom: 0, left: -28 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} vertical={false} />
+                    <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={9} tickLine={false} axisLine={false} />
+                    <YAxis yAxisId="score" domain={[0, 100]} stroke={typeColor} fontSize={9} tickLine={false} axisLine={false} width={32} />
+                    <YAxis yAxisId="latency" orientation="right" stroke="var(--text-muted)" fontSize={9} tickLine={false} axisLine={false} width={40} />
+                    <ReTooltip
+                        contentStyle={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.15)' }}
+                        itemStyle={{ fontSize: '11px', fontWeight: 'bold' }}
+                        labelStyle={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}
+                    />
+                    <Line yAxisId="score" type="monotone" dataKey="score" stroke={typeColor} strokeWidth={2} dot={false} name="Score" activeDot={{ r: 4 }} />
+                    <Line yAxisId="latency" type="monotone" dataKey="latency" stroke="#f97316" strokeWidth={1.5} dot={false} name="Latency (ms)" strokeDasharray="5 2" />
+                </LineChart>
+            </ResponsiveContainer>
+        </div>
+    );
+}
+
 export default function ConnectivityPerformance({ token, uiConfig, onManage }: ConnectivityPerformanceProps) {
     const maxCaptures = uiConfig?.maxCaptures || 10;
     const [results, setResults] = useState<any[]>([]);
@@ -148,6 +246,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
     const [sortField, setSortField] = useState<string>('name');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [isSyncing, setIsSyncing] = useState(false);
+    const [probeChartRange, setProbeChartRange] = useState('1h');
     const [syncResult, setSyncResult] = useState<any>(null);
     const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
 
@@ -467,6 +566,31 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                 </div>
                             )) : (
                             <div className="text-xs text-text-muted italic py-2">All probes stable</div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Global Score Over Time */}
+                <div className="md:col-span-4 bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+                    <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card-secondary/40">
+                        <div className="flex items-center gap-2 text-xs font-black text-text-muted uppercase tracking-wider">
+                            <TrendingUp size={15} className="text-indigo-500" /> Global Experience Over Time
+                        </div>
+                        <div className="flex p-0.5 bg-card-secondary rounded-lg border border-border">
+                            {(['15m','1h','6h','24h','7d'] as const).map(r => (
+                                <button key={r} onClick={() => setTimeRange(r)}
+                                    className={cn(
+                                        "px-2.5 py-1 rounded-md text-[10px] font-bold transition-all uppercase tracking-tighter",
+                                        timeRange === r ? "bg-indigo-600 text-white shadow" : "text-text-muted hover:text-text-primary"
+                                    )}>{r}</button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="px-6 pt-4 pb-3">
+                        {loadingStats ? (
+                            <div className="h-[130px] flex items-center justify-center"><div className="w-full h-full bg-card-secondary animate-pulse rounded-xl" /></div>
+                        ) : (
+                            <GlobalScoreTrendChart results={results} timeRange={timeRange} />
                         )}
                     </div>
                 </div>
@@ -868,6 +992,33 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                     </div>
                                 </div>
                             )}
+
+                            {/* Score Over Time Chart */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-xs font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
+                                        <TrendingUp size={15} className="text-indigo-500" /> Score Over Time
+                                    </h4>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1 text-[10px] font-bold text-text-muted">
+                                            <span className="w-3 h-0.5 rounded" style={{ backgroundColor: selectedEndpoint.type === 'PING' ? '#22c55e' : selectedEndpoint.type === 'DNS' ? '#a855f7' : selectedEndpoint.type === 'UDP' ? '#f97316' : '#3b82f6', display: 'inline-block' }} /> Score
+                                            <span className="w-4 border-t-2 border-dashed border-orange-500 mx-1 inline-block" /> Latency
+                                        </div>
+                                        <div className="flex p-0.5 bg-card-secondary rounded-lg border border-border">
+                                            {(['1h','6h','24h'] as const).map(r => (
+                                                <button key={r} onClick={() => setProbeChartRange(r)}
+                                                    className={cn(
+                                                        "px-2 py-0.5 rounded text-[10px] font-bold transition-all uppercase tracking-tighter",
+                                                        probeChartRange === r ? "bg-indigo-600 text-white shadow" : "text-text-muted hover:text-text-primary"
+                                                    )}>{r}</button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-card-secondary/20 rounded-xl border border-border p-3">
+                                    <ProbeScoreChart results={selectedEndpointResults} range={probeChartRange} probeType={selectedEndpoint.type} />
+                                </div>
+                            </div>
 
                             {/* Recent Checks Table */}
                             <div className="space-y-4">
