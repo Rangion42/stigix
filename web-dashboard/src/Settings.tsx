@@ -249,6 +249,9 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
     // System startup behaviour
     const [systemSettings, setSystemSettings] = useState({ auto_restart_iot: false, auto_restart_voice: false });
     const [savingSystemSettings, setSavingSystemSettings] = useState(false);
+    // Config validity for startup behaviour guards
+    const [iotHasConfig, setIotHasConfig] = useState<boolean | null>(null);  // null = loading
+    const [voiceHasConfig, setVoiceHasConfig] = useState<boolean | null>(null);
     // All groups expanded by default; toggled by clicking the group header
     const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
     const toggleCategory = (name: string) =>
@@ -444,6 +447,18 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
             .then(r => r.json())
             .then(data => setSystemSettings({ auto_restart_iot: !!data.auto_restart_iot, auto_restart_voice: !!data.auto_restart_voice }))
             .catch(() => {});
+
+        // Check if IoT has at least 1 enabled device
+        fetch('/api/iot/devices', { headers: authHeaders })
+            .then(r => r.json())
+            .then((devices: any[]) => setIotHasConfig(Array.isArray(devices) && devices.some(d => d.enabled !== false)))
+            .catch(() => setIotHasConfig(false));
+
+        // Check if Voice has at least 1 server configured
+        fetch('/api/voice/config', { headers: authHeaders })
+            .then(r => r.json())
+            .then((cfg: any) => setVoiceHasConfig(Array.isArray(cfg?.servers) && cfg.servers.length > 0))
+            .catch(() => setVoiceHasConfig(false));
     }, [token]);
 
     // Polling for upgrade status and registry status
@@ -2233,53 +2248,68 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                         key: 'auto_restart_iot' as const,
                                         label: 'IoT Simulation',
                                         desc: 'Auto-start all enabled IoT devices 15s after the container boots.',
+                                        noConfigMsg: 'Configure IoT devices first (IoT tab)',
                                         icon: '📡',
                                         color: 'green',
+                                        hasConfig: iotHasConfig,
                                     },
                                     {
                                         key: 'auto_restart_voice' as const,
                                         label: 'Voice / RTP Calls',
                                         desc: 'Resume voice calls if they were active before the last shutdown.',
+                                        noConfigMsg: 'Add at least one Voice server first (Voice tab)',
                                         icon: '📞',
                                         color: 'blue',
+                                        hasConfig: voiceHasConfig,
                                     },
-                                ] as const).map(({ key, label, desc, icon, color }) => {
+                                ] as const).map(({ key, label, desc, noConfigMsg, icon, color, hasConfig }) => {
                                     const active = systemSettings[key];
+                                    const isLoading = hasConfig === null;
+                                    const isDisabled = savingSystemSettings || isLoading || hasConfig === false;
                                     return (
-                                        <button
-                                            key={key}
-                                            onClick={() => saveSystemSetting(key, !active)}
-                                            disabled={savingSystemSettings}
-                                            className={cn(
-                                                'group relative flex items-start gap-4 rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer',
-                                                active
-                                                    ? color === 'green'
-                                                        ? 'border-green-500/40 bg-green-600/8 hover:bg-green-600/12'
-                                                        : 'border-blue-500/40 bg-blue-600/8 hover:bg-blue-600/12'
-                                                    : 'border-border bg-card-secondary/40 hover:border-border hover:bg-card-secondary/60',
-                                                savingSystemSettings && 'opacity-60 cursor-wait'
-                                            )}
-                                        >
-                                            <span className="text-2xl mt-0.5 select-none">{icon}</span>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <span className="text-[12px] font-black text-text-primary tracking-tight">{label}</span>
-                                                    {/* Toggle pill */}
-                                                    <div className={cn(
-                                                        'relative w-10 h-5 rounded-full transition-colors duration-200 flex-shrink-0',
-                                                        active
-                                                            ? color === 'green' ? 'bg-green-500' : 'bg-blue-500'
-                                                            : 'bg-border'
-                                                    )}>
-                                                        <span className={cn(
-                                                            'absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200',
-                                                            active ? 'translate-x-5' : 'translate-x-0.5'
-                                                        )} />
+                                        <div key={key} className="relative">
+                                            <button
+                                                onClick={() => !isDisabled && saveSystemSetting(key, !active)}
+                                                disabled={isDisabled}
+                                                className={cn(
+                                                    'group w-full relative flex items-start gap-4 rounded-xl border p-4 text-left transition-all duration-200',
+                                                    isDisabled
+                                                        ? 'border-border/40 bg-card-secondary/20 opacity-50 cursor-not-allowed'
+                                                        : active
+                                                            ? color === 'green'
+                                                                ? 'border-green-500/40 bg-green-600/8 hover:bg-green-600/12 cursor-pointer'
+                                                                : 'border-blue-500/40 bg-blue-600/8 hover:bg-blue-600/12 cursor-pointer'
+                                                            : 'border-border bg-card-secondary/40 hover:border-border hover:bg-card-secondary/60 cursor-pointer'
+                                                )}
+                                            >
+                                                <span className="text-2xl mt-0.5 select-none">{icon}</span>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span className="text-[12px] font-black text-text-primary tracking-tight">{label}</span>
+                                                        {/* Toggle pill */}
+                                                        <div className={cn(
+                                                            'relative w-10 h-5 rounded-full transition-colors duration-200 flex-shrink-0',
+                                                            isLoading ? 'bg-border animate-pulse' :
+                                                            active && !isDisabled
+                                                                ? color === 'green' ? 'bg-green-500' : 'bg-blue-500'
+                                                                : 'bg-border'
+                                                        )}>
+                                                            <span className={cn(
+                                                                'absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200',
+                                                                active && !isDisabled ? 'translate-x-5' : 'translate-x-0.5'
+                                                            )} />
+                                                        </div>
                                                     </div>
+                                                    <p className="text-[10px] font-medium text-text-muted mt-1 leading-relaxed">{desc}</p>
+                                                    {/* No-config warning */}
+                                                    {hasConfig === false && (
+                                                        <p className="mt-2 flex items-center gap-1.5 text-[9px] font-black text-amber-500 tracking-widest uppercase">
+                                                            <span>⚠️</span> {noConfigMsg}
+                                                        </p>
+                                                    )}
                                                 </div>
-                                                <p className="text-[10px] font-medium text-text-muted mt-1 leading-relaxed">{desc}</p>
-                                            </div>
-                                        </button>
+                                            </button>
+                                        </div>
                                     );
                                 })}
                             </div>
