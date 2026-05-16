@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.88] - 2026-05-16
+### Added
+- **Global Experience Score — sélection des types de probes** : Le score global n'était calculé que sur HTTP/HTTPS et ignorait PING, DNS, UDP, TCP et CLOUD (y compris les probes Stigix Cloud). Désormais, par défaut **tous les types sont inclus**. Un nouveau bloc "Global Experience Score — Probe Types" dans Settings > Probes permet d'activer/désactiver chaque type via des boutons colorés, avec un avertissement orange si des types sont exclus.
+- **`connectivity-logger.ts`** : `getStats()` accepte maintenant `globalScoreTypes[]` et filtre dynamiquement les résultats en conséquence. Le compteur HTTP Coverage reste toujours basé sur HTTP/HTTPS uniquement.
+- **`server.ts`** : L'API `/api/config/ui` GET et POST supporte maintenant `globalScoreTypes`. Le endpoint `/api/connectivity/stats` lit les types depuis `ui-config.json` et les passe à `getStats()`.
+
 ## [v1.3.0-patch.87] - 2026-05-16
 ### Added
 - **Settings.tsx** ⚠️ Validation non-bloquante (Option B) : un badge orange "Not tested" apparaît dans le header Cloud Target Security et un avertissement sous "Save Configuration" de Prisma SASE dès qu'un champ est modifié sans avoir cliqué "Test". Le badge disparaît automatiquement après un test réussi. La sauvegarde reste toujours possible.

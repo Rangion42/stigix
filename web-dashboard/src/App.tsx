@@ -135,7 +135,7 @@ export default function App() {
   const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h'>('1h');
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [registryStatus, setRegistryStatus] = useState<any>(null);
-  const [uiConfig, setUiConfig] = useState<{ refreshInterval: number, maxCaptures: number }>({ refreshInterval: 1000, maxCaptures: 10 });
+  const [uiConfig, setUiConfig] = useState<{ refreshInterval: number, maxCaptures: number, globalScoreTypes?: string[] }>({ refreshInterval: 1000, maxCaptures: 10 });
 
 
   // Rate Calculation State - Use Refs to avoid stale closures in setInterval

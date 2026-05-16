@@ -143,7 +143,7 @@ export class ConnectivityLogger {
         }
     }
 
-    async getStats(options: { timeRange?: string, activeProbeIds?: string[] } = {}): Promise<any> {
+    async getStats(options: { timeRange?: string, activeProbeIds?: string[], globalScoreTypes?: string[] } = {}): Promise<any> {
         // Cache aligned with probe interval (5 minutes) — invalidated on each logResult()
         const STATS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
         const now = Date.now();
@@ -175,9 +175,26 @@ export class ConnectivityLogger {
                 lastCheckTime: allResults.length > 0 ? allResults[0].timestamp : null
             };
 
-            const httpResults = filtered.filter(r => r.endpointType === 'HTTP' || r.endpointType === 'HTTPS');
+            // Filter results by selected probe types (default: all types)
+            const scoreTypes = (options.globalScoreTypes && options.globalScoreTypes.length > 0)
+                ? options.globalScoreTypes
+                : ['HTTP', 'HTTPS', 'PING', 'DNS', 'UDP', 'TCP', 'CLOUD'];
 
-            // Group by endpoint to find flaky ones
+            const scoreResults = filtered.filter(r => scoreTypes.includes(r.endpointType));
+
+            // Filter scoreResults to only include active probes
+            const activeScoreResults = options.activeProbeIds
+                ? scoreResults.filter(r => options.activeProbeIds!.includes(r.endpointId))
+                : scoreResults;
+
+            // HTTP Coverage count (always HTTP/HTTPS regardless of score types)
+            const httpResults = filtered.filter(r => r.endpointType === 'HTTP' || r.endpointType === 'HTTPS');
+            const activeHttpResults = options.activeProbeIds
+                ? httpResults.filter(r => options.activeProbeIds!.includes(r.endpointId))
+                : httpResults;
+            const uniqueHttpEndpoints = new Set(activeHttpResults.map(r => r.endpointId)).size;
+
+            // Group by endpoint to find flaky ones (all types)
             const endpointStats = new Map<string, { name: string, count: number, success: number, totalScore: number }>();
             filtered.forEach(r => {
                 const stats = endpointStats.get(r.endpointId) || { name: r.endpointName, count: 0, success: 0, totalScore: 0 };
@@ -188,26 +205,22 @@ export class ConnectivityLogger {
             });
 
             const flakyEndpoints = Array.from(endpointStats.entries())
-                .filter(([id, _]) => !options.activeProbeIds || options.activeProbeIds.includes(id)) // Only consider active probes for flaky list
+                .filter(([id, _]) => !options.activeProbeIds || options.activeProbeIds.includes(id))
                 .map(([id, stats]) => ({
                     id,
                     name: stats.name,
                     reliability: Math.round((stats.success / stats.count) * 100),
                     avgScore: Math.round(stats.totalScore / stats.count)
                 }))
-                .filter(e => e.reliability < 95 || e.avgScore < 70) // Definition of flaky
+                .filter(e => e.reliability < 95 || e.avgScore < 70)
                 .sort((a, b) => (a.reliability + a.avgScore) - (b.reliability + b.avgScore))
                 .slice(0, 3);
 
-            // Filter httpResults to only include active probes to calculate accurate global health
-            const activeHttpResults = options.activeProbeIds
-                ? httpResults.filter(r => options.activeProbeIds!.includes(r.endpointId))
-                : httpResults;
-
-            const uniqueHttpEndpoints = new Set(activeHttpResults.map(r => r.endpointId)).size;
-
             const computedStats = {
-                globalHealth: activeHttpResults.length > 0 ? Math.round(activeHttpResults.reduce((acc, r) => acc + (r.score || 0), 0) / activeHttpResults.length) : 0,
+                globalHealth: activeScoreResults.length > 0
+                    ? Math.round(activeScoreResults.reduce((acc, r) => acc + (r.score || 0), 0) / activeScoreResults.length)
+                    : 0,
+                globalScoreTypes: scoreTypes,
                 httpEndpoints: {
                     total: uniqueHttpEndpoints,
                     avgScore: activeHttpResults.length > 0 ? Math.round(activeHttpResults.reduce((acc, r) => acc + (r.score || 0), 0) / activeHttpResults.length) : 0,

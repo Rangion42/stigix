@@ -2521,25 +2521,31 @@ app.get('/api/tests/xfr/:id/stream', authenticateToken, (req, res) => {
 // API: Get UI Configuration (Public endpoint for baseline interval)
 app.get('/api/config/ui', (req, res) => {
     let maxCaptures = 10;
+    let globalScoreTypes: string[] = ['HTTP', 'HTTPS', 'PING', 'DNS', 'UDP', 'TCP', 'CLOUD'];
     try {
         if (fs.existsSync(UI_CONFIG_FILE)) {
             const config = JSON.parse(fs.readFileSync(UI_CONFIG_FILE, 'utf8'));
             if (config.maxCaptures) maxCaptures = config.maxCaptures;
+            if (Array.isArray(config.globalScoreTypes)) globalScoreTypes = config.globalScoreTypes;
         }
     } catch (e) { }
 
     res.json({
         refreshInterval: parseInt(process.env.DASHBOARD_REFRESH_MS || '1000'),
-        maxCaptures
+        maxCaptures,
+        globalScoreTypes
     });
 });
 
 // API: Update UI Configuration (Authenticated)
 app.post('/api/config/ui', authenticateToken, (req, res) => {
     try {
-        const { maxCaptures } = req.body;
+        const { maxCaptures, globalScoreTypes } = req.body;
+        const existing = fs.existsSync(UI_CONFIG_FILE) ? JSON.parse(fs.readFileSync(UI_CONFIG_FILE, 'utf8')) : {};
         const config = {
-            maxCaptures: Math.max(1, Math.min(100, parseInt(maxCaptures) || 10)),
+            ...existing,
+            maxCaptures: Math.max(1, Math.min(100, parseInt(maxCaptures) || existing.maxCaptures || 10)),
+            ...(Array.isArray(globalScoreTypes) && { globalScoreTypes }),
             updated_at: new Date().toISOString()
         };
         fs.writeFileSync(UI_CONFIG_FILE, JSON.stringify(config, null, 2));
@@ -3938,7 +3944,18 @@ app.get('/api/connectivity/stats', authenticateToken, async (req, res) => {
     const allProbes = [...mergedEnvProbes, ...pureCustom, ...discoveredProbes];
     const activeProbeIds = allProbes.filter((p: any) => p.enabled !== false).map((p: any) => p.name.toLowerCase().replace(/\s+/g, '-'));
 
-    const stats = await connectivityLogger.getStats({ timeRange: range as string, activeProbeIds });
+    // Read globalScoreTypes from ui-config
+    let globalScoreTypes: string[] | undefined;
+    try {
+        if (fs.existsSync(UI_CONFIG_FILE)) {
+            const uiCfg = JSON.parse(fs.readFileSync(UI_CONFIG_FILE, 'utf8'));
+            if (Array.isArray(uiCfg.globalScoreTypes) && uiCfg.globalScoreTypes.length > 0) {
+                globalScoreTypes = uiCfg.globalScoreTypes;
+            }
+        }
+    } catch {}
+
+    const stats = await connectivityLogger.getStats({ timeRange: range as string, activeProbeIds, globalScoreTypes });
     res.json(stats || { globalHealth: 0 });
 });
 

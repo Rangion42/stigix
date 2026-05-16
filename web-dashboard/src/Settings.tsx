@@ -3,7 +3,7 @@ import {
     RefreshCw, Download, AlertCircle, CheckCircle, Clock, Shield, Globe, Lock, Terminal,
     Network, Sliders, ChevronDown, ChevronRight, Server, CheckCircle2, Upload, Power,
     Settings as SettingsIcon, Database, Activity, Cpu, Plus, Edit2, Trash2, MapPin, Zap, Info, XCircle, ShieldAlert, Layers,
-    Clipboard, ExternalLink, BarChart3, AlertTriangle
+    Clipboard, ExternalLink, BarChart3, AlertTriangle, Gauge
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Favicon } from './components/Favicon';
@@ -118,7 +118,7 @@ const BetaBadge = ({ className }: { className?: string }) => (
 
 export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab }: { 
     token: string, 
-    uiConfig?: { maxCaptures: number }, 
+    uiConfig?: { maxCaptures: number; globalScoreTypes?: string[] },
     onUpdateUIConfig?: () => void,
     initialTab?: 'probes' | 'distribution' | 'maintenance' | 'system' | 'targets' | 'convergence' | 'registry' | 'targetService' | 'mcp' | 'prisma-api' | 'strata'
 }) {
@@ -252,6 +252,8 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
     const [prismaDirty, setPrismaDirty] = useState(false);
     const [probeFilterType, setProbeFilterType] = useState('ALL');
     const [maxCaptures, setMaxCaptures] = useState(uiConfig?.maxCaptures || 10);
+    const ALL_PROBE_TYPES = ['HTTP', 'HTTPS', 'PING', 'DNS', 'UDP', 'TCP', 'CLOUD'];
+    const [globalScoreTypes, setGlobalScoreTypes] = useState<string[]>(uiConfig?.globalScoreTypes || ALL_PROBE_TYPES);
     // System startup behaviour
     const [systemSettings, setSystemSettings] = useState({ auto_restart_iot: false, auto_restart_voice: false, auto_restart_traffic: true, auto_restart_probes: true });
     const [savingSystemSettings, setSavingSystemSettings] = useState(false);
@@ -266,6 +268,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
 
     useEffect(() => {
         if (uiConfig?.maxCaptures) setMaxCaptures(uiConfig.maxCaptures);
+        if (uiConfig?.globalScoreTypes) setGlobalScoreTypes(uiConfig.globalScoreTypes);
     }, [uiConfig?.maxCaptures]);
 
     const showSuccess = (msg: string) => {
@@ -933,7 +936,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
             const res = await fetch('/api/config/ui', {
                 method: 'POST',
                 headers: authHeaders,
-                body: JSON.stringify({ maxCaptures })
+                body: JSON.stringify({ maxCaptures, globalScoreTypes })
             });
             if (res.ok) {
                 showSuccess('UI Configuration saved');
@@ -1497,7 +1500,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                 </div>
                                 <button
                                     onClick={saveUIConfig}
-                                    disabled={saving || maxCaptures === uiConfig?.maxCaptures}
+                                    disabled={saving || (maxCaptures === uiConfig?.maxCaptures && JSON.stringify(globalScoreTypes.sort()) === JSON.stringify((uiConfig?.globalScoreTypes || ALL_PROBE_TYPES).slice().sort()))}
                                     className={cn(
                                         "px-6 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all flex items-center gap-2 shadow-lg",
                                         saving || maxCaptures === uiConfig?.maxCaptures
@@ -1556,6 +1559,63 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                 </div>
                             </div>
                         </div>
+
+                            {/* Global Score Probe Type Filter */}
+                            <div className="space-y-4 mt-6 pt-6 border-t border-border">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <label className="text-[11px] font-black text-text-primary tracking-wider uppercase flex items-center gap-2">
+                                            <Gauge size={14} className="text-indigo-500" />
+                                            Global Experience Score — Probe Types
+                                        </label>
+                                        <p className="text-[10px] text-text-muted mt-1 leading-relaxed">
+                                            Select which probe types contribute to the <strong className="text-indigo-500">Global Experience</strong> score and chart. Default: all types.
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => setGlobalScoreTypes([...ALL_PROBE_TYPES])}
+                                        className="text-[9px] font-black uppercase tracking-widest text-text-muted hover:text-blue-500 transition-colors border border-border px-2 py-1 rounded-lg"
+                                    >
+                                        Reset All
+                                    </button>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {ALL_PROBE_TYPES.map(type => {
+                                        const active = globalScoreTypes.includes(type);
+                                        return (
+                                            <button
+                                                key={type}
+                                                onClick={() => {
+                                                    if (active && globalScoreTypes.length === 1) return;
+                                                    setGlobalScoreTypes(prev =>
+                                                        active ? prev.filter(t => t !== type) : [...prev, type]
+                                                    );
+                                                }}
+                                                className={cn(
+                                                    "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5",
+                                                    active
+                                                        ? type === 'HTTP' || type === 'HTTPS' ? "bg-blue-500/10 text-blue-600 border-blue-500/30"
+                                                        : type === 'PING' ? "bg-green-500/10 text-green-600 border-green-500/30"
+                                                        : type === 'DNS' ? "bg-purple-500/10 text-purple-600 border-purple-500/30"
+                                                        : type === 'UDP' ? "bg-orange-500/10 text-orange-600 border-orange-500/30"
+                                                        : type === 'CLOUD' ? "bg-indigo-500/10 text-indigo-600 border-indigo-500/30"
+                                                        : "bg-slate-500/10 text-slate-600 border-slate-500/30"
+                                                        : "bg-card text-text-muted border-border opacity-50 hover:opacity-75"
+                                                )}
+                                            >
+                                                {active && <CheckCircle2 size={11} />}
+                                                {type}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {globalScoreTypes.length < ALL_PROBE_TYPES.length && (
+                                    <div className="text-[10px] text-amber-500 font-bold flex items-center gap-1.5 bg-amber-500/5 border border-amber-500/20 px-3 py-2 rounded-lg">
+                                        <AlertTriangle size={12} />
+                                        {ALL_PROBE_TYPES.length - globalScoreTypes.length} type(s) excluded from the Global Experience score. Click SAVE SETTINGS to apply.
+                                    </div>
+                                )}
+                            </div>
 
                         {/* Probe Modal */}
                         {isProbeModalOpen && (
