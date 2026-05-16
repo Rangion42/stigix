@@ -247,7 +247,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
     const [probeFilterType, setProbeFilterType] = useState('ALL');
     const [maxCaptures, setMaxCaptures] = useState(uiConfig?.maxCaptures || 10);
     // System startup behaviour
-    const [systemSettings, setSystemSettings] = useState({ auto_restart_iot: false, auto_restart_voice: false });
+    const [systemSettings, setSystemSettings] = useState({ auto_restart_iot: false, auto_restart_voice: false, auto_restart_traffic: true, auto_restart_probes: true });
     const [savingSystemSettings, setSavingSystemSettings] = useState(false);
     // Config validity for startup behaviour guards
     const [iotHasConfig, setIotHasConfig] = useState<boolean | null>(null);  // null = loading
@@ -443,9 +443,22 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
 
     // Fetch system settings (startup behaviour)
     useEffect(() => {
+        // system-settings.json for probes/iot/voice
         fetch('/api/config/system-settings', { headers: authHeaders })
             .then(r => r.json())
-            .then(data => setSystemSettings({ auto_restart_iot: !!data.auto_restart_iot, auto_restart_voice: !!data.auto_restart_voice }))
+            .then(data => setSystemSettings(prev => ({
+                ...prev,
+                auto_restart_iot: !!data.auto_restart_iot,
+                auto_restart_voice: !!data.auto_restart_voice,
+                auto_restart_probes: data.auto_restart_probes !== false, // default true
+                auto_restart_traffic: data.auto_restart_traffic !== false, // default true
+            })))
+            .catch(() => {});
+
+        // traffic status comes from applications-config.json via /api/traffic/status
+        fetch('/api/traffic/status', { headers: authHeaders })
+            .then(r => r.json())
+            .then(data => setSystemSettings(prev => ({ ...prev, auto_restart_traffic: !!data.running })))
             .catch(() => {});
 
         // Check if IoT has at least 1 enabled device
@@ -455,9 +468,10 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
             .catch(() => setIotHasConfig(false));
 
         // Check if Voice has at least 1 server configured
+        // API returns servers as a raw pipe-delimited string (not an array)
         fetch('/api/voice/config', { headers: authHeaders })
             .then(r => r.json())
-            .then((cfg: any) => setVoiceHasConfig(Array.isArray(cfg?.servers) && cfg.servers.length > 0))
+            .then((cfg: any) => setVoiceHasConfig(typeof cfg?.servers === 'string' && cfg.servers.trim().length > 0))
             .catch(() => setVoiceHasConfig(false));
     }, [token]);
 
@@ -930,17 +944,22 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
 
     if (loading) return <div className="p-8 text-center text-text-muted animate-pulse font-bold tracking-widest text-xs">Loading Settings...</div>;
 
-    const saveSystemSetting = async (key: 'auto_restart_iot' | 'auto_restart_voice', value: boolean) => {
+    const saveSystemSetting = async (key: 'auto_restart_iot' | 'auto_restart_voice' | 'auto_restart_traffic' | 'auto_restart_probes', value: boolean) => {
         const next = { ...systemSettings, [key]: value };
         setSystemSettings(next);
         setSavingSystemSettings(true);
         try {
-            await fetch('/api/config/system-settings', {
-                method: 'POST',
-                headers: authHeaders,
-                body: JSON.stringify({ [key]: value })
-            });
-            showSuccess(`Startup setting saved`);
+            if (key === 'auto_restart_traffic') {
+                // Traffic is controlled directly via applications-config.json
+                await fetch(value ? '/api/traffic/start' : '/api/traffic/stop', { method: 'POST', headers: authHeaders });
+            } else {
+                await fetch('/api/config/system-settings', {
+                    method: 'POST',
+                    headers: authHeaders,
+                    body: JSON.stringify({ [key]: value })
+                });
+            }
+            showSuccess('Startup setting saved');
         } catch (e) {
             setErrorMsg('Failed to save startup setting');
             setSystemSettings(systemSettings); // rollback
@@ -2228,95 +2247,121 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                     <div className="bg-card border border-border rounded-2xl p-8 shadow-sm space-y-12 animate-in fade-in duration-500">
 
                         {/* ── Startup Behaviour — global, prominent ──────────────── */}
-                        <div className="relative overflow-hidden rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-600/10 via-purple-600/5 to-card p-6 shadow-md">
-                            {/* decorative glow */}
-                            <div className="absolute -top-8 -right-8 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="p-2.5 bg-indigo-600/15 rounded-xl text-indigo-400">
-                                    <Power size={20} />
+                        <div className="rounded-2xl border border-border bg-card-secondary/40 overflow-hidden">
+                            {/* Header strip */}
+                            <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-card-secondary/60">
+                                <div className="p-2 bg-indigo-500/15 rounded-lg">
+                                    <Power size={18} className="text-indigo-400" />
                                 </div>
                                 <div>
-                                    <h2 className="text-lg font-black text-text-primary tracking-tight">Startup Behaviour</h2>
-                                    <p className="text-[10px] font-bold text-indigo-400/80 tracking-[0.18em] mt-0.5 uppercase">Global · Auto-restart on boot / upgrade</p>
+                                    <h2 className="text-sm font-black text-text-primary tracking-tight">Startup Behaviour</h2>
+                                    <p className="text-[10px] font-bold text-text-muted tracking-[0.15em] mt-0.5 uppercase">Auto-restart on boot / upgrade</p>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* IoT toggle */}
+                            {/* 2×2 grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border">
                                 {([
+                                    {
+                                        key: 'auto_restart_traffic' as const,
+                                        label: 'Background Traffic',
+                                        desc: 'HTTP application traffic restarts automatically (default: ON).',
+                                        icon: '🌐',
+                                        color: 'violet',
+                                        hasConfig: true,  // always has default config
+                                        noConfigMsg: '',
+                                    },
+                                    {
+                                        key: 'auto_restart_probes' as const,
+                                        label: 'Synthetic Probes',
+                                        desc: 'DEM connectivity probes restart automatically (default: ON).',
+                                        icon: '📊',
+                                        color: 'cyan',
+                                        hasConfig: true,  // always has default config
+                                        noConfigMsg: '',
+                                    },
                                     {
                                         key: 'auto_restart_iot' as const,
                                         label: 'IoT Simulation',
-                                        desc: 'Auto-start all enabled IoT devices 15s after the container boots.',
-                                        noConfigMsg: 'Configure IoT devices first (IoT tab)',
+                                        desc: 'Enabled IoT devices restart 15s after boot.',
                                         icon: '📡',
                                         color: 'green',
                                         hasConfig: iotHasConfig,
+                                        noConfigMsg: 'Configure IoT devices first',
                                     },
                                     {
                                         key: 'auto_restart_voice' as const,
                                         label: 'Voice / RTP Calls',
-                                        desc: 'Resume voice calls if they were active before the last shutdown.',
-                                        noConfigMsg: 'Add at least one Voice server first (Voice tab)',
+                                        desc: 'Resumes calls if they were active before shutdown.',
                                         icon: '📞',
                                         color: 'blue',
                                         hasConfig: voiceHasConfig,
+                                        noConfigMsg: 'Add a Voice server first',
                                     },
-                                ] as const).map(({ key, label, desc, noConfigMsg, icon, color, hasConfig }) => {
+                                ] as const).map(({ key, label, desc, icon, color, hasConfig, noConfigMsg }) => {
                                     const active = systemSettings[key];
                                     const isLoading = hasConfig === null;
                                     const isDisabled = savingSystemSettings || isLoading || hasConfig === false;
+
+                                    const accentColor = {
+                                        violet: { ring: 'group-hover:border-violet-500/40', dot: 'bg-violet-500', bg: 'bg-violet-500/10 text-violet-400' },
+                                        cyan:   { ring: 'group-hover:border-cyan-500/40',   dot: 'bg-cyan-500',   bg: 'bg-cyan-500/10 text-cyan-400'   },
+                                        green:  { ring: 'group-hover:border-green-500/40',  dot: 'bg-green-500',  bg: 'bg-green-500/10 text-green-400'  },
+                                        blue:   { ring: 'group-hover:border-blue-500/40',   dot: 'bg-blue-500',   bg: 'bg-blue-500/10 text-blue-400'   },
+                                    }[color];
+
                                     return (
-                                        <div key={key} className="relative">
-                                            <button
-                                                onClick={() => !isDisabled && saveSystemSetting(key, !active)}
-                                                disabled={isDisabled}
-                                                className={cn(
-                                                    'group w-full relative flex items-start gap-4 rounded-xl border p-4 text-left transition-all duration-200',
-                                                    isDisabled
-                                                        ? 'border-border/40 bg-card-secondary/20 opacity-50 cursor-not-allowed'
-                                                        : active
-                                                            ? color === 'green'
-                                                                ? 'border-green-500/40 bg-green-600/8 hover:bg-green-600/12 cursor-pointer'
-                                                                : 'border-blue-500/40 bg-blue-600/8 hover:bg-blue-600/12 cursor-pointer'
-                                                            : 'border-border bg-card-secondary/40 hover:border-border hover:bg-card-secondary/60 cursor-pointer'
-                                                )}
-                                            >
-                                                <span className="text-2xl mt-0.5 select-none">{icon}</span>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <span className="text-[12px] font-black text-text-primary tracking-tight">{label}</span>
-                                                        {/* Toggle pill */}
-                                                        <div className={cn(
-                                                            'relative w-10 h-5 rounded-full transition-colors duration-200 flex-shrink-0',
-                                                            isLoading ? 'bg-border animate-pulse' :
-                                                            active && !isDisabled
-                                                                ? color === 'green' ? 'bg-green-500' : 'bg-blue-500'
-                                                                : 'bg-border'
-                                                        )}>
-                                                            <span className={cn(
-                                                                'absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200',
-                                                                active && !isDisabled ? 'translate-x-5' : 'translate-x-0.5'
-                                                            )} />
-                                                        </div>
+                                        <button
+                                            key={key}
+                                            onClick={() => !isDisabled && saveSystemSetting(key, !active)}
+                                            disabled={isDisabled}
+                                            className={cn(
+                                                'group flex items-start gap-3 p-5 text-left w-full transition-all duration-150',
+                                                isDisabled
+                                                    ? 'opacity-45 cursor-not-allowed bg-transparent'
+                                                    : 'cursor-pointer hover:bg-card-secondary/80'
+                                            )}
+                                        >
+                                            {/* Icon */}
+                                            <span className="text-xl flex-shrink-0 mt-0.5">{icon}</span>
+
+                                            {/* Text */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <span className="text-[13px] font-black text-text-primary">{label}</span>
+                                                    {/* Toggle pill */}
+                                                    <div className={cn(
+                                                        'relative w-9 h-[18px] rounded-full transition-colors duration-200 flex-shrink-0 border',
+                                                        isLoading
+                                                            ? 'bg-border/50 border-border animate-pulse'
+                                                            : active && !isDisabled
+                                                                ? cn(accentColor.dot, 'border-transparent')
+                                                                : 'bg-border/40 border-border'
+                                                    )}>
+                                                        <span className={cn(
+                                                            'absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-md transition-transform duration-200',
+                                                            active && !isDisabled ? 'translate-x-[18px]' : 'translate-x-[2px]'
+                                                        )} />
                                                     </div>
-                                                    <p className="text-[10px] font-medium text-text-muted mt-1 leading-relaxed">{desc}</p>
-                                                    {/* No-config warning */}
-                                                    {hasConfig === false && (
-                                                        <p className="mt-2 flex items-center gap-1.5 text-[9px] font-black text-amber-500 tracking-widest uppercase">
-                                                            <span>⚠️</span> {noConfigMsg}
-                                                        </p>
-                                                    )}
                                                 </div>
-                                            </button>
-                                        </div>
+                                                <p className="text-[11px] text-text-secondary mt-1 leading-relaxed">{desc}</p>
+                                                {hasConfig === false && (
+                                                    <p className="mt-1.5 text-[10px] font-bold text-amber-400 flex items-center gap-1">
+                                                        <span>⚠</span> {noConfigMsg}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </button>
                                     );
                                 })}
                             </div>
 
-                            <p className="mt-4 text-[9px] font-bold text-text-muted/60 tracking-widest uppercase">
-                                ⚠️ Effective on next boot — changes do not restart services immediately
-                            </p>
+                            {/* Footer note */}
+                            <div className="px-6 py-3 border-t border-border bg-card-secondary/30">
+                                <p className="text-[9px] font-bold text-text-muted tracking-widest uppercase">
+                                    ℹ️ Probes changes effective on next boot · Traffic toggle takes effect immediately
+                                </p>
+                            </div>
                         </div>
 
                         {/* Network Interfaces (Moved from its own tab) */}

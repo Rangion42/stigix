@@ -408,10 +408,14 @@ const SYSTEM_SETTINGS_FILE = path.join(APP_CONFIG.configDir, 'system-settings.js
 interface SystemSettings {
     auto_restart_iot: boolean;
     auto_restart_voice: boolean;
+    auto_restart_traffic: boolean;
+    auto_restart_probes: boolean;
 }
 const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
     auto_restart_iot: false,
     auto_restart_voice: false,
+    auto_restart_traffic: true,   // retrocompat: traffic was always auto-starting
+    auto_restart_probes: true,    // retrocompat: probes were always auto-starting
 };
 function getSystemSettings(): SystemSettings {
     try {
@@ -4003,8 +4007,12 @@ const startConnectivityMonitor = () => {
     setTimeout(runMonitorTick, 5000);
 };
 
-// Start monitor
-startConnectivityMonitor();
+// Start monitor — gated by system-settings.json auto_restart_probes (default: true)
+if (getSystemSettings().auto_restart_probes) {
+    startConnectivityMonitor();
+} else {
+    console.log('[DEM] Connectivity monitoring disabled by Startup Behaviour settings.');
+}
 
 // --- Phase 7: Convergence & Failover Testing ---
 
@@ -9517,9 +9525,24 @@ httpServer.listen(PORT, '0.0.0.0', async () => {
 
     console.log(`Backend running at http://localhost:${PORT}`);
 
-    // ── Startup Behaviour: Auto-restart IoT / Voice based on system-settings.json ──
+    // ── Startup Behaviour: Auto-restart based on system-settings.json ──────────
     const sysSettings = getSystemSettings();
 
+    // Traffic: force-disable if auto_restart_traffic=false
+    if (!sysSettings.auto_restart_traffic) {
+        try {
+            if (fs.existsSync(APPLICATIONS_CONFIG_FILE)) {
+                const cfg = JSON.parse(fs.readFileSync(APPLICATIONS_CONFIG_FILE, 'utf8'));
+                if (cfg.control?.enabled) {
+                    cfg.control.enabled = false;
+                    fs.writeFileSync(APPLICATIONS_CONFIG_FILE, JSON.stringify(cfg, null, 2), 'utf8');
+                    log('STARTUP', 'Traffic auto-restart disabled — forced control.enabled=false');
+                }
+            }
+        } catch (e: any) { log('STARTUP', `Traffic startup override error: ${e.message}`, 'error'); }
+    }
+
+    // IoT: start enabled devices if auto_restart_iot=true
     if (sysSettings.auto_restart_iot) {
         // Delay 15s to let iotManager initialise and interface detection settle
         setTimeout(() => {

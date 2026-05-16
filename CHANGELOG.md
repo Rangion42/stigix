@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.78] - 2026-05-16
+### Improved
+- **Settings.tsx** 🔧 4 toggles Startup Behaviour (Traffic, Probes, IoT, Voice) en grille 2x2. Traffic et Probes actifs par defaut (retrocompat). Redesign dark mode : card sobre avec border-border, textes text-text-primary/secondary, lisibles en dark et light mode.
+- **Settings.tsx** 🐛 Fix check validite Voice : l'API retourne servers comme une string brute (et non un tableau). Le toggle Voice se debloque maintenant correctement si des serveurs sont configures.
+- **server.ts** 🔒 auto_restart_traffic (defaut: true) et auto_restart_probes (defaut: true) dans system-settings.json. Gate startConnectivityMonitor() et traffic force-disable au boot selon les flags.
+
 ## [v1.3.0-patch.77] - 2026-05-16
 ### Improved
 - **Settings.tsx** 🔒 Les toggles "Startup Behaviour" (IoT + Voice) sont désormais désactivés avec un message explicatif si aucune configuration valide n'existe (aucun device IoT activé, aucun serveur Voice configuré). Le toggle reste cliquable uniquement si la config est présente et valide. Pendant le chargement, le toggle est en état "pulse" (loading).
