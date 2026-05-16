@@ -13,6 +13,19 @@ LOG_DIR = os.getenv('LOG_DIR', '/var/log/sdwan-traffic-gen')
 VERSION_FILE = '/app/VERSION'  # Optional
 DEBUG_MODE = os.getenv('DEBUG', 'false').lower() == 'true'
 
+SYSTEM_SETTINGS_FILE = os.path.join(CONFIG_DIR, 'system-settings.json')
+
+def get_auto_restart_voice() -> bool:
+    """Read system-settings.json to decide if voice should resume on startup.
+    Returns False (safe default) if the file is absent or the flag is not set."""
+    try:
+        if os.path.exists(SYSTEM_SETTINGS_FILE):
+            with open(SYSTEM_SETTINGS_FILE, 'r') as f:
+                return bool(json.load(f).get('auto_restart_voice', False))
+    except Exception:
+        pass
+    return False
+
 def get_version():
     try:
         if os.path.exists(VERSION_FILE):
@@ -266,13 +279,17 @@ def main():
         config['state']['counter'] = 0
         with open(VOICE_CONFIG_FILE, 'w') as f:
             json.dump(config, f, indent=2)
-        # 2. Disable simulation by default
+        # 2. Disable simulation by default — UNLESS auto_restart_voice is enabled
         try:
-            config = load_voice_config()
-            if 'control' in config:
-                config['control']['enabled'] = False
-                with open(VOICE_CONFIG_FILE, 'w') as f:
-                    json.dump(config, f, indent=2)
+            if not get_auto_restart_voice():
+                config = load_voice_config()
+                if 'control' in config:
+                    config['control']['enabled'] = False
+                    with open(VOICE_CONFIG_FILE, 'w') as f:
+                        json.dump(config, f, indent=2)
+            else:
+                enabled_now = load_voice_config().get('control', {}).get('enabled', False)
+                print(f"🔄 Auto-restart VOICE enabled — resuming previous state (enabled={enabled_now})")
         except Exception as e:
             print(f"Warning during config reset: {e}")
 

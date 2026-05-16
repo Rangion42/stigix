@@ -246,6 +246,9 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
     const [slsConfig, setSlsConfig] = useState<any>(null);
     const [probeFilterType, setProbeFilterType] = useState('ALL');
     const [maxCaptures, setMaxCaptures] = useState(uiConfig?.maxCaptures || 10);
+    // System startup behaviour
+    const [systemSettings, setSystemSettings] = useState({ auto_restart_iot: false, auto_restart_voice: false });
+    const [savingSystemSettings, setSavingSystemSettings] = useState(false);
     // All groups expanded by default; toggled by clicking the group header
     const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
     const toggleCategory = (name: string) =>
@@ -433,6 +436,14 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
             clearInterval(containerStatsInterval);
         };
 
+    }, [token]);
+
+    // Fetch system settings (startup behaviour)
+    useEffect(() => {
+        fetch('/api/config/system-settings', { headers: authHeaders })
+            .then(r => r.json())
+            .then(data => setSystemSettings({ auto_restart_iot: !!data.auto_restart_iot, auto_restart_voice: !!data.auto_restart_voice }))
+            .catch(() => {});
     }, [token]);
 
     // Polling for upgrade status and registry status
@@ -903,6 +914,25 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
     };
 
     if (loading) return <div className="p-8 text-center text-text-muted animate-pulse font-bold tracking-widest text-xs">Loading Settings...</div>;
+
+    const saveSystemSetting = async (key: 'auto_restart_iot' | 'auto_restart_voice', value: boolean) => {
+        const next = { ...systemSettings, [key]: value };
+        setSystemSettings(next);
+        setSavingSystemSettings(true);
+        try {
+            await fetch('/api/config/system-settings', {
+                method: 'POST',
+                headers: authHeaders,
+                body: JSON.stringify({ [key]: value })
+            });
+            showSuccess(`Startup setting saved`);
+        } catch (e) {
+            setErrorMsg('Failed to save startup setting');
+            setSystemSettings(systemSettings); // rollback
+        } finally {
+            setSavingSystemSettings(false);
+        }
+    };
 
     // ─── Target CRUD Handlers ────────────────────────────────────────────────
     const fetchTargets = () => fetch('/api/targets', { headers: authHeaders })
@@ -2181,6 +2211,84 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
 
                 {activeTab === 'system' && (
                     <div className="bg-card border border-border rounded-2xl p-8 shadow-sm space-y-12 animate-in fade-in duration-500">
+
+                        {/* ── Startup Behaviour — global, prominent ──────────────── */}
+                        <div className="relative overflow-hidden rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-600/10 via-purple-600/5 to-card p-6 shadow-md">
+                            {/* decorative glow */}
+                            <div className="absolute -top-8 -right-8 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="p-2.5 bg-indigo-600/15 rounded-xl text-indigo-400">
+                                    <Power size={20} />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-black text-text-primary tracking-tight">Startup Behaviour</h2>
+                                    <p className="text-[10px] font-bold text-indigo-400/80 tracking-[0.18em] mt-0.5 uppercase">Global · Auto-restart on boot / upgrade</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* IoT toggle */}
+                                {([
+                                    {
+                                        key: 'auto_restart_iot' as const,
+                                        label: 'IoT Simulation',
+                                        desc: 'Auto-start all enabled IoT devices 15s after the container boots.',
+                                        icon: '📡',
+                                        color: 'green',
+                                    },
+                                    {
+                                        key: 'auto_restart_voice' as const,
+                                        label: 'Voice / RTP Calls',
+                                        desc: 'Resume voice calls if they were active before the last shutdown.',
+                                        icon: '📞',
+                                        color: 'blue',
+                                    },
+                                ] as const).map(({ key, label, desc, icon, color }) => {
+                                    const active = systemSettings[key];
+                                    return (
+                                        <button
+                                            key={key}
+                                            onClick={() => saveSystemSetting(key, !active)}
+                                            disabled={savingSystemSettings}
+                                            className={cn(
+                                                'group relative flex items-start gap-4 rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer',
+                                                active
+                                                    ? color === 'green'
+                                                        ? 'border-green-500/40 bg-green-600/8 hover:bg-green-600/12'
+                                                        : 'border-blue-500/40 bg-blue-600/8 hover:bg-blue-600/12'
+                                                    : 'border-border bg-card-secondary/40 hover:border-border hover:bg-card-secondary/60',
+                                                savingSystemSettings && 'opacity-60 cursor-wait'
+                                            )}
+                                        >
+                                            <span className="text-2xl mt-0.5 select-none">{icon}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="text-[12px] font-black text-text-primary tracking-tight">{label}</span>
+                                                    {/* Toggle pill */}
+                                                    <div className={cn(
+                                                        'relative w-10 h-5 rounded-full transition-colors duration-200 flex-shrink-0',
+                                                        active
+                                                            ? color === 'green' ? 'bg-green-500' : 'bg-blue-500'
+                                                            : 'bg-border'
+                                                    )}>
+                                                        <span className={cn(
+                                                            'absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200',
+                                                            active ? 'translate-x-5' : 'translate-x-0.5'
+                                                        )} />
+                                                    </div>
+                                                </div>
+                                                <p className="text-[10px] font-medium text-text-muted mt-1 leading-relaxed">{desc}</p>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            <p className="mt-4 text-[9px] font-bold text-text-muted/60 tracking-widest uppercase">
+                                ⚠️ Effective on next boot — changes do not restart services immediately
+                            </p>
+                        </div>
+
                         {/* Network Interfaces (Moved from its own tab) */}
                         <div className="space-y-8">
                             <div className="flex items-center gap-3">

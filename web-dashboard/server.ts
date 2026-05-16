@@ -402,6 +402,32 @@ const APPLICATIONS_CONFIG_FILE = path.join(APP_CONFIG.configDir, 'applications-c
 const VYOS_CONFIG_FILE = path.join(APP_CONFIG.configDir, 'vyos-config.json');
 const CONVERGENCE_CONFIG_FILE = path.join(APP_CONFIG.configDir, 'convergence-config.json');
 const ICON_CACHE_FILE = path.join(APP_CONFIG.configDir, 'icon-cache.json');
+const SYSTEM_SETTINGS_FILE = path.join(APP_CONFIG.configDir, 'system-settings.json');
+
+// ── System Settings helper (startup behaviour, etc.) ────────────────────────
+interface SystemSettings {
+    auto_restart_iot: boolean;
+    auto_restart_voice: boolean;
+}
+const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
+    auto_restart_iot: false,
+    auto_restart_voice: false,
+};
+function getSystemSettings(): SystemSettings {
+    try {
+        if (fs.existsSync(SYSTEM_SETTINGS_FILE)) {
+            const raw = JSON.parse(fs.readFileSync(SYSTEM_SETTINGS_FILE, 'utf8'));
+            return { ...DEFAULT_SYSTEM_SETTINGS, ...raw };
+        }
+    } catch (e) { }
+    return { ...DEFAULT_SYSTEM_SETTINGS };
+}
+function saveSystemSettings(settings: Partial<SystemSettings>): SystemSettings {
+    const current = getSystemSettings();
+    const merged = { ...current, ...settings };
+    fs.writeFileSync(SYSTEM_SETTINGS_FILE, JSON.stringify(merged, null, 2), 'utf8');
+    return merged;
+}
 
 // --- Favicon Discovery & Caching System ---
 interface IconCacheEntry {
@@ -9438,6 +9464,25 @@ app.post('/api/iot/import-prisma-csv', authenticateToken, async (req, res) => {
     }
 });
 
+// ── System Settings API ──────────────────────────────────────────────────────
+app.get('/api/config/system-settings', authenticateToken, (_req, res) => {
+    res.json(getSystemSettings());
+});
+
+app.post('/api/config/system-settings', authenticateToken, (req, res) => {
+    try {
+        const { auto_restart_iot, auto_restart_voice } = req.body;
+        const patch: Partial<SystemSettings> = {};
+        if (typeof auto_restart_iot === 'boolean') patch.auto_restart_iot = auto_restart_iot;
+        if (typeof auto_restart_voice === 'boolean') patch.auto_restart_voice = auto_restart_voice;
+        const saved = saveSystemSettings(patch);
+        log('SYSTEM', `System settings updated: ${JSON.stringify(saved)}`);
+        res.json({ success: true, settings: saved });
+    } catch (e: any) {
+        res.status(500).json({ error: 'Failed to save system settings', detail: e.message });
+    }
+});
+
 if (process.env.NODE_ENV === 'production') {
     // Static files
     app.use(express.static(path.join(__dirname, 'dist')));
@@ -9471,6 +9516,32 @@ httpServer.listen(PORT, '0.0.0.0', async () => {
 
 
     console.log(`Backend running at http://localhost:${PORT}`);
+
+    // ── Startup Behaviour: Auto-restart IoT / Voice based on system-settings.json ──
+    const sysSettings = getSystemSettings();
+
+    if (sysSettings.auto_restart_iot) {
+        // Delay 15s to let iotManager initialise and interface detection settle
+        setTimeout(() => {
+            try {
+                const iotCfg = getIoTConfig();
+                const toStart = (iotCfg.devices || []).filter((d: any) => d.enabled !== false);
+                if (toStart.length > 0) {
+                    log('STARTUP', `Auto-restarting ${toStart.length} IoT device(s)...`);
+                    toStart.forEach((device: any) => {
+                        iotManager.startDevice({ ...device })
+                            .catch((e: any) => log('STARTUP', `IoT auto-start failed for ${device.id}: ${e.message}`, 'error'));
+                    });
+                } else {
+                    log('STARTUP', 'Auto-restart IoT enabled but no enabled devices found.');
+                }
+            } catch (e: any) {
+                log('STARTUP', `IoT auto-restart error: ${e.message}`, 'error');
+            }
+        }, 15000);
+    }
+    // Voice auto-restart is handled inside voice_orchestrator.py
+    // (it reads system-settings.json and skips the forced enabled=false if auto_restart_voice=true)
 
     // Start Registry Service only after server is listening
     registryManager.start().catch(e => log('REGISTRY', `Failed to start: ${e.message}`, 'error'));

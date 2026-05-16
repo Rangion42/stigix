@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.76] - 2026-05-16
+### Added
+- **system-settings.json** 🆕 Nouveau fichier de settings système dédié (`config/system-settings.json`), rétrocompatible (si absent → defaults false = comportement actuel).
+- **Settings.tsx** ⚡ Section "Startup Behaviour" proéminente dans l'onglet System Info : 2 toggles pour activer l'auto-restart IoT et Voice au boot.
+- **server.ts** 🔄 Hook de démarrage : si `auto_restart_iot=true`, démarre automatiquement les devices IoT activés 15s après le boot du container.
+- **voice_orchestrator.py** 🔄 Respect du flag `auto_restart_voice` : ne force plus `enabled=false` au boot si le paramètre est actif, permettant la reprise des appels voix.
+- **server.ts** 🛣️ Nouvelles routes `GET/POST /api/config/system-settings`.
+
 ## [v1.3.0-patch.75] - 2026-05-16
 ### Added
 - **iot_emulator.py** 📋 Persistance des baux DHCP (RFC 2131 INIT-REBOOT) : chaque IP obtenue par DHCP est sauvegardée dans `/app/config/dhcp_leases.json` (volume persistant Docker).
