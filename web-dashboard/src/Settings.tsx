@@ -239,11 +239,15 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
     const [cloudMasterKey, setCloudMasterKey] = useState('');
     const [showCloudKey, setShowCloudKey] = useState(false);
     const [isSavingCloud, setIsSavingCloud] = useState(false);
+    const [isTestingCloud, setIsTestingCloud] = useState(false);
+    const [cloudTestResult, setCloudTestResult] = useState<{ success?: boolean; error?: string } | null>(null);
 
     // Convergence State
     const [convergenceThresholds, setConvergenceThresholds] = useState({ good: 1, degraded: 5, critical: 10 });
     const [mcpStatus, setMcpStatus] = useState<{ online: boolean; status?: string; transport?: string; url?: string; error?: string } | null>(null);
     const [slsConfig, setSlsConfig] = useState<any>(null);
+    const [isTestingPrisma, setIsTestingPrisma] = useState(false);
+    const [prismaTestResult, setPrismaTestResult] = useState<{ success?: boolean; error?: string } | null>(null);
     const [probeFilterType, setProbeFilterType] = useState('ALL');
     const [maxCaptures, setMaxCaptures] = useState(uiConfig?.maxCaptures || 10);
     // System startup behaviour
@@ -1000,6 +1004,46 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
             setShowTargetPorts(false);
             fetchTargets();
         } catch (e: any) { setTargetError(e.message); }
+    };
+
+    const handleTestCloud = async () => {
+        setIsTestingCloud(true);
+        setCloudTestResult(null);
+        try {
+            const res = await fetch('/api/config/cloud/test', {
+                method: 'POST',
+                headers: authHeaders,
+                body: JSON.stringify({ 
+                    baseUrl: cloudConfig?.baseUrl || 'https://stigix-target.jlsuzanne.workers.dev',
+                    masterKey: cloudMasterKey,
+                    tsgId: slsConfig?.tsg_id || registryStatus?.poc_id
+                })
+            });
+            const data = await res.json();
+            setCloudTestResult(data);
+        } catch (e: any) {
+            setCloudTestResult({ success: false, error: 'Network error' });
+        } finally {
+            setIsTestingCloud(false);
+        }
+    };
+
+    const handleTestPrisma = async () => {
+        setIsTestingPrisma(true);
+        setPrismaTestResult(null);
+        try {
+            const res = await fetch('/api/security/config/test', {
+                method: 'POST',
+                headers: authHeaders,
+                body: JSON.stringify({ sls_config: slsConfig })
+            });
+            const data = await res.json();
+            setPrismaTestResult(data);
+        } catch (e: any) {
+            setPrismaTestResult({ success: false, error: 'Network error' });
+        } finally {
+            setIsTestingPrisma(false);
+        }
     };
 
     const saveCloudConfig = async () => {
@@ -2826,19 +2870,37 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                     <p className="text-[10px] font-bold text-text-muted tracking-widest mt-1 opacity-70 uppercase">Probe Signing & Master Credentials</p>
                                 </div>
                             </div>
-                            <button
-                                onClick={saveCloudConfig}
-                                disabled={isSavingCloud || (!cloudMasterKey && cloudConfig?.baseUrl === (registryStatus?.remote_url || 'https://stigix-target.jlsuzanne.workers.dev')) }
-                                className={cn(
-                                    "px-6 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all flex items-center gap-2 shadow-lg",
-                                    isSavingCloud
-                                        ? "bg-card-secondary text-text-muted cursor-not-allowed border border-border"
-                                        : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/20"
+                            <div className="flex items-center gap-2">
+                                {cloudTestResult && (
+                                    <span className={cn(
+                                        "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border flex items-center gap-1.5 shadow-sm",
+                                        cloudTestResult.success ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" : "bg-red-500/10 text-red-500 border-red-500/30"
+                                    )}>
+                                        {cloudTestResult.success ? <><CheckCircle2 size={12} /> Target Verified</> : <><XCircle size={12} /> {cloudTestResult.error || 'Failed'}</>}
+                                    </span>
                                 )}
-                            >
-                                {isSavingCloud ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                                UPDATE SECURITY
-                            </button>
+                                <button
+                                    onClick={handleTestCloud}
+                                    disabled={isTestingCloud || !cloudConfig?.baseUrl}
+                                    className="px-4 py-2.5 bg-card hover:bg-card-hover border border-border hover:border-blue-500/30 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {isTestingCloud ? <RefreshCw size={14} className="animate-spin text-blue-500" /> : <Activity size={14} className="text-blue-500" />}
+                                    Test
+                                </button>
+                                <button
+                                    onClick={saveCloudConfig}
+                                    disabled={isSavingCloud || (!cloudMasterKey && cloudConfig?.baseUrl === (registryStatus?.remote_url || 'https://stigix-target.jlsuzanne.workers.dev')) }
+                                    className={cn(
+                                        "px-6 py-2.5 rounded-xl text-[10px] font-black tracking-widest transition-all flex items-center gap-2 shadow-lg",
+                                        isSavingCloud
+                                            ? "bg-card-secondary text-text-muted cursor-not-allowed border border-border"
+                                            : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/20"
+                                    )}
+                                >
+                                    {isSavingCloud ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                                    UPDATE SECURITY
+                                </button>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
@@ -3698,6 +3760,14 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                                 <RefreshCw size={14} className="inline mr-2" />
                                                 Sync from System
                                             </button>
+                                            <button
+                                                onClick={handleTestPrisma}
+                                                disabled={isTestingPrisma || !slsConfig.client_id || !slsConfig.tsg_id}
+                                                className="flex-1 py-3 bg-card hover:bg-card-hover text-blue-500 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-border hover:border-blue-500/30 flex items-center justify-center gap-2 disabled:opacity-50"
+                                            >
+                                                {isTestingPrisma ? <RefreshCw size={14} className="animate-spin" /> : <Activity size={14} />}
+                                                Test Auth
+                                            </button>
                                         <button
                                             onClick={async () => {
                                                 setSaving(true);
@@ -3713,11 +3783,20 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                                 finally { setSaving(false); }
                                             }}
                                             disabled={saving}
-                                            className="flex-[2] py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black tracking-[0.2em] transition-all shadow-lg shadow-blue-900/20 disabled:opacity-50"
+                                            className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[10px] font-black tracking-[0.2em] transition-all shadow-lg shadow-blue-900/20 disabled:opacity-50 flex items-center justify-center"
                                         >
                                             {saving ? <RefreshCw className="animate-spin inline mr-2" size={14} /> : 'Save Configuration'}
                                         </button>
                                     </div>
+                                    {prismaTestResult && (
+                                        <div className={cn(
+                                            "mt-2 p-3 border rounded-xl text-xs font-bold flex items-center gap-2",
+                                            prismaTestResult.success ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500" : "bg-red-500/10 border-red-500/30 text-red-500"
+                                        )}>
+                                            {prismaTestResult.success ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
+                                            {prismaTestResult.success ? "Successfully authenticated with Prisma SASE API." : `Authentication Failed: ${prismaTestResult.error}`}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

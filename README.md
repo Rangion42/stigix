@@ -1,8 +1,8 @@
-# Stigix
+# 🕸️ Stigix — Advanced Networking & Security Simulation Environment
 
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/jsuzanne/sdwan-traffic-gen)
+[![Version](https://img.shields.io/badge/Version-1.3.0--patch.84-blue.svg)](https://github.com/jsuzanne/stigix/releases)
+[![Docker Pulls](https://img.shields.io/docker/pulls/jlsuzanne/stigix)](https://hub.docker.com/r/jlsuzanne/stigix)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.3.0--patch.80-blue.svg)](https://github.com/jsuzanne/stigix/releases)
 
 A modern web-based SD-WAN traffic generator with real-time monitoring, customizable traffic patterns, and comprehensive security testing. Perfect for testing SD-WAN deployments, network QoS policies, and application performance.
 

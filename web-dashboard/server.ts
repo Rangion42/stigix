@@ -10,6 +10,7 @@ import { spawn, exec, execSync } from 'child_process';
 import { promisify } from 'util';
 import { fileURLToPath } from 'url';
 import os from 'os';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { log } from './utils/logger.js';
 import bcrypt from 'bcryptjs';
