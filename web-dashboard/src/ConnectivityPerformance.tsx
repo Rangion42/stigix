@@ -104,8 +104,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);      // Phase 1: probes config (fast)
     const [loadingStats, setLoadingStats] = useState(true); // Phase 2: stats + results (slow)
-    const [timeRange, setTimeRange] = useState('24h');
-    const [graphTimeRange, setGraphTimeRange] = useState('6h'); // Separate time range for graphs
+    const [timeRange, setTimeRange] = useState('1h');
     const [filterType, setFilterType] = useState('ALL');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedEndpoint, setSelectedEndpoint] = useState<any>(null);
@@ -204,9 +203,10 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
     const fetchStatsAndResults = async () => {
         setLoadingStats(true);
         try {
+            const dynamicLimit = timeRange === '15m' ? 300 : timeRange === '1h' ? 1500 : timeRange === '6h' ? 5000 : timeRange === '24h' ? 12000 : 30000;
             const [statsRes, resultsRes] = await Promise.all([
                 fetch(`/api/connectivity/stats?range=${timeRange}`, { headers: authHeaders() }),
-                fetch(`/api/connectivity/results?timeRange=${timeRange}&limit=500`, { headers: authHeaders() })
+                fetch(`/api/connectivity/results?timeRange=${timeRange}&limit=${dynamicLimit}`, { headers: authHeaders() })
             ]);
             const [statsData, resultsData] = await Promise.all([
                 statsRes.json(),
@@ -473,28 +473,9 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
 
                 {/* Performance Trends by Endpoint Type */}
                 <div className="md:col-span-4 bg-card-secondary/30 border border-border p-6 rounded-2xl shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="text-text-muted text-xs font-bold tracking-wider flex items-center gap-2">
+                    <div className="text-text-muted text-xs font-bold tracking-wider flex items-center gap-2">
                             <BarChart3 size={16} /> Performance Trends by Type
                         </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-text-muted font-bold uppercase">Time Range:</span>
-                            {['1h', '6h', '24h', '7d'].map(range => (
-                                <button
-                                    key={range}
-                                    onClick={() => setGraphTimeRange(range)}
-                                    className={twMerge(
-                                        "px-2 py-1 text-[10px] font-bold uppercase rounded transition-all",
-                                        graphTimeRange === range
-                                            ? "bg-blue-600 text-white"
-                                            : "bg-card-secondary text-text-muted hover:bg-card-secondary/80"
-                                    )}
-                                >
-                                    {range}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <EndpointTypeGraph type="HTTP/HTTPS" results={httpResults} color="#3b82f6" />
                         <EndpointTypeGraph type="PING" results={pingResults} color="#22c55e" />

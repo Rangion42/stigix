@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.74] - 2026-05-16
+### Fixed
+- **ConnectivityPerformance.tsx** 🐛 Le filtre TimeRange fonctionne maintenant réellement : la limite API est désormais dynamique selon la plage (15m=300, 1h=1500, 6h=5000, 24h=12000, 7d=30000).
+- **ConnectivityPerformance.tsx** 🗑️ Suppression des boutons graphTimeRange morts (jamais connectés aux données).
+- **connectivity-logger.ts** 🐛 Ajout du case manquant '15m' dans getResults() (existait dans getStats mais pas dans getResults).
+- **ConnectivityPerformance.tsx** ⚡ Plage par défaut changée de '24h' à '1h' pour un chargement initial plus rapide.
+
 ## [v1.3.0-patch.73] - 2026-05-15
 ### Changed
 - **Iot.tsx** 🗑️ Suppression du widget "Scale & Monitoring" — bruit visuel inutile.

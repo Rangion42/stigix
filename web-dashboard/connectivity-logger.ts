@@ -112,7 +112,8 @@ export class ConnectivityLogger {
             const now = Date.now();
             let cutoff = 0;
             if (options.timeRange) {
-                if (options.timeRange === '1h') cutoff = now - 3600000;
+                if (options.timeRange === '15m') cutoff = now - 15 * 60 * 1000;
+                else if (options.timeRange === '1h') cutoff = now - 3600000;
                 else if (options.timeRange === '6h') cutoff = now - 6 * 3600000;
                 else if (options.timeRange === '24h') cutoff = now - 24 * 3600000;
                 else if (options.timeRange === '7d') cutoff = now - 7 * 24 * 3600000;
