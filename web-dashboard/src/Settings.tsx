@@ -2254,8 +2254,8 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                     <Power size={18} className="text-indigo-400" />
                                 </div>
                                 <div>
-                                    <h2 className="text-sm font-black text-text-primary tracking-tight">Startup Behaviour</h2>
-                                    <p className="text-[10px] font-bold text-text-muted tracking-[0.15em] mt-0.5 uppercase">Auto-restart on boot / upgrade</p>
+                                    <h2 className="text-sm font-black text-text-primary tracking-tight">State Persistence</h2>
+                                    <p className="text-[10px] font-bold text-text-muted tracking-[0.15em] mt-0.5 uppercase">Preserve service state across reboots</p>
                                 </div>
                             </div>
 
@@ -2265,25 +2265,25 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                     {
                                         key: 'auto_restart_traffic' as const,
                                         label: 'Background Traffic',
-                                        desc: 'HTTP application traffic restarts automatically (default: ON).',
+                                        desc: 'Resumes its pre-reboot state — running stays running, stopped stays stopped.',
                                         icon: '🌐',
                                         color: 'violet',
-                                        hasConfig: true,  // always has default config
+                                        hasConfig: true,
                                         noConfigMsg: '',
                                     },
                                     {
                                         key: 'auto_restart_probes' as const,
                                         label: 'Synthetic Probes',
-                                        desc: 'DEM connectivity probes restart automatically (default: ON).',
+                                        desc: 'DEM probes resume their pre-reboot state automatically.',
                                         icon: '📊',
                                         color: 'cyan',
-                                        hasConfig: true,  // always has default config
+                                        hasConfig: true,
                                         noConfigMsg: '',
                                     },
                                     {
                                         key: 'auto_restart_iot' as const,
                                         label: 'IoT Simulation',
-                                        desc: 'Enabled IoT devices restart 15s after boot.',
+                                        desc: 'Only devices that were running before the reboot will resume.',
                                         icon: '📡',
                                         color: 'green',
                                         hasConfig: iotHasConfig,
@@ -2292,7 +2292,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                     {
                                         key: 'auto_restart_voice' as const,
                                         label: 'Voice / RTP Calls',
-                                        desc: 'Resumes calls if they were active before shutdown.',
+                                        desc: 'Resumes calls only if the simulation was active before the reboot.',
                                         icon: '📞',
                                         color: 'blue',
                                         hasConfig: voiceHasConfig,
@@ -2359,7 +2359,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                             {/* Footer note */}
                             <div className="px-6 py-3 border-t border-border bg-card-secondary/30">
                                 <p className="text-[9px] font-bold text-text-muted tracking-widest uppercase">
-                                    ℹ️ Probes changes effective on next boot · Traffic toggle takes effect immediately
+                                    ℹ️ Services resume their pre-reboot state on next restart · Traffic toggle takes effect immediately
                                 </p>
                             </div>
                         </div>
