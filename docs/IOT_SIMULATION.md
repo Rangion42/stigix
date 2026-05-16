@@ -7,6 +7,7 @@ The **SD-WAN Traffic Generator** includes a sophisticated IoT Simulation engine 
 ### 📡 Layer-2/3 Simulation (Scapy)
 Unlike standard traffic generators that use high-level HTTP libraries, our IoT engine uses **Scapy** to forge raw packets at the network layer.
 - **DHCP Support**: Simulated devices can request and renew IP addresses from your real local DHCP server (Router/Core Switch).
+- **DHCP Lease Persistence**: Each device's assigned IP is saved to disk. On container restart, the device uses [RFC 2131 INIT-REBOOT](https://www.rfc-editor.org/rfc/rfc2131#section-3.2) to reclaim the same IP — no DISCOVER needed if the server accepts.
 - **ARP Handling**: Devices respond to ARP requests on the wire, making them appear "real" to networking equipment.
 - **MAC Spoofing**: Each simulated device has its own unique, configurable MAC address.
 
@@ -203,10 +204,70 @@ python iot/import_prisma_devices.py -i "iot device bad sources.csv" -o devices.j
 
 
 ### Protocol Support Details
-- **`dhcp`**: Triggers a Scapy-based DHCP state machine (Discover -> Offer -> Request -> Ack).
+- **`dhcp`**: Triggers a Scapy-based DHCP state machine (Discover → Offer → Request → Ack) with RFC 2131 INIT-REBOOT lease persistence (see below).
 - **`arp`**: Listens for ARP Who-Has requests and responds with the spoofed MAC.
 - **`cloud`**: Simulates periodic outbound "heartbeat" traffic to a vendor-specific FQDN.
 - **`mqtt`**: Simulates periodic telemetry updates to an MQTT broker.
+
+---
+
+## 📋 DHCP Lease Persistence (RFC 2131 INIT-REBOOT)
+
+By default, a DHCP server with no MAC reservations may assign a **different IP** to a device after a container restart. To solve this, the IoT emulator persists each device's assigned IP in a lease file that survives restarts.
+
+### How it works
+
+```
+Boot device (MAC: aa:bb:cc:dd:ee:ff)
+      │
+      ▼
+ config/dhcp_leases.json exists for this MAC?
+      │
+    YES ──► Last known IP: 192.168.1.42
+      │           │
+      │           ▼
+      │    DHCP REQUEST broadcast (INIT-REBOOT, no DISCOVER)
+      │    Option 50: requested_addr = 192.168.1.42
+      │           │
+      │         ACK ──► ✅ Same IP confirmed (~4s, fast path)
+      │         NAK ──► 🔄 Subnet changed → full DISCOVER
+      │     timeout ──► 🔄 No response   → full DISCOVER
+      │
+     NO ──► Full DISCOVER → OFFER → REQUEST → ACK (normal flow)
+```
+
+### Lease file location
+
+Leases are stored in **`/app/config/dhcp_leases.json`**, which maps to the `./config/` directory of your Stigix installation — a persistent Docker volume.
+
+```json
+{
+  "00:12:34:56:78:01": {
+    "ip": "192.168.1.100",
+    "gateway": "192.168.1.1",
+    "timestamp": 1747386000.0
+  },
+  "ec:b5:fa:00:01:01": {
+    "ip": "192.168.1.105",
+    "gateway": "192.168.1.1",
+    "timestamp": 1747386060.0
+  }
+}
+```
+
+> **Override:** Set the `DHCP_LEASE_FILE` environment variable to use a different path.
+
+### Key behaviours
+
+| Scenario | Result |
+|---|---|
+| Normal boot, saved lease, server ACKs | ✅ Same IP reclaimed instantly |
+| Server NAKs (subnet changed, IP taken) | 🔄 Automatic fallback to full DISCOVER |
+| Server doesn't respond to INIT-REBOOT | 🔄 Automatic fallback to full DISCOVER |
+| Device never had an IP (first boot) | ➡️ Normal DISCOVER, no lease to restore |
+| DHCP fails completely (no OFFER) | 🔕 Device stays silent, lease **not erased** (retry on next boot) |
+
+---
 
 ## 🛡️ Security Testing (Bad Behavior)
 
@@ -293,12 +354,41 @@ When a device starts, you can monitor the "Real-on-the-Wire" interaction in the 
 
 When a device starts, you can monitor the "Real-on-the-Wire" interaction in the UI logs:
 
-### DHCP Sequence (Success)
+### DHCP — First boot (full sequence)
 ```text
-🔄 [IOT] Starting DHCP sequence for 'Smart Bulb' (ec:b5:fa:00:01:01)...
-📤 [DHCP] Sending DISCOVER on enp2s0
-✅ [DHCP] Received OFFER from 192.168.1.1 (Offered IP: 192.168.1.105)
-✅ [DHCP] ACK received. Device 'Smart Bulb' is now LIVE on 192.168.1.105
+🚀 Starting device simulation: Smart Bulb (bulb-01) [DHCP: auto]
+🆔 MAC addr: ec:b5:fa:00:01:01
+🔄 DHCP attempt 1 (mode: auto)...
+📤 DHCP DISCOVER (xid: 0x1a2b3c4d, MAC: ec:b5:fa:00:01:01)
+⏳ Waiting for DHCP OFFER (timeout: 4s)...
+✅ DHCP OFFER from 192.168.1.1 (offered: 192.168.1.105)
+📤 DHCP REQUEST for offered IP 192.168.1.105
+⏳ Waiting for DHCP ACK (timeout: 4s)...
+✅ DHCP ACK: 192.168.1.105 from 192.168.1.1
+📣 Gratuitous ARP: 192.168.1.105 is-at ec:b5:fa:00:01:01
+✅ DHCP complete (IP: 192.168.1.105, GW: 192.168.1.1)
+```
+
+### DHCP — Container restart (INIT-REBOOT fast path)
+```text
+🚀 Starting device simulation: Smart Bulb (bulb-01) [DHCP: auto]
+🆔 MAC addr: ec:b5:fa:00:01:01
+📋 Saved DHCP lease found: 192.168.1.105 — attempting INIT-REBOOT (RFC 2131)
+📤 DHCP INIT-REBOOT REQUEST for 192.168.1.105 (xid: 0x5e6f7a8b)
+✅ INIT-REBOOT success — same IP confirmed: 192.168.1.105
+🌐 Gateway from DHCP: 192.168.1.1
+📣 Gratuitous ARP: 192.168.1.105 is-at ec:b5:fa:00:01:01
+```
+
+### DHCP — INIT-REBOOT rejected (subnet changed)
+```text
+📋 Saved DHCP lease found: 10.0.0.50 — attempting INIT-REBOOT (RFC 2131)
+📤 DHCP INIT-REBOOT REQUEST for 10.0.0.50 (xid: 0x3c4d5e6f)
+⚠️ DHCP NAK for saved IP 10.0.0.50 (subnet changed?)
+🔄 INIT-REBOOT rejected by server — falling back to full DISCOVER
+🔄 DHCP attempt 1 (mode: auto)...
+📤 DHCP DISCOVER ...
+✅ DHCP complete (IP: 192.168.1.200, GW: 192.168.1.1)
 ```
 
 ### ARP Interaction
