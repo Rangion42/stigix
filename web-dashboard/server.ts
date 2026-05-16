@@ -6475,8 +6475,13 @@ app.post('/api/config/cloud/test', authenticateToken, async (req, res) => {
 
         if (!baseUrl) return res.json({ success: false, error: 'No Worker URL configured' });
 
+        // Normalize URL — add https:// if no protocol specified
+        const normalizedUrl = baseUrl.startsWith('http://') || baseUrl.startsWith('https://')
+            ? baseUrl
+            : `https://${baseUrl}`;
+
         // Append /saas/info to test a protected endpoint
-        const targetUrl = new URL(baseUrl.replace(/\/$/, '') + '/saas/info');
+        const targetUrl = new URL(normalizedUrl.replace(/\/$/, '') + '/saas/info');
 
         // Sign the request if we have credentials
         if (masterKey && tsgId) {
