@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.81] - 2026-05-16
+### Documentation
+- **README.md** Version badge mis à jour v1.3.0-patch.80. Ajout de State Persistence dans Features et What's New highlights.
+- **docs/IOT_SIMULATION.md** Nouvelle section "State Persistence" : table start/stop → enabled flag → effect at boot.
+- **docs/VOICE_SIMULATION.md** Mise à jour "Clean Slate Architecture" → conditionnel selon le toggle State Persistence. Nouvelle section State Persistence.
+
 ## [v1.3.0-patch.80] - 2026-05-16
 ### Improved
 - **Settings.tsx** 🏷️ Renomme "Startup Behaviour / Auto-restart" en "State Persistence / Preserve service state across reboots". Les descriptions de chaque toggle reflètent la vraie sémantique : les services reprennent leur état d'avant le reboot, ils ne démarrent pas tous automatiquement.

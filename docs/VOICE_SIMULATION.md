@@ -97,8 +97,16 @@ To provide realistic SD-WAN testing and easy flow correlation, each call now use
 
 
 
+### 🔄 State Persistence (v1.3.0-patch.78+)
+On every restart, the Voice simulation checks **Settings → System Info → State Persistence → Voice / RTP Calls**:
+- **Toggle OFF** (default): The simulation starts in **Disabled** mode for safety — clean slate.
+- **Toggle ON + voice was active before reboot**: The simulation **automatically resumes** with the same targets and settings.
+- **Toggle ON + voice was stopped before reboot**: The simulation stays Disabled — it respects the pre-reboot state.
+
+> The Voice toggle is only clickable if at least one server is configured in the Voice tab. If no servers are defined, it remains grayed out.
+
 ### 🧹 Clean Slate Architecture
-On every restart of the `voice-gen` container:
+On every restart of the container (when State Persistence is OFF or voice was inactive):
 - Stats logs are truncated (empty start).
 - Call counters reset to `CALL-0001`.
 - The simulation starts in `Disabled` mode for safety.

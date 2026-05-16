@@ -401,4 +401,29 @@ When a device starts, you can monitor the "Real-on-the-Wire" interaction in the 
 You can easily migrate your IoT lab setup between different generator instances using the **Import/Export** buttons. The system ensures data integrity and automatically creates backups of your configuration.
 
 ---
+
+## 💾 State Persistence
+
+Stigix preserves your IoT simulation state across container reboots and upgrades. This is controlled via **Settings → System Info → State Persistence**.
+
+### How it works
+
+| Action | Immediate effect | Persisted in JSON | Effect on next boot |
+|---|---|---|---|
+| **Start** a device | Process starts | `enabled: true` | ✅ Device resumes |
+| **Stop** a device | Process stops | `enabled: false` | ⛔ Device stays off |
+| **Start-all** | All processes start | `enabled: true` for each | ✅ All resume |
+| **Stop-all** | All processes stop | `enabled: false` for each | ⛔ All stay off |
+
+> **Only devices that were running before the reboot will automatically restart.** If you started device A and left devices B and C stopped, after a reboot only device A will resume.
+
+### Enable / Disable State Persistence
+
+Go to **Settings → System Info → State Persistence** and toggle **IoT Simulation**:
+- **ON** (default: OFF) — IoT devices restore their pre-reboot state 15 seconds after the container boots.
+- **OFF** — No IoT devices start automatically; you start them manually from the IoT tab.
+
+> The IoT toggle is only clickable if at least one device is configured. If your `iot-devices.json` is empty, the toggle remains grayed out with a configuration prompt.
+
+---
 *For more technical details on networking, see [SMART_NETWORKING.md](SMART_NETWORKING.md).*

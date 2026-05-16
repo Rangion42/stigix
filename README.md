@@ -2,7 +2,7 @@
 
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/jsuzanne/sdwan-traffic-gen)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.3.0--patch.42-blue.svg)](https://github.com/jsuzanne/stigix/releases)
+[![Version](https://img.shields.io/badge/Version-1.3.0--patch.80-blue.svg)](https://github.com/jsuzanne/stigix/releases)
 
 A modern web-based SD-WAN traffic generator with real-time monitoring, customizable traffic patterns, and comprehensive security testing. Perfect for testing SD-WAN deployments, network QoS policies, and application performance.
 
@@ -96,6 +96,7 @@ This project is my way to turn all that lab and demo experience into an open-sou
 - **Docker-based** - Pre-built multi-platform images (AMD64 + ARM64).
 - **Export/Import config capability** - to clone appplications, probes, IOT , Vyos configurations
 - **One-Click Upgrade (Beta)** - Built-in maintenance UI to pull latest images and restart services with a single click.
+- **State Persistence** - Per-service toggle (Settings → System Info) to preserve the running state of Traffic, Probes, IoT, and Voice across reboots and upgrades. Each service resumes exactly its pre-reboot state — only services that were running before the restart will come back up.
 
   
 ### 🔒 Production Ready
@@ -111,6 +112,8 @@ This project is my way to turn all that lab and demo experience into an open-sou
 The project is evolving rapidly with new features and refinements added in every release.
 
 ### Highlights in v1.3.0
+- **State Persistence** 💾 — New **Settings → System Info** panel with per-service toggles (Traffic, Probes, IoT, Voice). Each service restores its exact pre-reboot state: only services that were active before shutdown resume automatically. Defaults: Traffic ON, Probes ON, IoT OFF (requires config), Voice OFF (requires server config). [Read docs](docs/IOT_SIMULATION.md#-state-persistence) [Voice docs](docs/VOICE_SIMULATION.md#-state-persistence)
+- **IoT DHCP Lease Persistence** 📡 — Devices reclaim their previous IP via RFC 2131 INIT-REBOOT after a container restart, without a full DISCOVER cycle. [Read docs](docs/IOT_SIMULATION.md)
 - **C2 Attack Scenarios** 🎯 — 7 real-traffic attack simulation tests (SQL Injection, DNS C2 Infiltration, Greyware DNS, Compromised DNS, Sliver C2 Emulation, EICAR over HTTPS, DNS Tunneling Burst) with inverted verdict logic, inline badges, and a dedicated C2 scheduler. [Read docs](docs/SECURITY_TESTING.md)
 - **AI Security Tests (AISA)** 🤖 — 5 Palo Alto AI Security simulation scenarios based on a real-world PowerShell POC script. Targets ChatGPT, Grok, Gemini, Perplexity + 24 AI apps for volume telemetry. Includes a dedicated AI scheduler. [Read docs](docs/SECURITY_TESTING.md)
 - **Security Score Dashboard** 📊 — Per-module security posture scoring (URL, DNS, Threat Prevention) with 24h trend charts, baseline pinning, gap analysis, and Latest Changes diff between consecutive runs.
