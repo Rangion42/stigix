@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.83] - 2026-05-16
+### Fixed
+- **ConnectivityPerformance.tsx** 🎯 Alignement horizontal des graphes Score Over Time et Timing Analysis : les deux axes Y gauches ont maintenant width=50 identique, les zones de dessin démarrent au même pixel.
+
 ## [v1.3.0-patch.82] - 2026-05-16
 ### Added
 - **ConnectivityPerformance.tsx** 📈 Global Experience Over Time : carte full-width avec tabs 15m/1H/6H/24H/7D, AreaChart du score global buckété par période, placée entre les KPI et Performance Trends. Le sélecteur de période est partagé avec le reste de la vue.

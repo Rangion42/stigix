@@ -178,10 +178,10 @@ function ProbeScoreChart({ results, range, probeType }: { results: any[]; range:
     return (
         <div className="h-[140px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 4, right: 44, bottom: 0, left: -28 }}>
+                <LineChart data={chartData} margin={{ top: 4, right: 44, bottom: 0, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} vertical={false} />
                     <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={9} tickLine={false} axisLine={false} />
-                    <YAxis yAxisId="score" domain={[0, 100]} stroke={typeColor} fontSize={9} tickLine={false} axisLine={false} width={32} />
+                    <YAxis yAxisId="score" domain={[0, 100]} stroke={typeColor} fontSize={9} tickLine={false} axisLine={false} width={50} />
                     <YAxis yAxisId="latency" orientation="right" stroke="var(--text-muted)" fontSize={9} tickLine={false} axisLine={false} width={40} />
                     <ReTooltip
                         contentStyle={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.15)' }}
@@ -952,7 +952,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                             }))}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
                                                 <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
-                                                <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
+                                                <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} width={50} />
                                                 <ReTooltip
                                                     contentStyle={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                                                     itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
