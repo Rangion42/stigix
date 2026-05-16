@@ -3,7 +3,7 @@ import {
     RefreshCw, Download, AlertCircle, CheckCircle, Clock, Shield, Globe, Lock, Terminal,
     Network, Sliders, ChevronDown, ChevronRight, Server, CheckCircle2, Upload, Power,
     Settings as SettingsIcon, Database, Activity, Cpu, Plus, Edit2, Trash2, MapPin, Zap, Info, XCircle, ShieldAlert, Layers,
-    Clipboard, ExternalLink, BarChart3
+    Clipboard, ExternalLink, BarChart3, AlertTriangle
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { Favicon } from './components/Favicon';
@@ -241,6 +241,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
     const [isSavingCloud, setIsSavingCloud] = useState(false);
     const [isTestingCloud, setIsTestingCloud] = useState(false);
     const [cloudTestResult, setCloudTestResult] = useState<{ success?: boolean; error?: string } | null>(null);
+    const [cloudDirty, setCloudDirty] = useState(false);
 
     // Convergence State
     const [convergenceThresholds, setConvergenceThresholds] = useState({ good: 1, degraded: 5, critical: 10 });
@@ -248,6 +249,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
     const [slsConfig, setSlsConfig] = useState<any>(null);
     const [isTestingPrisma, setIsTestingPrisma] = useState(false);
     const [prismaTestResult, setPrismaTestResult] = useState<{ success?: boolean; error?: string } | null>(null);
+    const [prismaDirty, setPrismaDirty] = useState(false);
     const [probeFilterType, setProbeFilterType] = useState('ALL');
     const [maxCaptures, setMaxCaptures] = useState(uiConfig?.maxCaptures || 10);
     // System startup behaviour
@@ -1021,6 +1023,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
             });
             const data = await res.json();
             setCloudTestResult(data);
+            setCloudDirty(false);
         } catch (e: any) {
             setCloudTestResult({ success: false, error: 'Network error' });
         } finally {
@@ -1039,6 +1042,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
             });
             const data = await res.json();
             setPrismaTestResult(data);
+            setPrismaDirty(false);
         } catch (e: any) {
             setPrismaTestResult({ success: false, error: 'Network error' });
         } finally {
@@ -2871,7 +2875,12 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                {cloudTestResult && (
+                                {(cloudDirty || (cloudTestResult && !cloudTestResult.success)) && (
+                                    <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border flex items-center gap-1.5 bg-amber-500/10 text-amber-500 border-amber-500/30">
+                                        <AlertTriangle size={11} /> Not tested
+                                    </span>
+                                )}
+                                {cloudTestResult && !cloudDirty && (
                                     <span className={cn(
                                         "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border flex items-center gap-1.5 shadow-sm",
                                         cloudTestResult.success ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" : "bg-red-500/10 text-red-500 border-red-500/30"
@@ -2920,7 +2929,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                             type={showCloudKey ? "text" : "password"}
                                             placeholder={cloudConfig?.hasKey ? "••••••••••••••••" : "paste your master key here..."}
                                             value={cloudMasterKey}
-                                            onChange={e => setCloudMasterKey(e.target.value)}
+                                            onChange={e => { setCloudMasterKey(e.target.value); setCloudDirty(true); setCloudTestResult(null); }}
                                             className="w-full bg-card-secondary/50 border border-border text-[11px] font-black tracking-widest text-text-primary rounded-xl px-5 py-3 outline-none focus:ring-1 focus:ring-blue-500 transition-all shadow-inner font-mono"
                                         />
                                         <button 
@@ -2939,7 +2948,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                             type="text"
                                             placeholder="https://stigix-target.your-account.workers.dev"
                                             value={cloudConfig?.baseUrl || ''}
-                                            onChange={e => setCloudConfig(prev => prev ? { ...prev, baseUrl: e.target.value } : null)}
+                                            onChange={e => { setCloudConfig(prev => prev ? { ...prev, baseUrl: e.target.value } : null); setCloudDirty(true); setCloudTestResult(null); }}
                                             className="w-full bg-card-secondary/50 border border-border text-[11px] font-mono text-text-primary rounded-xl px-5 py-3 outline-none focus:ring-1 focus:ring-blue-500 transition-all shadow-inner"
                                         />
                                     </div>
@@ -3679,7 +3688,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                                 type="text"
                                                 placeholder="e.g. 777003"
                                                 value={slsConfig.tsg_id}
-                                                onChange={e => setSlsConfig({ ...slsConfig, tsg_id: e.target.value })}
+                                                onChange={e => { setSlsConfig({ ...slsConfig, tsg_id: e.target.value }); setPrismaDirty(true); setPrismaTestResult(null); }}
                                                 className="w-full bg-card border border-border rounded-xl px-4 py-3 text-xs font-mono outline-none focus:ring-1 focus:ring-blue-500 transition-all font-black"
                                             />
                                         </div>
@@ -3690,7 +3699,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                                 type="text"
                                                 placeholder="Enter OAuth2 Client ID"
                                                 value={slsConfig.client_id}
-                                                onChange={e => setSlsConfig({ ...slsConfig, client_id: e.target.value })}
+                                                onChange={e => { setSlsConfig({ ...slsConfig, client_id: e.target.value }); setPrismaDirty(true); setPrismaTestResult(null); }}
                                                 className="w-full bg-card border border-border rounded-xl px-4 py-3 text-xs font-mono outline-none focus:ring-1 focus:ring-blue-500 transition-all font-black"
                                             />
                                         </div>
@@ -3702,7 +3711,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                                     type="password"
                                                     placeholder="••••••••••••••••"
                                                     value={slsConfig.client_secret || ''}
-                                                    onChange={e => setSlsConfig({ ...slsConfig, client_secret: e.target.value })}
+                                                    onChange={e => { setSlsConfig({ ...slsConfig, client_secret: e.target.value }); setPrismaDirty(true); setPrismaTestResult(null); }}
                                                     className="w-full bg-card border border-border rounded-xl px-4 py-3 text-xs font-mono outline-none focus:ring-1 focus:ring-blue-500 transition-all pr-10 font-black"
                                                 />
                                                 <Lock size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted opacity-40" />
@@ -3788,7 +3797,13 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                             {saving ? <RefreshCw className="animate-spin inline mr-2" size={14} /> : 'Save Configuration'}
                                         </button>
                                     </div>
-                                    {prismaTestResult && (
+                                    {(prismaDirty || (prismaTestResult && !prismaTestResult.success)) && (
+                                        <div className="mt-2 p-3 border rounded-xl text-xs font-bold flex items-center gap-2 bg-amber-500/10 border-amber-500/30 text-amber-500">
+                                            <AlertTriangle size={14} />
+                                            Credentials have not been validated — click "Test Auth" before saving to confirm they work.
+                                        </div>
+                                    )}
+                                    {prismaTestResult && !prismaDirty && (
                                         <div className={cn(
                                             "mt-2 p-3 border rounded-xl text-xs font-bold flex items-center gap-2",
                                             prismaTestResult.success ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500" : "bg-red-500/10 border-red-500/30 text-red-500"
