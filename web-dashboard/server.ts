@@ -144,6 +144,32 @@ function savePrismaConfig(config: any) {
 // Load global config at startup
 loadPrismaConfig();
 
+/**
+ * Triggers a hot-reload of the RegistryManager when both conditions are met:
+ *  1. TSG ID is available (pocId for the registry)
+ *  2. A Stigix Master Key is saved on disk (confirms cloud identity is configured)
+ * Called without await so it never blocks the HTTP response.
+ */
+function tryReinitRegistry(reason: string) {
+    const tsgId = process.env.PRISMA_SDWAN_TSGID;
+    let hasMasterKey = false;
+    try {
+        const cloudCfg = fs.existsSync(CLOUD_CONFIG_FILE)
+            ? JSON.parse(fs.readFileSync(CLOUD_CONFIG_FILE, 'utf8'))
+            : {};
+        hasMasterKey = !!(cloudCfg.masterKey || process.env.STIGIX_TARGET_MASTER_KEY);
+    } catch {}
+
+    if (tsgId && hasMasterKey) {
+        log('REGISTRY', `Auto hot-reload triggered by: ${reason}`);
+        registryManager.reinitialize().catch(e =>
+            log('REGISTRY', `Hot-reload failed: ${e.message}`, 'error')
+        );
+    } else {
+        log('REGISTRY', `Hot-reload skipped (${reason}): tsgId=${!!tsgId}, masterKey=${hasMasterKey}`);
+    }
+}
+
 const DEBUG = process.env.DEBUG === 'true';
 
 // Quick Targets for XFR: "Label1:IP1,Label2:IP2"
@@ -6463,6 +6489,8 @@ app.post('/api/security/config', authenticateToken, (req, res) => {
         config.sls_config = sls_config;
         // Also save to global Prisma config for other managers
         savePrismaConfig(sls_config);
+        // Hot-reload registry if credentials are now complete
+        if (sls_config.tsg_id) tryReinitRegistry('Prisma config saved with TSG ID');
     }
     if (scheduled_execution !== undefined) {
         config.scheduled_execution = scheduled_execution;
@@ -6509,6 +6537,17 @@ app.post('/api/config/cloud/test', authenticateToken, async (req, res) => {
 
         const testRes = await fetch(targetUrl.toString(), { signal: AbortSignal.timeout(10000) });
         if (testRes.ok) {
+            // Cloud test success — TSG ID is guaranteed valid (used in signature).
+            // Propagate to process.env so reinitialize() picks it up.
+            if (tsgId && !process.env.PRISMA_SDWAN_TSGID) {
+                process.env.PRISMA_SDWAN_TSGID = tsgId;
+                log('REGISTRY', `TSG ID propagated to process.env from cloud test: ${tsgId}`);
+            }
+            // Hot-reload registry immediately — no need to re-check conditions.
+            log('REGISTRY', `Cloud test succeeded. Triggering registry hot-reload.`);
+            registryManager.reinitialize().catch(e =>
+                log('REGISTRY', `Hot-reload after cloud test failed: ${e.message}`, 'error')
+            );
             res.json({ success: true });
         } else {
             const body = await testRes.text();

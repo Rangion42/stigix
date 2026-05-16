@@ -458,6 +458,24 @@ export class RegistryManager {
         };
     }
 
+    /**
+     * Hot-reload: reinitialize the registry client with fresh credentials from env.
+     * Call this after PRISMA_SDWAN_TSGID or STIGIX_REGISTRY_API_KEY changes at runtime.
+     */
+    async reinitialize(): Promise<void> {
+        log('REGISTRY', 'Hot-reload: reinitializing registry client with updated credentials...');
+        this.stop();
+        this.leaderInfo = null;
+        this.peerCache.clear();
+        this.sharedTargetsCache = [];
+        // Recreate client from fresh process.env (already updated by savePrismaConfig)
+        this.client = StigixRegistryClient.fromEnv((usage) => this.handleUsage(usage));
+        this.currentIp = this.detectPrivateIp(this.configDir);
+        this.loadStaticLeader();
+        await this.start();
+        log('REGISTRY', 'Hot-reload complete.');
+    }
+
     stop() {
         if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
         if (this.discoveryInterval) clearInterval(this.discoveryInterval);
