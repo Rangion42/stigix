@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.89] - 2026-05-16
+### Fixed
+- **Cloud Target Security — Master Key TEST bug** : Après navigation (ex. Settings → Targets → retour), le champ Master Key se vidait (`cloudMasterKey = ''`). Le bouton TEST envoyait alors `masterKey: ""` au backend au lieu de `undefined`, ce qui empêchait le fallback sur la clé sauvée sur disque → HTTP 401. Fix : `cloudMasterKey.trim() || undefined` pour laisser le backend utiliser `cloud-config.json` quand le champ est vide.
+- Ajout de `autoComplete="new-password"` sur l'input pour empêcher l'autofill du navigateur d'injecter une valeur incorrecte dans le champ password vide.
+- Placeholder changé en "Leave empty to keep saved key" pour indiquer clairement le comportement attendu.
+
 ## [v1.3.0-patch.88] - 2026-05-16
 ### Added
 - **Global Experience Score — sélection des types de probes** : Le score global n'était calculé que sur HTTP/HTTPS et ignorait PING, DNS, UDP, TCP et CLOUD (y compris les probes Stigix Cloud). Désormais, par défaut **tous les types sont inclus**. Un nouveau bloc "Global Experience Score — Probe Types" dans Settings > Probes permet d'activer/désactiver chaque type via des boutons colorés, avec un avertissement orange si des types sont exclus.

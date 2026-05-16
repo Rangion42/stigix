@@ -1020,7 +1020,9 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                 headers: authHeaders,
                 body: JSON.stringify({ 
                     baseUrl: cloudConfig?.baseUrl || 'https://stigix-target.jlsuzanne.workers.dev',
-                    masterKey: cloudMasterKey,
+                    // Only send masterKey if the user has actually typed something.
+                    // If empty + hasKey, let the backend use the saved key from disk.
+                    masterKey: cloudMasterKey.trim() || undefined,
                     tsgId: slsConfig?.tsg_id || registryStatus?.poc_id
                 })
             });
@@ -2987,7 +2989,8 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                     <div className="relative group">
                                         <input
                                             type={showCloudKey ? "text" : "password"}
-                                            placeholder={cloudConfig?.hasKey ? "••••••••••••••••" : "paste your master key here..."}
+                                            autoComplete="new-password"
+                                            placeholder={cloudConfig?.hasKey ? "Leave empty to keep saved key" : "paste your master key here..."}
                                             value={cloudMasterKey}
                                             onChange={e => { setCloudMasterKey(e.target.value); setCloudDirty(true); setCloudTestResult(null); }}
                                             className="w-full bg-card-secondary/50 border border-border text-[11px] font-black tracking-widest text-text-primary rounded-xl px-5 py-3 outline-none focus:ring-1 focus:ring-blue-500 transition-all shadow-inner font-mono"
