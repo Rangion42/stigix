@@ -7,6 +7,7 @@ import path from 'path';
 import dgram from 'dgram';
 //import { spawn, exec } from 'child_process';
 import { spawn, exec, execSync } from 'child_process';
+import crypto from 'crypto';
 import { promisify } from 'util';
 import { fileURLToPath } from 'url';
 import os from 'os';
@@ -6456,6 +6457,89 @@ app.post('/api/security/config', authenticateToken, (req, res) => {
         res.json({ success: true, config: getSecurityUIConfig() });
     } else {
         res.status(500).json({ error: 'Failed to save config' });
+    }
+});
+
+// API: Test Cloudflare Worker Configuration
+app.post('/api/config/cloud/test', authenticateToken, async (req, res) => {
+    const { baseUrl: reqBaseUrl, masterKey: reqMasterKey, tsgId: reqTsgId } = req.body;
+    try {
+        // Read saved config from disk as fallback
+        const cloudCfgPath = path.join(PROJECT_ROOT, 'config', 'cloud-config.json');
+        let savedCloudCfg: any = {};
+        try { savedCloudCfg = JSON.parse(fs.readFileSync(cloudCfgPath, 'utf8')); } catch {}
+
+        const baseUrl = reqBaseUrl || savedCloudCfg.baseUrl || 'https://target.stigix.io';
+        const masterKey = reqMasterKey || savedCloudCfg.masterKey || process.env.STIGIX_TARGET_MASTER_KEY;
+        const tsgId = reqTsgId || savedCloudCfg.tsg_id || process.env.PRISMA_SDWAN_TSGID;
+
+        if (!baseUrl) return res.json({ success: false, error: 'No Worker URL configured' });
+
+        // Append /saas/info to test a protected endpoint
+        const targetUrl = new URL(baseUrl.replace(/\/$/, '') + '/saas/info');
+
+        // Sign the request if we have credentials
+        if (masterKey && tsgId) {
+            const signature = crypto.createHash('sha256').update(`${tsgId}:${masterKey}`).digest('hex');
+            targetUrl.searchParams.set('key', signature);
+            targetUrl.searchParams.set('tsg', tsgId);
+        }
+
+        const testRes = await fetch(targetUrl.toString(), { signal: AbortSignal.timeout(10000) });
+        if (testRes.ok) {
+            res.json({ success: true });
+        } else {
+            const body = await testRes.text();
+            res.json({ success: false, error: `HTTP ${testRes.status}${body ? ': ' + body.substring(0, 80) : ''}` });
+        }
+    } catch (e: any) {
+        res.json({ success: false, error: e.message });
+    }
+});
+
+// API: Test Prisma SASE Configuration
+app.post('/api/security/config/test', authenticateToken, async (req, res) => {
+    const { sls_config: reqConfig } = req.body;
+
+    // Read saved prisma config from disk as fallback
+    const prismaCfgPath = path.join(PROJECT_ROOT, 'config', 'prisma-config.json');
+    let savedPrisma: any = {};
+    try { savedPrisma = JSON.parse(fs.readFileSync(prismaCfgPath, 'utf8')); } catch {}
+
+    const client_id = reqConfig?.client_id || savedPrisma.client_id || process.env.PRISMA_SDWAN_CLIENT_ID;
+    const client_secret = reqConfig?.client_secret || savedPrisma.client_secret || process.env.PRISMA_SDWAN_CLIENT_SECRET;
+    const tsg_id = reqConfig?.tsg_id || savedPrisma.tsg_id || process.env.PRISMA_SDWAN_TSGID;
+    const region = reqConfig?.region || savedPrisma.region || 'prd';
+
+    if (!client_id || !client_secret || !tsg_id) {
+        return res.json({ success: false, error: 'Missing Prisma credentials' });
+    }
+
+    try {
+        const scriptPath = path.join(PROJECT_ROOT, 'engines', 'getflow.py');
+        const env = {
+            ...process.env,
+            PRISMA_SDWAN_CLIENT_ID: client_id,
+            PRISMA_SDWAN_CLIENT_SECRET: client_secret,
+            PRISMA_SDWAN_TSGID: tsg_id,
+            PRISMA_SDWAN_REGION: region === 'eu' ? 'Germany' : 'US'
+        };
+
+        exec(`python3 "${scriptPath}" --list-sites`, { env, timeout: 15000 }, (error, stdout, stderr) => {
+            if (error) {
+                let errorMsg = 'Authentication failed';
+                const combined = (stderr || '') + (stdout || '');
+                if (combined.includes('invalid_client')) errorMsg = 'Invalid Client ID or Secret';
+                else if (combined.includes('invalid_grant')) errorMsg = 'Invalid TSG ID or unauthorized';
+                else if (combined.includes('ModuleNotFoundError')) errorMsg = 'Missing Python module (prisma_sase)';
+                else if (stderr) errorMsg = stderr.substring(0, 120).trim();
+                res.json({ success: false, error: errorMsg });
+            } else {
+                res.json({ success: true });
+            }
+        });
+    } catch (e: any) {
+        res.json({ success: false, error: e.message });
     }
 });
 
