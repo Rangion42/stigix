@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.3.0-patch.75] - 2026-05-16
+### Added
+- **iot_emulator.py** 📋 Persistance des baux DHCP (RFC 2131 INIT-REBOOT) : chaque IP obtenue par DHCP est sauvegardée dans `/app/config/dhcp_leases.json` (volume persistant Docker).
+- **iot_emulator.py** 🔄 Au redémarrage du container, le device tente de reclaimer la même IP via un REQUEST direct (sans DISCOVER) — si le serveur DHCP accepte, même IP garantie.
+- **iot_emulator.py** 🛡️ Si le serveur NAK ou ne répond pas (IP hors subnet), fallback automatique sur le DISCOVER classique.
+- **iot_emulator.py** 🔒 Si le device n'avait jamais eu d'IP, aucune lease n'est sauvée : comportement inchangé.
+
 ## [v1.3.0-patch.74] - 2026-05-16
 ### Fixed
 - **ConnectivityPerformance.tsx** 🐛 Le filtre TimeRange fonctionne maintenant réellement : la limite API est désormais dynamique selon la plage (15m=300, 1h=1500, 6h=5000, 24h=12000, 7d=30000).

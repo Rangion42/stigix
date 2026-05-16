@@ -16,6 +16,46 @@ import warnings
 from datetime import datetime
 from pathlib import Path
 import os
+import fcntl
+
+# ── DHCP Lease Persistence (RFC 2131 INIT-REBOOT) ────────────────────────────
+# Stored in /app/config so it survives container restarts (Docker volume mount)
+DHCP_LEASE_FILE = os.getenv('DHCP_LEASE_FILE', '/app/config/dhcp_leases.json')
+
+def _load_dhcp_leases() -> dict:
+    """Load all persisted DHCP leases. Thread-safe read."""
+    try:
+        if os.path.exists(DHCP_LEASE_FILE):
+            with open(DHCP_LEASE_FILE, 'r') as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+def save_dhcp_lease(mac: str, ip: str, gateway: str = None):
+    """Persist a DHCP lease {MAC → ip, gateway, timestamp}. Thread-safe write."""
+    try:
+        os.makedirs(os.path.dirname(DHCP_LEASE_FILE), exist_ok=True)
+        with open(DHCP_LEASE_FILE, 'a+') as f:  # open for read+append
+            try:
+                fcntl.flock(f, fcntl.LOCK_EX)
+                f.seek(0)
+                try:
+                    leases = json.load(f)
+                except Exception:
+                    leases = {}
+                leases[mac] = {'ip': ip, 'gateway': gateway, 'timestamp': time.time()}
+                f.seek(0)
+                f.truncate()
+                json.dump(leases, f, indent=2)
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)
+    except Exception as e:
+        logging.getLogger(__name__).warning(f'Could not save DHCP lease for {mac}: {e}')
+
+def get_dhcp_lease(mac: str) -> dict | None:
+    """Return saved lease dict {ip, gateway} for a MAC, or None."""
+    return _load_dhcp_leases().get(mac)
 
 # Suppress Scapy import errors by redirecting stderr temporarily
 _original_stderr = sys.stderr
@@ -754,13 +794,27 @@ class IoTDevice:
 
     def do_dhcp_sequence(self):
         """Perform DHCP sequence with retries: Discover → Offer → Request → ACK.
-        
-        Fallback strategy:
+
+        RFC 2131 INIT-REBOOT: if a lease was saved from a previous session, we
+        try to reclaim the same IP via a direct REQUEST first (no DISCOVER).
+        If the server NAKs or doesn't respond we fall back to a normal DISCOVER.
+
+        Fallback strategy (normal DISCOVER path):
           1. Full ACK received → IP confirmed from server (best)
-          2. OFFER received but no ACK (e.g. unicast ACK dropped by kernel) →
-             use offered IP + host gateway as fallback (good enough for emulation)
+          2. OFFER received but no ACK → use offered IP + host gateway (good enough)
           3. No OFFER at all → device stays silent until renewal loop retries
         """
+        # ── Phase 0: INIT-REBOOT — try to reclaim the last known IP ───────────
+        saved_lease = get_dhcp_lease(self.mac)
+        if saved_lease and saved_lease.get('ip'):
+            saved_ip = saved_lease['ip']
+            self.log("info", f"📋 Saved DHCP lease found: {saved_ip} — attempting INIT-REBOOT (RFC 2131)")
+            result = self._dhcp_init_reboot_attempt(saved_ip)
+            if result == "ack_ok":
+                return  # Same IP confirmed — done
+            self.log("info", "🔄 INIT-REBOOT rejected by server — falling back to full DISCOVER")
+
+        # ── Phase 1–3: Normal DISCOVER → OFFER → REQUEST → ACK ───────────────
         last_offered_ip = None
         last_offered_server = None
 
@@ -779,7 +833,6 @@ class IoTDevice:
         # ── Fallback: use last OFFER if we got one but never confirmed ACK ────
         if last_offered_ip:
             self.ip = last_offered_ip
-            # Try to learn gateway: host routing table fallback
             gw = self._get_host_gateway()
             if gw:
                 self.gateway = gw
@@ -788,7 +841,6 @@ class IoTDevice:
             else:
                 self.log("warning", f"⚠️ DHCP ACK never confirmed — using offered IP {self.ip} "
                                     f"(no gateway detected, traffic may fail)")
-            # Send gratuitous ARP to announce ourselves anyway
             try:
                 garp = Ether(dst="ff:ff:ff:ff:ff:ff", src=self.mac) / \
                        ARP(op="is-at", hwsrc=self.mac, psrc=self.ip,
@@ -799,11 +851,87 @@ class IoTDevice:
                 self.log("warning", f"⚠️ Fallback gratuitous ARP failed: {ge}")
             return
 
-        # No OFFER at all — stay silent
+        # No OFFER at all — stay silent (lease NOT erased: keep it for next boot)
         self.ip = None
         self.gateway = None
         self.log("error", f"❌ DHCP failed after {self.DHCP_MAX_RETRIES} attempts — no OFFER received. "
                           f"Device will stay silent until renewal.")
+
+    def _dhcp_init_reboot_attempt(self, saved_ip: str) -> str:
+        """RFC 2131 INIT-REBOOT: send a broadcast REQUEST with requested_addr
+        set to the last known IP, without doing a DISCOVER first.
+        Returns: 'ack_ok' | 'nak' | 'no_response' | 'error'
+        """
+        try:
+            self.dhcp_xid = random.randint(1, 0xFFFFFFFF)
+
+            dhcp_opts = self.build_dhcp_options("request")
+            # Remove trailing 'end' to append our options
+            if dhcp_opts and dhcp_opts[-1] == ("end"):
+                dhcp_opts = dhcp_opts[:-1]
+
+            # INIT-REBOOT: requested_addr = saved IP, NO server_id option
+            dhcp_opts.append(("requested_addr", saved_ip))
+            dhcp_opts.append(("end"))
+
+            request = Ether(dst="ff:ff:ff:ff:ff:ff", src=self.mac) / \
+                      IP(src="0.0.0.0", dst="255.255.255.255") / \
+                      UDP(sport=68, dport=67) / \
+                      BOOTP(chaddr=bytes.fromhex(self.mac.replace(':', '')),
+                            xid=self.dhcp_xid, flags=0x8000, htype=1, hlen=6) / \
+                      DHCP(options=dhcp_opts)
+
+            self.log("info", f"📤 DHCP INIT-REBOOT REQUEST for {saved_ip} (xid: {hex(self.dhcp_xid)})")
+            sendp(request, iface=self.interface, verbose=0)
+
+            # Wait for ACK or NAK
+            ack_pkts = self._sniff_dhcp(self.DHCP_TIMEOUT)
+            ack_pkt = next((p for p in ack_pkts
+                            if self.parse_dhcp_options(p).get('message-type') in (5, 6)), None)
+
+            if not ack_pkt:
+                self.log("warning", f"⚠️ No server response to INIT-REBOOT (timeout {self.DHCP_TIMEOUT}s)")
+                return "no_response"
+
+            opts = self.parse_dhcp_options(ack_pkt)
+            msg_type = opts.get('message-type')
+
+            if msg_type == 6:  # NAK — IP no longer valid in this subnet
+                self.log("warning", f"⚠️ DHCP NAK for saved IP {saved_ip} (subnet changed?)")
+                return "nak"
+
+            if msg_type == 5:  # ACK — same IP confirmed
+                assigned_ip = ack_pkt[BOOTP].yiaddr
+                self.ip = assigned_ip
+                router = opts.get('router')
+                if router:
+                    self.gateway = router[0] if isinstance(router, list) else router
+                    self.log("info", f"🌐 Gateway from DHCP: {self.gateway}")
+
+                self.log("info", f"✅ INIT-REBOOT success — same IP confirmed: {assigned_ip}")
+                if JSON_OUTPUT:
+                    emit_json("dhcp_ack", device_id=self.id, assigned_ip=assigned_ip,
+                              server_id=ack_pkt[IP].src, gateway=self.gateway, init_reboot=True)
+
+                # Gratuitous ARP
+                try:
+                    garp = Ether(dst="ff:ff:ff:ff:ff:ff", src=self.mac) / \
+                           ARP(op="is-at", hwsrc=self.mac, psrc=assigned_ip,
+                               hwdst="ff:ff:ff:ff:ff:ff", pdst=assigned_ip)
+                    sendp(garp, iface=self.interface, verbose=0)
+                    self.log("info", f"📣 Gratuitous ARP: {assigned_ip} is-at {self.mac}")
+                except Exception as ge:
+                    self.log("warning", f"⚠️ Gratuitous ARP failed: {ge}")
+
+                # Update persisted lease with fresh gateway
+                save_dhcp_lease(self.mac, assigned_ip, self.gateway)
+                return "ack_ok"
+
+            return "no_response"
+
+        except Exception as e:
+            self.log("error", f"❌ DHCP INIT-REBOOT error: {e}")
+            return "error"
 
     def _dhcp_attempt(self, attempt: int = 1) -> str:
         """Single DHCP Discover→Offer→Request→ACK attempt.
@@ -913,6 +1041,9 @@ class IoTDevice:
                     self.log("info", f"📣 Gratuitous ARP: {assigned_ip} is-at {self.mac}")
                 except Exception as ge:
                     self.log("warning", f"⚠️ Gratuitous ARP failed: {ge}")
+
+                # Persist lease — survives container restarts (INIT-REBOOT on next boot)
+                save_dhcp_lease(self.mac, assigned_ip, self.gateway)
 
                 self.log("info", f"✅ DHCP complete (IP: {self.ip}, GW: {self.gateway})")
                 return "ack_ok"
