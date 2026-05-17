@@ -9586,6 +9586,10 @@ app.get('/api/iot/stats', authenticateToken, (req, res) => {
     res.json(iotManager.getAllStats());
 });
 
+app.get('/api/iot/bad-behavior', authenticateToken, (req, res) => {
+    res.json({ enabled: iotManager.getBadBehavior() });
+});
+
 app.post('/api/iot/bad-behavior', authenticateToken, (req, res) => {
     const { enabled } = req.body;
     if (typeof enabled !== 'boolean') {
@@ -9594,6 +9598,7 @@ app.post('/api/iot/bad-behavior', authenticateToken, (req, res) => {
     iotManager.setBadBehavior(enabled);
     res.json({ success: true, bad_behavior: enabled });
 });
+
 
 app.get('/api/iot/config/export', authenticateToken, (req, res) => {
     try {
@@ -9687,7 +9692,7 @@ app.post('/api/iot/import-prisma-csv', authenticateToken, async (req, res) => {
         if (max_devices  && Number(max_devices) > 0)  args.push('--max-devices', String(Number(max_devices)));
         if (only_iot)        args.push('--only-iot');
         if (enable_security) args.push('--enable-security');
-        if (security_percentage != null && Number(security_percentage) > 0)
+        if (security_percentage != null && Number(security_percentage) >= 0)
             args.push('--security-percentage', String(Number(security_percentage)));
 
         log('IOT', `Running Prisma CSV import: ${pythonBin} ${args.join(' ')}`);

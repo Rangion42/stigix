@@ -179,6 +179,51 @@ def safe(row, key, default=""):
     return (row.get(key) or "").strip()
 
 
+def normalize_mac(mac_raw: str) -> str:
+    """
+    Normalize a MAC address from various Prisma CSV export formats to xx:xx:xx:xx:xx:xx.
+    Handles:
+      - Standard colon format:       00:1d:9c:d7:0a:82           → kept as-is
+      - Rockwell slot suffix:        00:1d:9c:d7:0a:82-slot-2    → strip suffix
+      - Dash-separated:              00-1d-9c-d7-0a-82            → convert to colons
+      - 12-char hex no separators:   001d9cd70a82                 → add colons
+      - Decimal integer (48-bit):    32781234567890               → hex conversion
+    Returns "" if the value cannot be mapped to a valid 6-byte MAC (caller generates random).
+    """
+    if not mac_raw:
+        return ""
+    mac = mac_raw.strip().lower()
+
+    # 1. Strip Rockwell / industrial slot suffix: "xx:xx:xx:xx:xx:xx-slot-N"
+    mac = re.sub(r'-slot-\d+$', '', mac).strip()
+    mac = re.sub(r'-port-\d+$', '', mac).strip()
+
+    # 2. Already valid colon-separated
+    if re.match(r'^([0-9a-f]{2}:){5}[0-9a-f]{2}$', mac):
+        return mac
+
+    # 3. Dash-separated: aa-bb-cc-dd-ee-ff
+    if re.match(r'^([0-9a-f]{2}-){5}[0-9a-f]{2}$', mac):
+        return mac.replace('-', ':')
+
+    # 4. 12-char hex string without separators: aabbccddeeff
+    hex_only = re.sub(r'[^0-9a-f]', '', mac)
+    if len(hex_only) == 12:
+        return ':'.join(hex_only[i:i+2] for i in range(0, 12, 2))
+
+    # 5. Decimal integer representation of the 48-bit MAC value
+    if re.match(r'^\d+$', mac.strip()):
+        try:
+            val = int(mac.strip())
+            if 0 < val <= 0xFFFFFFFFFFFF:  # valid 48-bit range
+                hex_str = f'{val:012x}'
+                return ':'.join(hex_str[i:i+2] for i in range(0, 12, 2))
+        except ValueError:
+            pass
+
+    return ""  # Cannot normalize — caller will generate a random MAC
+
+
 def extract_vendor(row):
     """
     Extract vendor from various Prisma CSV columns.
@@ -368,7 +413,9 @@ def convert(
         vendor = extract_vendor(row)
         model  = extract_model(row)
 
-        # MAC fallback
+        # MAC normalization — handles Rockwell slot suffix, decimal integers, etc.
+        mac_raw = safe(row, "mac address")
+        mac = normalize_mac(mac_raw)
         if not mac or mac == "00:00:00:00:00:00":
             mac = ":".join(f"{random.randint(0, 255):02x}" for _ in range(6))
 

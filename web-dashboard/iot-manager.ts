@@ -63,6 +63,10 @@ export class IoTManager extends EventEmitter {
     private idleTimers: Map<string, NodeJS.Timeout> = new Map();
     private configDir: string;
 
+    // ── Global bad behavior state ─────────────────────────────────────────────
+    // Tracks the last setBadBehavior() call so we can re-apply it after a daemon restart.
+    private badBehaviorEnabled: boolean = true; // mirrors --enable-bad-behavior CLI flag
+
     constructor(networkInterface: string = 'eth0', configDir?: string) {
         super();
         this.daemonInterface = networkInterface;
@@ -324,6 +328,11 @@ export class IoTManager extends EventEmitter {
             if (this.daemonReady) {
                 log('IOT', `Daemon recovered — re-sending ${recovered.size} device start commands`);
                 this.restartAttempts = 0;
+                // Re-apply bad behavior state (daemon resets to enabled on spawn)
+                if (!this.badBehaviorEnabled) {
+                    this.sendCommand({ cmd: 'disable_bad_behavior' });
+                    log('IOT', 'Re-applied disable_bad_behavior after daemon restart');
+                }
                 for (const cfg of recovered.values()) {
                     this.sendCommand({ cmd: 'start', device: cfg });
                 }
@@ -443,9 +452,12 @@ export class IoTManager extends EventEmitter {
 
     setBadBehavior(enabled: boolean): void {
         if (!this.daemonProcess) { log('IOT', 'Cannot set bad behavior — daemon not running', 'warn'); return; }
+        this.badBehaviorEnabled = enabled;
         this.sendCommand({ cmd: enabled ? 'enable_bad_behavior' : 'disable_bad_behavior' });
         log('IOT', `Bad behavior ${enabled ? 'ENABLED' : 'DISABLED'} globally`);
     }
+
+    getBadBehavior(): boolean { return this.badBehaviorEnabled; }
 
     isDaemonHealthy(): boolean { return this.daemonProcess !== null && this.daemonReady && !this.gaveUp; }
 

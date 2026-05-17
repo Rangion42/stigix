@@ -129,6 +129,10 @@ export default function Iot({ token }: IotProps) {
             setIotSettings(d);
             setSliderValue(d.max);
         }).catch(() => {});
+        // Sync bad behavior state from server (daemon starts with it enabled)
+        fetch('/api/iot/bad-behavior', { headers: authHeaders() }).then(r => r.json()).then(d => {
+            if (typeof d.enabled === 'boolean') setBadBehaviorEnabled(d.enabled);
+        }).catch(() => {});
         fetchDevices();
         const interval = setInterval(fetchDevices, 5000);
         return () => clearInterval(interval);
@@ -618,15 +622,17 @@ export default function Iot({ token }: IotProps) {
                         <button
                             id="bad-behavior-toggle"
                             onClick={toggleBadBehavior}
-                            title={badBehaviorEnabled ? 'Disable Bad Behavior (switch to clean mode)' : 'Enable Bad Behavior for all configured devices'}
+                            title={badBehaviorEnabled
+                                ? 'Attacks active — click to stop all bad behavior (Clean Mode)'
+                                : 'No attacks — click to enable bad behavior on all configured devices'}
                             className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
                                 badBehaviorEnabled
-                                    ? 'bg-red-500/10 border-red-500/40 text-red-400 hover:bg-red-500/20'
+                                    ? 'bg-red-500/10 border-red-500/40 text-red-400 hover:bg-red-500/20 animate-pulse'
                                     : 'bg-card-secondary border-border text-text-muted hover:text-text-secondary hover:bg-card-hover'
                             }`}
                         >
-                            <span>{badBehaviorEnabled ? '💀' : '🗡️'}</span>
-                            <span>{badBehaviorEnabled ? 'Attack ON' : 'Clean Mode'}</span>
+                            <span>{badBehaviorEnabled ? '💀' : '🛡️'}</span>
+                            <span>{badBehaviorEnabled ? 'Attacks ON' : 'Clean'}</span>
                         </button>
 
                         <button
