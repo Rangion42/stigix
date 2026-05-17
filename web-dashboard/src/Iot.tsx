@@ -826,26 +826,22 @@ export default function Iot({ token }: IotProps) {
                                         className={cn(
                                             "flex items-center justify-center transition-all border",
                                             isCompact ? "p-2 rounded-xl" : "flex-1 py-3.5 rounded-2xl text-sm font-black",
-                                            (device as any).deviceState === 'ACTIVE'
-                                                ? "bg-red-500/10 hover:bg-red-500/20 text-red-500 border-red-500/20"
-                                                : (device as any).deviceState === 'QUEUED'
-                                                    ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border-amber-500/20"
-                                                    : (device as any).deviceState === 'IDLE'
-                                                        ? "bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/20"
-                                                        : "bg-blue-600 hover:bg-blue-500 text-white border-transparent shadow-lg shadow-blue-900/40"
+                                            (device as any).deviceState === 'QUEUED'
+                                                ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border-amber-500/20"
+                                                : (device as any).deviceState === 'ACTIVE' || (device as any).deviceState === 'IDLE'
+                                                    ? "bg-red-500/10 hover:bg-red-500/20 text-red-500 border-red-500/20"
+                                                    : "bg-blue-600 hover:bg-blue-500 text-white border-transparent shadow-lg shadow-blue-900/40"
                                         )}
                                         title={
-                                            (device as any).deviceState === 'ACTIVE' ? "Shut Down" :
                                             (device as any).deviceState === 'QUEUED' ? "Remove from Queue" :
-                                            (device as any).deviceState === 'IDLE'   ? "Cancel Idle" :
+                                            (device as any).deviceState === 'ACTIVE' || (device as any).deviceState === 'IDLE' ? "Shut Down" :
                                             "Start"
                                         }
                                     >
                                         <Power size={18} />
                                         {!isCompact && <span className="ml-2 tracking-widest">
-                                            {(device as any).deviceState === 'ACTIVE' ? 'Shut' :
-                                             (device as any).deviceState === 'QUEUED' ? 'Dequeue' :
-                                             (device as any).deviceState === 'IDLE'   ? 'Cancel' :
+                                            {(device as any).deviceState === 'QUEUED' ? 'Dequeue' :
+                                             (device as any).deviceState === 'ACTIVE' || (device as any).deviceState === 'IDLE' ? 'Shut' :
                                              'Start'}
                                         </span>}
                                     </button>
