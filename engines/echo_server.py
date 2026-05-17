@@ -8,7 +8,8 @@ from socket import *
 DEBUG_MODE = os.getenv('DEBUG', 'false').lower() == 'true'
 
 # UDP Echo Server - Optimized for Docker & Multi-port
-BUFSIZE = 1024
+# BUFSIZE: must be >= max(RTP_header + payload) = 12 + 1300 (video) = 1312 → use 2048
+BUFSIZE = 2048
 
 def get_version():
     try:
