@@ -53,6 +53,7 @@ On macOS, Windows, and WSL2, IoT simulation runs in **Bridge Mode** with these l
 ## 📝 Configuration
 
 IoT devices are managed via the **IoT Tab** in the Dashboard. The configuration is stored in `config/iot-devices.json`.
+Concurrency settings are stored separately in `config/iot-settings.json` (auto-created on first save).
 
 *Device gallery displaying all simulated IoT hardware with their current network status:*
 <img src="screenshots/05-IOT/04-iot-device-gallery.png" width="700" alt="IoT Device Gallery" />
@@ -201,6 +202,102 @@ python iot/import_prisma_devices.py -i "iot device bad sources.csv" -o devices.j
 4. Paste the JSON
 5. Start simulating!
 
+## ⚡ Concurrency Control (IoT Throttle)
+
+### Why it matters
+
+Each simulated IoT device runs via **Scapy raw sockets** inside a single Python daemon process. On Linux (host network mode), spawning too many concurrent Scapy sessions causes Python threads to enter **state D** (uninterruptible I/O wait), which starves the CPU scheduler and breaks latency-sensitive services:
+
+| Lab config | CPU stigix | Python D-state | VoIP loss |
+|---|---|---|---|
+| 163 IoT devices active | ~100% | 5+ threads | 37–73% ❌ |
+| 30 IoT devices active | ~18% | 0 | 0% ✅ |
+
+### How the throttle works
+
+Stigix uses a **semaphore queue** in the IoT manager. At any time, only `maxConcurrentDevices` devices are actually sending Scapy traffic. The rest wait their turn in a rotating queue.
+
+**Device states:**
+
+| State | Badge | Meaning |
+|---|---|---|
+| 🟢 **ACTIVE** | Green | Scapy process running, consuming a concurrency slot |
+| 🟡 **QUEUED** | Amber | Waiting for a free slot |
+| 🔵 **IDLE** | Blue | Cycle complete, waiting `traffic_interval` seconds before re-queuing |
+| ⚫ **Stopped** | Gray | Manually disabled by user |
+
+**Rotation cycle:**
+
+```
+User starts 163 devices
+        │
+        ▼
+  30 → ACTIVE (Scapy sends traffic)
+ 133 → QUEUED (waiting for a slot)
+        │
+        ▼  (device completes its DHCP + traffic cycle)
+        │
+      IDLE ──── waits traffic_interval seconds ──── re-queues
+        │
+        ▼
+   Slot freed → next QUEUED becomes ACTIVE immediately
+```
+
+> This is actually **more realistic** than running all devices simultaneously. Real IoT devices don't send traffic continuously — they operate in cycles (DHCP renew, heartbeat, telemetry burst), then go quiet.
+
+### Controlling concurrency from the UI
+
+The **IoT Concurrency Control** panel appears at the top of the IoT tab:
+
+- **Slider** — drag to set `maxConcurrentDevices` (range: 1 → total devices)
+- **Default: 30** devices concurrent (configurable, persisted in `config/iot-settings.json`)
+- Changes apply **immediately, live** — no restart required:
+  - **Raise limit** → QUEUED devices promoted to ACTIVE instantly
+  - **Lower limit** → ACTIVE devices finish their current cycle naturally (no `SIGKILL`)
+- Live counters update every 5 seconds via Socket.IO: **Active / Queued / Idle**
+
+### System Health mini-panel
+
+The panel also displays real-time system metrics (updated every 5s via Socket.IO `iot:health`):
+
+| Metric | Source | Warning threshold |
+|---|---|---|
+| **Host CPU %** | `/proc/stat` delta | > 80% → 🔴 HIGH |
+| **UDP Errors/s** | `/proc/net/snmp` delta | > 20/s → warning |
+| **Python D-state** | `ps -eo stat,comm` | ≥ 3 → 🔴 HIGH |
+
+**VoIP Risk levels:**
+- 🔴 **HIGH** — CPU > 80% or ≥ 3 D-state processes → reduce concurrency
+- 🟡 **MEDIUM** — CPU > 60% or 1–2 D-state processes → monitor
+- 🟢 **LOW** — Healthy, VoIP protected
+
+> These metrics are read from inside the container. Because Stigix runs with `network_mode: host`, the container has direct access to the host's `/proc` filesystem, giving accurate system-level visibility.
+
+### Bad Behavior in throttled mode
+
+The throttle **does not limit attack capabilities** — it limits the number of concurrent Scapy sessions. Devices in ACTIVE state still execute their full bad behavior profile (DNS flood, C2 beacon, port scan, data exfil, etc.) at full intensity. Only 30 of them do it simultaneously instead of 163.
+
+### Configuration file
+
+```json
+// config/iot-settings.json (auto-created)
+{
+  "maxConcurrentDevices": 30
+}
+```
+
+This file is optional. If absent, the system defaults to 30. It is **upgrade-safe** — existing `iot-devices.json` files require no modification.
+
+### API endpoints
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/iot/settings` | GET | Returns `{ max, active, queued, idle }` |
+| `/api/iot/settings` | POST | Body: `{ maxConcurrentDevices: number }` — applies live |
+| `/api/iot/queue-status` | GET | Per-device state map `{ [id]: 'ACTIVE'\|'QUEUED'\|'IDLE'\|'STOPPED' }` |
+| `/api/system/iot-health` | GET | CPU%, UDP errors/s, D-state count, VoIP risk level |
+
+---
 
 
 ### Protocol Support Details
@@ -410,10 +507,10 @@ Stigix preserves your IoT simulation state across container reboots and upgrades
 
 | Action | Immediate effect | Persisted in JSON | Effect on next boot |
 |---|---|---|---|
-| **Start** a device | Process starts | `enabled: true` | ✅ Device resumes |
-| **Stop** a device | Process stops | `enabled: false` | ⛔ Device stays off |
-| **Start-all** | All processes start | `enabled: true` for each | ✅ All resume |
-| **Stop-all** | All processes stop | `enabled: false` for each | ⛔ All stay off |
+| **Start** a device | Enters ACTIVE or QUEUED | `enabled: true` | ✅ Device resumes (respects concurrency limit) |
+| **Stop** a device | Removed from queue | `enabled: false` | ⛔ Device stays off |
+| **Start-all** | Up to `maxConcurrent` → ACTIVE, rest → QUEUED | `enabled: true` for each | ✅ All resume with throttle |
+| **Stop-all** | All processes stop, queue cleared | `enabled: false` for each | ⛔ All stay off |
 
 > **Only devices that were running before the reboot will automatically restart.** If you started device A and left devices B and C stopped, after a reboot only device A will resume.
 
