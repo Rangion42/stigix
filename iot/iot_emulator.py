@@ -851,11 +851,31 @@ class IoTDevice:
                 self.log("warning", f"⚠️ Fallback gratuitous ARP failed: {ge}")
             return
 
-        # No OFFER at all — stay silent (lease NOT erased: keep it for next boot)
+        # No OFFER at all — try cached lease as last resort before silencing the device.
+        # This covers: DHCP server unreachable (router busy, SD-WAN failover, etc.)
+        # Using the last known IP is safe: the device sends a Gratuitous ARP to announce
+        # itself on the wire, and the router will ARP-reply if the IP is still valid.
+        if saved_lease and saved_lease.get('ip'):
+            self.ip = saved_lease['ip']
+            if saved_lease.get('gateway'):
+                self.gateway = saved_lease['gateway']
+            self.log("warning", f"⚠️ DHCP unreachable after {self.DHCP_MAX_RETRIES} attempts — "
+                                f"reusing cached lease: {self.ip} (offline/degraded mode)")
+            try:
+                garp = Ether(dst="ff:ff:ff:ff:ff:ff", src=self.mac) / \
+                       ARP(op="is-at", hwsrc=self.mac, psrc=self.ip,
+                           hwdst="ff:ff:ff:ff:ff:ff", pdst=self.ip)
+                sendp(garp, iface=self.interface, verbose=0)
+                self.log("info", f"📣 Gratuitous ARP (cached IP): {self.ip} is-at {self.mac}")
+            except Exception as ge:
+                self.log("warning", f"⚠️ Gratuitous ARP (cached) failed: {ge}")
+            return
+
+        # Absolutely no IP available — stay silent until renewal
         self.ip = None
         self.gateway = None
-        self.log("error", f"❌ DHCP failed after {self.DHCP_MAX_RETRIES} attempts — no OFFER received. "
-                          f"Device will stay silent until renewal.")
+        self.log("error", f"❌ DHCP failed after {self.DHCP_MAX_RETRIES} attempts — no OFFER received "
+                          f"and no saved lease. Device will stay silent until renewal.")
 
     def _dhcp_init_reboot_attempt(self, saved_ip: str) -> str:
         """RFC 2131 INIT-REBOOT: send a broadcast REQUEST with requested_addr
