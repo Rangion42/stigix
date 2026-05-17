@@ -920,7 +920,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                 body: JSON.stringify(convergenceThresholds)
             });
             if (res.ok) {
-                showSuccess('Convergence thresholds saved');
+                showSuccess('Failover thresholds saved');
             } else {
                 setErrorMsg('Failed to save thresholds');
             }
@@ -1108,7 +1108,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
 
     const CAP_LABELS: { key: keyof TargetCapability; label: string; color: string }[] = [
         { key: 'voice', label: 'Voice', color: 'blue' },
-        { key: 'convergence', label: 'Convergence', color: 'purple' },
+        { key: 'convergence', label: 'Failover', color: 'purple' },
         { key: 'xfr', label: 'Speedtest', color: 'cyan' },
         { key: 'security', label: 'Security', color: 'red' },
         { key: 'connectivity', label: 'Connectivity', color: 'green' },
@@ -1119,7 +1119,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
     const tabs = [
         { id: 'distribution', label: 'Traffic Distribution' },
         { id: 'probes', label: 'Synthetic Probes' },
-        { id: 'convergence', label: 'Convergence' },
+        { id: 'convergence', label: 'Failover' },
         { id: 'system', label: 'System Info' },
         ...(systemInfo?.beta ? [{ id: 'maintenance', label: 'System Maintenance', beta: true }] : []),
         { id: 'targets', label: 'Targets' },
@@ -1189,7 +1189,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                 <Zap size={20} />
                             </div>
                             <div>
-                                <h2 className="text-lg font-black text-text-primary tracking-tight">Convergence Thresholds</h2>
+                                <h2 className="text-lg font-black text-text-primary tracking-tight">Failover Thresholds</h2>
                                 <p className="text-[10px] font-bold text-text-muted tracking-widest mt-1 opacity-70">Define failover performance criteria</p>
                             </div>
                         </div>
@@ -1260,7 +1260,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                     className="px-8 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-[10px] font-black tracking-[0.2em] transition-all flex items-center gap-2 shadow-lg shadow-purple-900/40 disabled:opacity-50"
                                 >
                                     {saving ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                                    {saving ? 'SAVING...' : 'SAVE CONVERGENCE CONFIG'}
+                                    {saving ? 'SAVING...' : 'SAVE FAILOVER CONFIG'}
                                 </button>
                             </div>
                         </div>
@@ -3179,7 +3179,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                                                 <div className="flex gap-1">
                                                                     {inst.capabilities?.voice && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" title="Voice" />}
                                                                     {inst.capabilities?.xfr && <div className="w-1.5 h-1.5 rounded-full bg-cyan-500" title="Speedtest" />}
-                                                                    {inst.capabilities?.convergence && <div className="w-1.5 h-1.5 rounded-full bg-purple-500" title="Convergence" />}
+                                                                    {inst.capabilities?.convergence && <div className="w-1.5 h-1.5 rounded-full bg-purple-500" title="Failover" />}
                                                                     {inst.capabilities?.security && <div className="w-1.5 h-1.5 rounded-full bg-red-500" title="Security" />}
                                                                 </div>
                                                             </td>
@@ -3357,7 +3357,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                     <div className="mt-3 grid grid-cols-2 md:grid-cols-5 gap-3">
                                         {[
                                             { key: 'voice', label: 'Voice', placeholder: '6100' },
-                                            { key: 'convergence', label: 'Conv.', placeholder: '6200' },
+                                            { key: 'convergence', label: 'Fail.', placeholder: '6200' },
                                             { key: 'iperf', label: 'Iperf', placeholder: '5201' },
                                             { key: 'http', label: 'HTTP', placeholder: '8082' },
                                             { key: 'xfr', label: 'Speedtest', placeholder: '5201' },
