@@ -9264,9 +9264,12 @@ app.post('/api/iot/settings', authenticateToken, (req, res) => {
     res.json({ success: true, ...iotManager.getQueueStats() });
 });
 
-// GET /api/iot/queue-status — per-device states
+// GET /api/iot/queue-status — per-device states + timing info
 app.get('/api/iot/queue-status', authenticateToken, (req, res) => {
-    res.json(iotManager.getDeviceStates());
+    res.json({
+        states:  iotManager.getDeviceStates(),
+        timings: iotManager.getTimingInfo(),
+    });
 });
 
 // ── IoT Health Cache (background, non-blocking) ─────────────────────────────
@@ -9367,10 +9370,12 @@ app.get('/api/iot/devices', authenticateToken, (req, res) => {
         log('IOT-REQ', `GET /api/iot/devices - Found ${devices.length} devices`, 'debug');
     }
     const deviceStates = iotManager.getDeviceStates();
+    const timings = iotManager.getTimingInfo();
     const result = devices.map(d => ({
         ...d,
         running: deviceStates[d.id] === 'ACTIVE',
         deviceState: deviceStates[d.id] || 'STOPPED',
+        timing: timings[d.id] || null,
         status: iotManager.getDeviceStatus(d.id)
     }));
     res.json(result);

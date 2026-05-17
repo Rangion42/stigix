@@ -71,6 +71,24 @@ export default function Iot({ token }: IotProps) {
     const [iotHealth, setIotHealth] = useState<any>(null);
     const sliderDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Format elapsed seconds as "2m 14s" or "45s"
+    const [now, setNow] = useState(() => Date.now());
+    useEffect(() => {
+        const t = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(t);
+    }, []);
+    const fmtElapsed = (ms: number) => {
+        const s = Math.max(0, Math.floor((now - ms) / 1000));
+        const m = Math.floor(s / 60);
+        return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
+    };
+    const fmtRemain = (idledAt: number, cycleSeconds: number) => {
+        const elapsed = Math.floor((now - idledAt) / 1000);
+        const remain = Math.max(0, cycleSeconds - elapsed);
+        const m = Math.floor(remain / 60);
+        return m > 0 ? `${m}m ${remain % 60}s` : `${remain}s`;
+    };
+
     // Close dropdown on outside click
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -763,7 +781,7 @@ export default function Iot({ token }: IotProps) {
                                     </div>
 
                                     {!isCompact && (
-                                        <div className="hidden lg:block shrink-0">
+                                        <div className="hidden lg:block shrink-0 text-right">
                                             <div className={cn(
                                                 "px-2.5 py-1 rounded-full text-[10px] font-black tracking-widest border",
                                                 (device as any).deviceState === 'ACTIVE' ? "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20" :
@@ -775,6 +793,18 @@ export default function Iot({ token }: IotProps) {
                                                  (device as any).deviceState === 'QUEUED' ? 'Queued' :
                                                  (device as any).deviceState === 'IDLE'   ? 'Idle' : 'Stopped'}
                                             </div>
+                                            {/* Timing info below the badge */}
+                                            {(device as any).timing && (() => {
+                                                const t = (device as any).timing;
+                                                const state = (device as any).deviceState;
+                                                if (state === 'ACTIVE' && t.activatedAt)
+                                                    return <div className="text-[9px] text-green-500/70 font-mono mt-1">{fmtElapsed(t.activatedAt)}</div>;
+                                                if (state === 'IDLE' && t.idledAt)
+                                                    return <div className="text-[9px] text-blue-400/70 font-mono mt-1">{fmtRemain(t.idledAt, t.cycleSeconds || 60)} left</div>;
+                                                if (state === 'QUEUED' && t.queuePosition)
+                                                    return <div className="text-[9px] text-amber-400/70 font-mono mt-1">#{t.queuePosition}</div>;
+                                                return null;
+                                            })()}
                                         </div>
                                     )}
                                 </div>

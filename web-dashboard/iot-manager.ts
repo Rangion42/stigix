@@ -62,6 +62,8 @@ export class IoTManager extends EventEmitter {
     private deviceStates: Map<string, DeviceState> = new Map();
     private idleTimers: Map<string, NodeJS.Timeout> = new Map();   // IDLE → re-queue
     private cycleTimers: Map<string, NodeJS.Timeout> = new Map();  // ACTIVE → cycle stop
+    private activatedAt: Map<string, number> = new Map();  // deviceId → ACTIVE start timestamp (ms)
+    private idledAt: Map<string, number> = new Map();      // deviceId → IDLE start timestamp (ms)
     private configDir: string;
 
     // ── Global bad behavior state ─────────────────────────────────────────────
@@ -119,16 +121,13 @@ export class IoTManager extends EventEmitter {
     private async activateDevice(config: IoTDeviceConfig): Promise<void> {
         this.ensureDaemon();
         await this.waitForDaemonReady(8000);
-        // Note: deviceStates is already set to 'ACTIVE' synchronously by the caller
-        // to prevent race conditions in concurrent batch starts.
         this.runningDevices.set(config.id, config);
         this.sendCommand({ cmd: 'start', device: config });
+        this.activatedAt.set(config.id, Date.now());
+        this.idledAt.delete(config.id);
         log('IOT', `Activated: ${config.id} [${this.getActiveCount()}/${this.maxConcurrentDevices}]`);
 
         // Schedule automatic cycle stop so queued devices get their turn.
-        // The daemon loops indefinitely — it never emits 'stopped' on its own.
-        // After traffic_interval seconds we stop the device; the 'stopped' handler
-        // then sets it IDLE → re-queues after traffic_interval → promotes next QUEUED.
         const cycleMs = Math.max(30_000, (config.traffic_interval || 60) * 1000);
         const cycleTimer = setTimeout(() => this.endDeviceCycle(config.id), cycleMs);
         this.cycleTimers.set(config.id, cycleTimer);
@@ -206,6 +205,8 @@ export class IoTManager extends EventEmitter {
         if (idle) { clearTimeout(idle); this.idleTimers.delete(deviceId); }
         const cycle = this.cycleTimers.get(deviceId);
         if (cycle) { clearTimeout(cycle); this.cycleTimers.delete(deviceId); }
+        this.activatedAt.delete(deviceId);
+        this.idledAt.delete(deviceId);
 
         const state = this.deviceStates.get(deviceId);
         this.managedDevices.delete(deviceId);
@@ -227,6 +228,8 @@ export class IoTManager extends EventEmitter {
         for (const timer of this.cycleTimers.values()) clearTimeout(timer);
         this.idleTimers.clear();
         this.cycleTimers.clear();
+        this.activatedAt.clear();
+        this.idledAt.clear();
         this.managedDevices.clear();
         this.deviceStates.clear();
         this.runningDevices.clear();
@@ -272,6 +275,32 @@ export class IoTManager extends EventEmitter {
     getDeviceStates(): Record<string, DeviceState> {
         const out: Record<string, DeviceState> = {};
         for (const [id, state] of this.deviceStates.entries()) out[id] = state;
+        return out;
+    }
+
+    /**
+     * Returns per-device timing info for the UI:
+     * - ACTIVE: activatedAt timestamp (ms) so client can compute elapsed
+     * - IDLE:   idledAt timestamp (ms) + traffic_interval so client can compute remaining
+     * - QUEUED: position in queue (1-based)
+     */
+    getTimingInfo(): Record<string, { activatedAt?: number; idledAt?: number; cycleSeconds?: number; queuePosition?: number }> {
+        const out: Record<string, any> = {};
+        let queuePos = 0;
+        for (const [id, state] of this.deviceStates.entries()) {
+            if (state === 'ACTIVE') {
+                out[id] = { activatedAt: this.activatedAt.get(id) };
+            } else if (state === 'IDLE') {
+                const cfg = this.managedDevices.get(id);
+                out[id] = {
+                    idledAt: this.idledAt.get(id),
+                    cycleSeconds: cfg?.traffic_interval || 60,
+                };
+            } else if (state === 'QUEUED') {
+                queuePos++;
+                out[id] = { queuePosition: queuePos };
+            }
+        }
         return out;
     }
 
@@ -424,6 +453,8 @@ export class IoTManager extends EventEmitter {
                 if (cfg && currentState === 'ACTIVE') {
                     // Device completed its cycle → IDLE → re-queue after traffic_interval
                     this.deviceStates.set(device_id, 'IDLE');
+                    this.idledAt.set(device_id, Date.now());
+                    this.activatedAt.delete(device_id);
                     const delayMs = (cfg.traffic_interval || 60) * 1000;
                     const timer = setTimeout(() => this.requeueDevice(device_id), delayMs);
                     this.idleTimers.set(device_id, timer);
