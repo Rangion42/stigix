@@ -71,6 +71,8 @@ export default function Iot({ token }: IotProps) {
     const [iotHealth, setIotHealth] = useState<any>(null);
     const [trafficRate, setTrafficRate] = useState<{ pps: number; ppm: number; bps: number; activeDevices: number } | null>(null);
     const sliderDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // State filter
+    const [stateFilter, setStateFilter] = useState<'ALL' | 'ACTIVE' | 'QUEUED' | 'IDLE' | 'STOPPED'>('ALL');
 
     // Format elapsed seconds as "2m 14s" or "45s"
     const [now, setNow] = useState(() => Date.now());
@@ -374,7 +376,10 @@ export default function Iot({ token }: IotProps) {
         const vendor = (d.vendor || '').toLowerCase();
         const id = (d.id || '').toLowerCase();
         const mac = (d.mac || '').toLowerCase();
-        return name.includes(query) || vendor.includes(query) || id.includes(query) || mac.includes(query);
+        const textMatch = name.includes(query) || vendor.includes(query) || id.includes(query) || mac.includes(query);
+        const ds = (d as any).deviceState || 'STOPPED';
+        const stateMatch = stateFilter === 'ALL' || ds === stateFilter;
+        return textMatch && stateMatch;
     }) : [];
 
     const getDeviceIcon = (type: string, size: number = 20) => {
@@ -426,98 +431,86 @@ export default function Iot({ token }: IotProps) {
                 </div>
             )}
 
-            {/* ── Concurrency Control Panel ─────────────────────────────── */}
+            {/* ── Concurrency Control Panel — compact single row ──────── */}
             <div className={cn(
-                "bg-card border rounded-2xl p-5 shadow-sm",
-                iotSettings.active > 80 ? "border-red-500/40" : iotSettings.active > 50 ? "border-amber-500/30" : "border-border"
+                "bg-card border rounded-2xl px-5 py-3 shadow-sm",
+                iotSettings.active > 80 ? "border-red-500/40" : "border-border"
             )}>
-                <div className="flex items-start justify-between gap-6 flex-wrap">
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-3">
-                            <Gauge size={16} className="text-blue-400" />
-                            <span className="text-xs font-black text-text-primary uppercase tracking-widest">IoT Concurrency Control</span>
-                            {iotSettings.active > 80 && (
-                                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-red-500/10 text-red-400 border border-red-500/20 uppercase tracking-wide">
-                                    <div className="w-1 h-1 rounded-full bg-red-500 animate-pulse" /> High Load
-                                </span>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <span className="text-[11px] text-text-muted w-40 shrink-0">Max simultaneous devices</span>
-                            <input
-                                type="range" min={1} max={Math.max(devices.length, sliderValue, 163)}
-                                value={sliderValue}
-                                onChange={e => handleSliderChange(Number(e.target.value))}
-                                className="flex-1 accent-blue-500 h-1.5 rounded-full cursor-pointer"
-                            />
-                            <span className="text-base font-black text-blue-400 w-8 text-right">{sliderValue}</span>
-                        </div>
-                        <div className="flex items-center gap-4 text-[11px]">
-                            <span className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                <span className="text-text-muted">Active: <span className="font-black text-emerald-400">{iotSettings.active}</span></span>
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 rounded-full bg-amber-500" />
-                                <span className="text-text-muted">Queued: <span className="font-black text-amber-400">{iotSettings.queued}</span></span>
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                <span className="text-text-muted">Idle: <span className="font-black text-blue-400">{iotSettings.idle}</span></span>
-                            </span>
-                        </div>
-                        {iotSettings.active > 80 && (
-                            <p className="text-[10px] text-red-400/80 mt-2 font-medium">
-                                ⚠ High IoT load may impact VoIP quality. Consider reducing concurrency below 50.
-                            </p>
-                        )}
+                <div className="flex items-center gap-3 flex-wrap">
+                    {/* Label */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <Gauge size={13} className="text-blue-400" />
+                        <span className="text-[10px] font-black text-text-primary uppercase tracking-widest">IoT</span>
                     </div>
-
-                    {/* System Health Mini Panel */}
+                    <div className="h-3.5 w-px bg-border shrink-0" />
+                    {/* Slider */}
+                    <div className="flex items-center gap-2 flex-1 min-w-[180px]">
+                        <span className="text-[10px] text-text-muted whitespace-nowrap shrink-0">Max:</span>
+                        <input
+                            type="range" min={1} max={Math.max(devices.length, sliderValue, 163)}
+                            value={sliderValue}
+                            onChange={e => handleSliderChange(Number(e.target.value))}
+                            className="flex-1 accent-blue-500 h-1 rounded-full cursor-pointer"
+                        />
+                        <span className="text-sm font-black text-blue-400 w-7 text-right shrink-0">{sliderValue}</span>
+                    </div>
+                    <div className="h-3.5 w-px bg-border shrink-0" />
+                    {/* State counts */}
+                    <div className="flex items-center gap-3 shrink-0 text-[11px]">
+                        <span className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <span className="text-text-muted">Active: <span className="font-black text-emerald-400">{iotSettings.active}</span></span>
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            <span className="text-text-muted">Queued: <span className="font-black text-amber-400">{iotSettings.queued}</span></span>
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                            <span className="text-text-muted">Idle: <span className="font-black text-blue-400">{iotSettings.idle}</span></span>
+                        </span>
+                    </div>
+                    {/* Inline health metrics */}
                     {iotHealth && (
-                        <div className={cn(
-                            "shrink-0 rounded-xl border p-4 space-y-2 min-w-[200px]",
-                            getRiskColor(iotHealth.voipRiskLevel).bg, getRiskColor(iotHealth.voipRiskLevel).border
-                        )}>
-                            <div className="flex items-center justify-between mb-1">
-                                <span className="text-[9px] font-black uppercase tracking-widest text-text-muted flex items-center gap-1">
-                                    <Heart size={10} /> System Health
+                        <>
+                            <div className="h-3.5 w-px bg-border shrink-0" />
+                            <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                                <span className={cn("text-[10px] font-bold", iotHealth.containerCpuPercent > 80 ? 'text-red-400' : 'text-text-muted')}>
+                                    CPU <span className="font-black">{iotHealth.containerCpuPercent}%</span>
                                 </span>
-                                <span className={cn("text-[9px] font-black uppercase tracking-widest flex items-center gap-1", getRiskColor(iotHealth.voipRiskLevel).text)}>
-                                    <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", getRiskColor(iotHealth.voipRiskLevel).dot)} />
+                                <span className={cn("text-[10px] font-bold", iotHealth.udpReceiveErrorsDelta > 20 ? 'text-red-400' : 'text-text-muted')}>
+                                    UDP <span className="font-black">+{iotHealth.udpReceiveErrorsDelta}</span>
+                                </span>
+                                <span className={cn("text-[10px] font-bold", iotHealth.pythonProcessesStateD >= 2 ? 'text-red-400' : 'text-text-muted')}>
+                                    D-state <span className="font-black">{iotHealth.pythonProcessesStateD}</span>
+                                </span>
+                                {trafficRate && trafficRate.activeDevices > 0 && (
+                                    <span className="text-[10px] font-bold text-blue-400 flex items-center gap-1">
+                                        <TrendingUp size={9} />
+                                        <span className="font-black">{trafficRate.pps} pps</span>
+                                        <span className="text-text-muted/50">·</span>
+                                        <span className="font-black">{trafficRate.ppm.toLocaleString()} ppm</span>
+                                    </span>
+                                )}
+                                <span className={cn(
+                                    "px-2 py-0.5 rounded-full text-[9px] font-black border flex items-center gap-1",
+                                    getRiskColor(iotHealth.voipRiskLevel).text,
+                                    getRiskColor(iotHealth.voipRiskLevel).bg,
+                                    getRiskColor(iotHealth.voipRiskLevel).border
+                                )}>
+                                    <div className={cn("w-1 h-1 rounded-full animate-pulse", getRiskColor(iotHealth.voipRiskLevel).dot)} />
                                     {iotHealth.voipRiskLevel}
                                 </span>
                             </div>
-                            {[
-                                { label: 'Host CPU', value: `${iotHealth.containerCpuPercent}%`, warn: iotHealth.containerCpuPercent > 80 },
-                                { label: 'UDP Errors/s', value: `+${iotHealth.udpReceiveErrorsDelta}`, warn: iotHealth.udpReceiveErrorsDelta > 20 },
-                                { label: 'Python D-state', value: iotHealth.pythonProcessesStateD, warn: iotHealth.pythonProcessesStateD >= 2 },
-                            ].map(({ label, value, warn }) => (
-                                <div key={label} className="flex items-center justify-between text-[10px]">
-                                    <span className="text-text-muted">{label}</span>
-                                    <span className={cn("font-black", warn ? getRiskColor(iotHealth.voipRiskLevel).text : 'text-text-secondary')}>{value}</span>
-                                </div>
-                            ))}
-                            {/* Traffic rate */}
-                            {trafficRate && trafficRate.activeDevices > 0 && (
-                                <>
-                                    <div className="h-px bg-border/50 my-1" />
-                                    <div className="flex items-center justify-between text-[10px]">
-                                        <span className="text-text-muted flex items-center gap-1"><TrendingUp size={9} /> IoT pkt/s</span>
-                                        <span className="font-black text-blue-400">{trafficRate.pps.toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-[10px]">
-                                        <span className="text-text-muted flex items-center gap-1"><Zap size={9} /> IoT pkt/min</span>
-                                        <span className="font-black text-blue-400">{trafficRate.ppm.toLocaleString()}</span>
-                                    </div>
-                                </>
-                            )}
-                            {iotHealth.recommendation && (
-                                <p className={cn("text-[9px] mt-1 leading-relaxed", getRiskColor(iotHealth.voipRiskLevel).text)}>{iotHealth.recommendation}</p>
-                            )}
-                        </div>
+                        </>
                     )}
                 </div>
+                {/* Recommendation banner */}
+                {iotHealth?.recommendation && (
+                    <p className={cn("text-[9px] mt-2 font-medium", getRiskColor(iotHealth.voipRiskLevel).text)}>
+                        {iotHealth.recommendation}
+                    </p>
+                )}
             </div>
             {/* Header section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -697,21 +690,35 @@ export default function Iot({ token }: IotProps) {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[11px] font-bold text-text-muted tracking-widest">{devices.filter(d => (d as any).deviceState === 'ACTIVE').length} Running</span>
-                    </div>
-                    {devices.filter(d => (d as any).deviceState === 'QUEUED' || (d as any).deviceState === 'IDLE').length > 0 && (
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-amber-500" />
-                            <span className="text-[11px] font-bold text-text-muted tracking-widest">{devices.filter(d => (d as any).deviceState === 'QUEUED' || (d as any).deviceState === 'IDLE').length} In Queue</span>
-                        </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-border" />
-                        <span className="text-[11px] font-bold text-text-muted tracking-widest">{devices.filter(d => !(d as any).deviceState || (d as any).deviceState === 'STOPPED').length} Stopped</span>
-                    </div>
+                {/* State filter pills — clickable, double as count badges */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                    {(['ALL', 'ACTIVE', 'QUEUED', 'IDLE', 'STOPPED'] as const).map(s => {
+                        const count = s === 'ALL' ? devices.length
+                            : s === 'ACTIVE'  ? devices.filter(d => (d as any).deviceState === 'ACTIVE').length
+                            : s === 'QUEUED'  ? devices.filter(d => (d as any).deviceState === 'QUEUED').length
+                            : s === 'IDLE'    ? devices.filter(d => (d as any).deviceState === 'IDLE').length
+                            : devices.filter(d => !(d as any).deviceState || (d as any).deviceState === 'STOPPED').length;
+                        const dot = s === 'ACTIVE' ? 'bg-emerald-500' : s === 'QUEUED' ? 'bg-amber-500' : s === 'IDLE' ? 'bg-blue-500' : s === 'STOPPED' ? 'bg-zinc-500' : 'bg-blue-500';
+                        const active = stateFilter === s;
+                        const activeStyle = s === 'ACTIVE'  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                            : s === 'QUEUED'  ? 'bg-amber-500/15 border-amber-500/40 text-amber-400'
+                            : s === 'IDLE'    ? 'bg-blue-500/15 border-blue-500/40 text-blue-400'
+                            : s === 'STOPPED' ? 'bg-zinc-500/15 border-zinc-500/40 text-zinc-400'
+                            : 'bg-blue-600/20 border-blue-500/50 text-blue-300';
+                        return (
+                            <button
+                                key={s}
+                                onClick={() => setStateFilter(s)}
+                                className={cn(
+                                    "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black border transition-all",
+                                    active ? activeStyle : 'bg-card-secondary border-border text-text-muted hover:text-text-secondary hover:bg-card-hover'
+                                )}
+                            >
+                                {s !== 'ALL' && <div className={cn('w-1.5 h-1.5 rounded-full', dot)} />}
+                                {s === 'ALL' ? 'All' : s.charAt(0) + s.slice(1).toLowerCase()} <span className="opacity-60">({count})</span>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
