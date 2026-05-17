@@ -656,12 +656,18 @@ export default function Iot({ token }: IotProps) {
 
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                        <span className="text-[11px] font-bold text-text-muted tracking-widest">{devices.filter(d => d.running).length} Running</span>
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[11px] font-bold text-text-muted tracking-widest">{devices.filter(d => (d as any).deviceState === 'ACTIVE').length} Running</span>
                     </div>
+                    {devices.filter(d => (d as any).deviceState === 'QUEUED' || (d as any).deviceState === 'IDLE').length > 0 && (
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-amber-500" />
+                            <span className="text-[11px] font-bold text-text-muted tracking-widest">{devices.filter(d => (d as any).deviceState === 'QUEUED' || (d as any).deviceState === 'IDLE').length} In Queue</span>
+                        </div>
+                    )}
                     <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-border" />
-                        <span className="text-[11px] font-bold text-text-muted tracking-widest">{devices.filter(d => !d.running).length} Stopped</span>
+                        <span className="text-[11px] font-bold text-text-muted tracking-widest">{devices.filter(d => !(d as any).deviceState || (d as any).deviceState === 'STOPPED').length} Stopped</span>
                     </div>
                 </div>
             </div>
@@ -754,9 +760,14 @@ export default function Iot({ token }: IotProps) {
                                         <div className="hidden lg:block shrink-0">
                                             <div className={cn(
                                                 "px-2.5 py-1 rounded-full text-[10px] font-black tracking-widest border",
-                                                device.running ? "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20" : "bg-card-secondary text-text-muted border-border"
+                                                (device as any).deviceState === 'ACTIVE' ? "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20" :
+                                                (device as any).deviceState === 'QUEUED' ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                                                (device as any).deviceState === 'IDLE'   ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                                "bg-card-secondary text-text-muted border-border"
                                             )}>
-                                                {device.running ? 'Running' : 'Stopped'}
+                                                {(device as any).deviceState === 'ACTIVE' ? 'Running' :
+                                                 (device as any).deviceState === 'QUEUED' ? 'Queued' :
+                                                 (device as any).deviceState === 'IDLE'   ? 'Idle' : 'Stopped'}
                                             </div>
                                         </div>
                                     )}
@@ -809,14 +820,28 @@ export default function Iot({ token }: IotProps) {
                                         className={cn(
                                             "flex items-center justify-center transition-all border",
                                             isCompact ? "p-2 rounded-xl" : "flex-1 py-3.5 rounded-2xl text-sm font-black",
-                                            device.running
+                                            (device as any).deviceState === 'ACTIVE'
                                                 ? "bg-red-500/10 hover:bg-red-500/20 text-red-500 border-red-500/20"
-                                                : "bg-blue-600 hover:bg-blue-500 text-white border-transparent shadow-lg shadow-blue-900/40"
+                                                : (device as any).deviceState === 'QUEUED'
+                                                    ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border-amber-500/20"
+                                                    : (device as any).deviceState === 'IDLE'
+                                                        ? "bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/20"
+                                                        : "bg-blue-600 hover:bg-blue-500 text-white border-transparent shadow-lg shadow-blue-900/40"
                                         )}
-                                        title={device.running ? "Shut Down" : "Initialize"}
+                                        title={
+                                            (device as any).deviceState === 'ACTIVE' ? "Shut Down" :
+                                            (device as any).deviceState === 'QUEUED' ? "Remove from Queue" :
+                                            (device as any).deviceState === 'IDLE'   ? "Cancel Idle" :
+                                            "Start"
+                                        }
                                     >
                                         <Power size={18} />
-                                        {!isCompact && <span className="ml-2 tracking-widest">{device.running ? 'Shut' : 'Start'}</span>}
+                                        {!isCompact && <span className="ml-2 tracking-widest">
+                                            {(device as any).deviceState === 'ACTIVE' ? 'Shut' :
+                                             (device as any).deviceState === 'QUEUED' ? 'Dequeue' :
+                                             (device as any).deviceState === 'IDLE'   ? 'Cancel' :
+                                             'Start'}
+                                        </span>}
                                     </button>
 
                                     {!isCompact && (
