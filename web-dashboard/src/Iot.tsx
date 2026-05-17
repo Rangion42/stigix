@@ -160,13 +160,16 @@ export default function Iot({ token }: IotProps) {
         localStorage.setItem('iot-compact', String(isCompact));
     }, [isCompact]);
 
-    const toggleDevice = async (id: string, currentlyRunning?: boolean) => {
+    const toggleDevice = async (id: string, deviceState?: string) => {
         try {
-            const endpoint = currentlyRunning ? `/api/iot/stop/${id}` : `/api/iot/start/${id}`;
+            // STOPPED → start; ACTIVE / IDLE / QUEUED → stop (removes from rotation)
+            const endpoint = (!deviceState || deviceState === 'STOPPED')
+                ? `/api/iot/start/${id}`
+                : `/api/iot/stop/${id}`;
             await fetch(endpoint, { method: 'POST', headers: authHeaders() });
             fetchDevices();
         } catch (e) {
-            console.error("Failed to toggle device", e);
+            console.error('Failed to toggle device', e);
         }
     };
 
@@ -852,7 +855,7 @@ export default function Iot({ token }: IotProps) {
                                 {/* Actions */}
                                 <div className={cn("flex items-center", isCompact ? "gap-3 w-auto justify-end mr-12" : "gap-2")}>
                                     <button
-                                        onClick={() => toggleDevice(device.id, device.running)}
+                                        onClick={() => toggleDevice(device.id, (device as any).deviceState)}
                                         className={cn(
                                             "flex items-center justify-center transition-all border",
                                             isCompact ? "p-2 rounded-xl" : "flex-1 py-3.5 rounded-2xl text-sm font-black",
