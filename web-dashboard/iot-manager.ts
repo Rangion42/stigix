@@ -114,7 +114,8 @@ export class IoTManager extends EventEmitter {
     private async activateDevice(config: IoTDeviceConfig): Promise<void> {
         this.ensureDaemon();
         await this.waitForDaemonReady(8000);
-        this.deviceStates.set(config.id, 'ACTIVE');
+        // Note: deviceStates is already set to 'ACTIVE' synchronously by the caller
+        // to prevent race conditions in concurrent batch starts.
         this.runningDevices.set(config.id, config);
         this.sendCommand({ cmd: 'start', device: config });
         log('IOT', `Activated: ${config.id} [${this.getActiveCount()}/${this.maxConcurrentDevices}]`);
@@ -155,8 +156,16 @@ export class IoTManager extends EventEmitter {
         }
         this.managedDevices.set(deviceConfig.id, deviceConfig);
 
+        // Reserve slot SYNCHRONOUSLY before any await — prevents race condition
+        // when many devices are started in parallel (e.g. auto-restart on boot).
         if (this.getActiveCount() < this.maxConcurrentDevices) {
-            await this.activateDevice(deviceConfig);
+            this.deviceStates.set(deviceConfig.id, 'ACTIVE'); // slot reserved immediately
+            this.activateDevice(deviceConfig).catch(e => {
+                log('IOT', `Failed to activate ${deviceConfig.id}: ${e.message}`, 'error');
+                // On failure: release the slot and queue instead
+                this.deviceStates.set(deviceConfig.id, 'QUEUED');
+                this.runningDevices.delete(deviceConfig.id);
+            });
         } else {
             this.deviceStates.set(deviceConfig.id, 'QUEUED');
             log('IOT', `Device ${deviceConfig.id} queued (${this.getActiveCount()}/${this.maxConcurrentDevices} slots used)`);
