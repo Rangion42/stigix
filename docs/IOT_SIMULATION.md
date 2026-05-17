@@ -254,7 +254,23 @@ The **IoT Concurrency Control** panel appears at the top of the IoT tab:
 - Changes apply **immediately, live** — no restart required:
   - **Raise limit** → QUEUED devices promoted to ACTIVE instantly
   - **Lower limit** → ACTIVE devices finish their current cycle naturally (no `SIGKILL`)
-- Live counters update every 5 seconds via Socket.IO: **Active / Queued / Idle**
+- Live counters update every 5 seconds via Socket.IO `iot:health`:
+  - 🟢 **Running** — number of ACTIVE Scapy sessions
+  - 🟡 **In Queue** — QUEUED + IDLE devices (hidden when 0)
+  - ⚫ **Stopped** — manually disabled devices
+
+**Per-device card:**
+
+Each device card displays a state badge and a context-aware action button:
+
+| Device state | Badge color | Status label | Action button |
+|---|---|---|---|
+| ACTIVE | 🟢 Green | Running | **Shut** (red) — stops the device |
+| QUEUED | 🟡 Amber | Queued | **Dequeue** (amber) — removes from queue |
+| IDLE | 🔵 Blue | Idle | **Cancel** (blue) — cancels the idle timer |
+| STOPPED | ⚫ Gray | Stopped | **Start** (blue) — adds to queue or activates |
+
+> QUEUED devices do **not** show a Start button — they are already managed by the throttle and will activate automatically when a slot is free. Clicking **Dequeue** removes them from the managed set entirely.
 
 ### System Health mini-panel
 
