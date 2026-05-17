@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Gauge, Activity, Clock, Filter, Download, Zap, Shield, Search, ChevronRight, BarChart3, AlertCircle, Info, ChevronUp, ChevronDown, Flame, Plus, XCircle, RefreshCw, Globe, Play, Pause, TrendingUp } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { twMerge } from 'tailwind-merge';
@@ -156,9 +156,14 @@ function GlobalScoreTrendChart({ results, timeRange }: { results: any[]; timeRan
 }
 
 // Per-probe score + latency dual-axis chart used inside the detail modal
-function ProbeScoreChart({ results, range, probeType }: { results: any[]; range: string; probeType: string }) {
+function ProbeScoreChart({ results, range, probeType, data: externalData, syncId: syncIdProp }: {
+    results: any[]; range: string; probeType: string;
+    data?: any[];        // pre-computed shared data (for crosshair sync)
+    syncId?: string;     // Recharts syncId for crosshair sync across charts
+}) {
     const typeColor = probeType === 'PING' ? '#22c55e' : probeType === 'DNS' ? '#a855f7' : probeType === 'UDP' ? '#f97316' : probeType === 'CLOUD' ? '#6366f1' : '#3b82f6';
     const chartData = React.useMemo(() => {
+        if (externalData) return externalData;
         const rangeMs = range === '1h' ? 60*60*1000 : range === '6h' ? 6*60*60*1000 : 24*60*60*1000;
         const cutoff = Date.now() - rangeMs;
         return results
@@ -170,7 +175,7 @@ function ProbeScoreChart({ results, range, probeType }: { results: any[]; range:
                 score: r.score,
                 latency: Math.round(r.metrics?.total_ms || 0),
             }));
-    }, [results, range]);
+    }, [results, range, externalData]);
 
     if (!chartData.length) return (
         <div className="h-[140px] flex items-center justify-center text-text-muted text-xs italic opacity-60">No data for this period</div>
@@ -178,7 +183,7 @@ function ProbeScoreChart({ results, range, probeType }: { results: any[]; range:
     return (
         <div className="h-[140px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 4, right: 44, bottom: 0, left: 0 }}>
+                <LineChart data={chartData} syncId={syncIdProp} margin={{ top: 4, right: 44, bottom: 0, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} vertical={false} />
                     <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={9} tickLine={false} axisLine={false} />
                     <YAxis yAxisId="score" domain={[0, 100]} stroke={typeColor} fontSize={9} tickLine={false} axisLine={false} width={50} />
@@ -187,6 +192,7 @@ function ProbeScoreChart({ results, range, probeType }: { results: any[]; range:
                         contentStyle={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.15)' }}
                         itemStyle={{ fontSize: '11px', fontWeight: 'bold' }}
                         labelStyle={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}
+                        cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 2', strokeOpacity: 0.8 }}
                     />
                     <Line yAxisId="score" type="monotone" dataKey="score" stroke={typeColor} strokeWidth={2} dot={false} name="Score" activeDot={{ r: 4 }} />
                     <Line yAxisId="latency" type="monotone" dataKey="latency" stroke="#f97316" strokeWidth={1.5} dot={false} name="Latency (ms)" strokeDasharray="5 2" />
@@ -249,6 +255,14 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
     const [probeChartRange, setProbeChartRange] = useState('1h');
     const [syncResult, setSyncResult] = useState<any>(null);
     const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
+
+    // Crosshair sync: refs to measure DOM positions for connecting line
+    const timingChartWrapRef  = useRef<HTMLDivElement>(null); // outer section wrapping timing chart
+    const scoreChartWrapRef   = useRef<HTMLDivElement>(null); // outer section wrapping score chart
+    const chartsRegionRef     = useRef<HTMLDivElement>(null); // parent containing both sections
+    const [crosshair, setCrosshair] = useState<{ x: number; connTop: number; connH: number; visible: boolean }>(
+        { x: 0, connTop: 0, connH: 0, visible: false }
+    );
 
     const authHeaders = () => ({ 'Authorization': `Bearer ${token}` });
 
@@ -502,6 +516,25 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
         if (!selectedEndpoint) return [];
         return results.filter(r => r.endpointId === selectedEndpoint.id);
     }, [results, selectedEndpoint]);
+
+    // Shared chart data for the detail modal — BOTH charts use this so syncId works by identical indices
+    const detailChartData = React.useMemo(() => {
+        const rangeMs = probeChartRange === '1h' ? 60*60*1000 : probeChartRange === '6h' ? 6*60*60*1000 : 24*60*60*1000;
+        const cutoff = Date.now() - rangeMs;
+        return selectedEndpointResults
+            .filter(r => r.timestamp >= cutoff)
+            .slice(0, 300)
+            .reverse()
+            .map(r => ({
+                time: new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                score: r.score,
+                latency: Math.round(r.metrics?.total_ms || 0),
+                DNS:  Math.round(r.metrics?.dns_ms  || 0),
+                TCP:  Math.round(r.metrics?.tcp_ms  || 0),
+                TLS:  Math.round(r.metrics?.tls_ms  || 0),
+                TTFB: Math.round(r.metrics?.ttfb_ms || 0),
+            }));
+    }, [selectedEndpointResults, probeChartRange]);
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -927,9 +960,12 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                         </div>
 
                         <div className="p-8 space-y-8">
+                            {/* ── Synchronized charts wrapper (relative for connecting line) ── */}
+                            <div ref={chartsRegionRef} style={{ position: 'relative' }}>
+
                             {/* Detailed Timing Breakdown (Stacked Area Chart) */}
                             {(selectedEndpoint.type.includes('HTTP') || selectedEndpoint.type === 'CLOUD') && (
-                                <div className="space-y-4">
+                                <div ref={timingChartWrapRef} className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h4 className="text-xs font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
                                             <Zap size={16} className="text-yellow-500" /> Timing Analysis (ms)
@@ -943,23 +979,34 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                     </div>
                                     <div className="h-[250px] w-full bg-card-secondary/20 p-4 rounded-xl border border-border shadow-inner">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart data={selectedEndpointResults.slice(0, maxCaptures).reverse().map(r => ({
-                                                time: new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                                                DNS: Math.round(r.metrics.dns_ms || 0),
-                                                TCP: Math.round(r.metrics.tcp_ms || 0),
-                                                TLS: Math.round(r.metrics.tls_ms || 0),
-                                                TTFB: Math.round(r.metrics.ttfb_ms || 0)
-                                            }))}>
+                                            <AreaChart
+                                                data={detailChartData}
+                                                syncId="probe-detail-sync"
+                                                onMouseMove={(e: any) => {
+                                                    if (e?.activeCoordinate?.x !== undefined && timingChartWrapRef.current && scoreChartWrapRef.current && chartsRegionRef.current) {
+                                                        const region  = chartsRegionRef.current.getBoundingClientRect();
+                                                        const chart1  = timingChartWrapRef.current.getBoundingClientRect();
+                                                        const chart2  = scoreChartWrapRef.current.getBoundingClientRect();
+                                                        // x from left of region = container p-4 (16px) + recharts active coord
+                                                        const x       = e.activeCoordinate.x + 16;
+                                                        const connTop = chart1.bottom - region.top;
+                                                        const connH   = chart2.top    - chart1.bottom;
+                                                        setCrosshair({ x, connTop, connH, visible: connH > 0 });
+                                                    }
+                                                }}
+                                                onMouseLeave={() => setCrosshair(c => ({ ...c, visible: false }))}
+                                            >
                                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
                                                 <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} />
                                                 <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} axisLine={false} width={50} />
                                                 <ReTooltip
                                                     contentStyle={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                                                     itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                                                    cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 2', strokeOpacity: 0.8 }}
                                                 />
-                                                <Area type="monotone" dataKey="DNS" stackId="1" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.4} />
-                                                <Area type="monotone" dataKey="TCP" stackId="1" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.4} />
-                                                <Area type="monotone" dataKey="TLS" stackId="1" stroke="#a855f7" fill="#a855f7" fillOpacity={0.4} />
+                                                <Area type="monotone" dataKey="DNS"  stackId="1" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.4} />
+                                                <Area type="monotone" dataKey="TCP"  stackId="1" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.4} />
+                                                <Area type="monotone" dataKey="TLS"  stackId="1" stroke="#a855f7" fill="#a855f7" fillOpacity={0.4} />
                                                 <Area type="monotone" dataKey="TTFB" stackId="1" stroke="#f97316" fill="#f97316" fillOpacity={0.4} />
                                             </AreaChart>
                                         </ResponsiveContainer>
@@ -994,7 +1041,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                             )}
 
                             {/* Score Over Time Chart */}
-                            <div className="space-y-3">
+                            <div ref={scoreChartWrapRef} className="space-y-3">
                                 <div className="flex items-center justify-between">
                                     <h4 className="text-xs font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
                                         <TrendingUp size={15} className="text-indigo-500" /> Score Over Time
@@ -1016,9 +1063,34 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                     </div>
                                 </div>
                                 <div className="bg-card-secondary/20 rounded-xl border border-border p-3">
-                                    <ProbeScoreChart results={selectedEndpointResults} range={probeChartRange} probeType={selectedEndpoint.type} />
+                                    <ProbeScoreChart
+                                        results={selectedEndpointResults}
+                                        range={probeChartRange}
+                                        probeType={selectedEndpoint.type}
+                                        data={detailChartData}
+                                        syncId="probe-detail-sync"
+                                    />
                                 </div>
                             </div>
+
+                            {/* Connecting vertical line between the two charts */}
+                            {crosshair.visible && crosshair.connH > 0 && (
+                                <div
+                                    aria-hidden
+                                    style={{
+                                        position: 'absolute',
+                                        left:   `${crosshair.x}px`,
+                                        top:    `${crosshair.connTop}px`,
+                                        height: `${crosshair.connH}px`,
+                                        width:  '1px',
+                                        background: 'linear-gradient(to bottom, rgba(99,102,241,0.5), rgba(99,102,241,0.1), rgba(99,102,241,0.5))',
+                                        pointerEvents: 'none',
+                                        zIndex: 10,
+                                    }}
+                                />
+                            )}
+                            </div>{/* end charts wrapper */}
+
 
                             {/* Recent Checks Table */}
                             <div className="space-y-4">
