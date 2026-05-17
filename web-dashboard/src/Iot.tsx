@@ -6,7 +6,8 @@ import {
     Search, CheckSquare, Square as SquareIcon,
     ArrowUpRight, Clock, AlertCircle, ChevronRight,
     LayoutGrid, List, Terminal, X, ExternalLink, ChevronDown, FileJson,
-    Power, Edit2, AlertTriangle, FileSpreadsheet, CheckCircle2, Loader2, DownloadCloud
+    Power, Edit2, AlertTriangle, FileSpreadsheet, CheckCircle2, Loader2, DownloadCloud,
+    Gauge, Heart, TrendingUp, Zap
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import LogViewer from './components/LogViewer';
@@ -64,6 +65,12 @@ export default function Iot({ token }: IotProps) {
     const [showImportDropdown, setShowImportDropdown] = useState(false);
     const importDropdownRef = useRef<HTMLDivElement>(null);
 
+    // Concurrency state
+    const [iotSettings, setIotSettings] = useState<{ max: number; active: number; queued: number; idle: number }>({ max: 30, active: 0, queued: 0, idle: 0 });
+    const [sliderValue, setSliderValue] = useState(30);
+    const [iotHealth, setIotHealth] = useState<any>(null);
+    const sliderDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     // Close dropdown on outside click
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -75,11 +82,15 @@ export default function Iot({ token }: IotProps) {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Listen for daemon crash notification
+    // Listen for daemon crash + IoT health events
     useEffect(() => {
         const socket = io();
         socket.on('iot:daemon_failed', (info: any) => {
             setDaemonFailed(info.message || 'IoT daemon crashed — restart required');
+        });
+        socket.on('iot:health', (health: any) => {
+            setIotHealth(health);
+            setIotSettings({ max: health.maxConcurrentDevices || 30, active: health.activeDevices || 0, queued: health.queuedDevices || 0, idle: health.idleDevices || 0 });
         });
         return () => { socket.disconnect(); };
     }, []);
@@ -113,8 +124,13 @@ export default function Iot({ token }: IotProps) {
     };
 
     useEffect(() => {
+        // Fetch concurrency settings on mount
+        fetch('/api/iot/settings', { headers: authHeaders() }).then(r => r.json()).then(d => {
+            setIotSettings(d);
+            setSliderValue(d.max);
+        }).catch(() => {});
         fetchDevices();
-        const interval = setInterval(fetchDevices, 5000); // Poll every 5s for stats
+        const interval = setInterval(fetchDevices, 5000);
         return () => clearInterval(interval);
     }, []);
 
@@ -343,6 +359,30 @@ export default function Iot({ token }: IotProps) {
         return <Cpu size={size} />;
     };
 
+    const handleSliderChange = (val: number) => {
+        setSliderValue(val);
+        if (sliderDebounce.current) clearTimeout(sliderDebounce.current);
+        sliderDebounce.current = setTimeout(() => {
+            fetch('/api/iot/settings', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ maxConcurrentDevices: val }) })
+                .then(r => r.json()).then(d => setIotSettings(d)).catch(() => {});
+        }, 500);
+    };
+
+    const getRiskColor = (level: string) => {
+        if (level === 'HIGH') return { text: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30', dot: 'bg-red-500' };
+        if (level === 'MEDIUM') return { text: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/30', dot: 'bg-amber-500' };
+        return { text: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', dot: 'bg-emerald-500' };
+    };
+
+    const getStateBadge = (state: string) => {
+        switch (state) {
+            case 'ACTIVE':  return <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wide">Active</span>;
+            case 'QUEUED':  return <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-wide">Queued</span>;
+            case 'IDLE':    return <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-wide">Idle</span>;
+            default:        return <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-card-secondary text-text-muted border border-border uppercase tracking-wide">Off</span>;
+        }
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-12">
             {/* Daemon crash alert */}
@@ -358,6 +398,86 @@ export default function Iot({ token }: IotProps) {
                     </button>
                 </div>
             )}
+
+            {/* ── Concurrency Control Panel ─────────────────────────────── */}
+            <div className={cn(
+                "bg-card border rounded-2xl p-5 shadow-sm",
+                iotSettings.active > 80 ? "border-red-500/40" : iotSettings.active > 50 ? "border-amber-500/30" : "border-border"
+            )}>
+                <div className="flex items-start justify-between gap-6 flex-wrap">
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Gauge size={16} className="text-blue-400" />
+                            <span className="text-xs font-black text-text-primary uppercase tracking-widest">IoT Concurrency Control</span>
+                            {iotSettings.active > 80 && (
+                                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-red-500/10 text-red-400 border border-red-500/20 uppercase tracking-wide">
+                                    <div className="w-1 h-1 rounded-full bg-red-500 animate-pulse" /> High Load
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3 mb-2">
+                            <span className="text-[11px] text-text-muted w-40 shrink-0">Max simultaneous devices</span>
+                            <input
+                                type="range" min={1} max={Math.max(devices.length, sliderValue, 163)}
+                                value={sliderValue}
+                                onChange={e => handleSliderChange(Number(e.target.value))}
+                                className="flex-1 accent-blue-500 h-1.5 rounded-full cursor-pointer"
+                            />
+                            <span className="text-base font-black text-blue-400 w-8 text-right">{sliderValue}</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-[11px]">
+                            <span className="flex items-center gap-1.5">
+                                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                <span className="text-text-muted">Active: <span className="font-black text-emerald-400">{iotSettings.active}</span></span>
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                                <div className="w-2 h-2 rounded-full bg-amber-500" />
+                                <span className="text-text-muted">Queued: <span className="font-black text-amber-400">{iotSettings.queued}</span></span>
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                                <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                <span className="text-text-muted">Idle: <span className="font-black text-blue-400">{iotSettings.idle}</span></span>
+                            </span>
+                        </div>
+                        {iotSettings.active > 80 && (
+                            <p className="text-[10px] text-red-400/80 mt-2 font-medium">
+                                ⚠ High IoT load may impact VoIP quality. Consider reducing concurrency below 50.
+                            </p>
+                        )}
+                    </div>
+
+                    {/* System Health Mini Panel */}
+                    {iotHealth && (
+                        <div className={cn(
+                            "shrink-0 rounded-xl border p-4 space-y-2 min-w-[200px]",
+                            getRiskColor(iotHealth.voipRiskLevel).bg, getRiskColor(iotHealth.voipRiskLevel).border
+                        )}>
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-text-muted flex items-center gap-1">
+                                    <Heart size={10} /> System Health
+                                </span>
+                                <span className={cn("text-[9px] font-black uppercase tracking-widest flex items-center gap-1", getRiskColor(iotHealth.voipRiskLevel).text)}>
+                                    <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", getRiskColor(iotHealth.voipRiskLevel).dot)} />
+                                    {iotHealth.voipRiskLevel}
+                                </span>
+                            </div>
+                            {[
+                                { label: 'Host CPU', value: `${iotHealth.containerCpuPercent}%`, warn: iotHealth.containerCpuPercent > 80 },
+                                { label: 'UDP Errors/s', value: `+${iotHealth.udpReceiveErrorsDelta}`, warn: iotHealth.udpReceiveErrorsDelta > 20 },
+                                { label: 'Python D-state', value: iotHealth.pythonProcessesStateD, warn: iotHealth.pythonProcessesStateD >= 2 },
+                            ].map(({ label, value, warn }) => (
+                                <div key={label} className="flex items-center justify-between text-[10px]">
+                                    <span className="text-text-muted">{label}</span>
+                                    <span className={cn("font-black", warn ? getRiskColor(iotHealth.voipRiskLevel).text : 'text-text-secondary')}>{value}</span>
+                                </div>
+                            ))}
+                            {iotHealth.recommendation && (
+                                <p className={cn("text-[9px] mt-1 leading-relaxed", getRiskColor(iotHealth.voipRiskLevel).text)}>{iotHealth.recommendation}</p>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
             {/* Header section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4 min-w-0 flex-shrink">
@@ -589,7 +709,10 @@ export default function Iot({ token }: IotProps) {
                                     </div>
                                     <div className="truncate">
                                         <h3 className={cn("font-bold text-text-primary transition-colors tracking-tight truncate", isCompact ? "text-sm" : "text-base group-hover:text-blue-500")}>{device.name}</h3>
-                                        <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest truncate">{device.vendor} • {device.type}</p>
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest truncate">{device.vendor} • {device.type}</p>
+                                            {(device as any).deviceState && getStateBadge((device as any).deviceState)}
+                                        </div>
                                     </div>
                                 </div>
 

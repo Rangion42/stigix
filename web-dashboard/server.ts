@@ -1548,7 +1548,7 @@ if (fs.existsSync(INTERFACES_FILE)) {
     });
 }
 
-const iotManager = new IoTManager(getInterface());
+const iotManager = new IoTManager(getInterface(), APP_CONFIG.configDir);
 const vyosManager = new VyosManager(APP_CONFIG.configDir, PYTHON_PATH);
 const vyosScheduler = new VyosScheduler(vyosManager, APP_CONFIG.configDir, APP_CONFIG.logDir);
 const siteManager = new SiteManager(APP_CONFIG.configDir);
@@ -9249,6 +9249,116 @@ const scheduleLogCleanup = () => {
 
 // --- IoT Devices API ---
 
+// GET /api/iot/settings
+app.get('/api/iot/settings', authenticateToken, (req, res) => {
+    res.json(iotManager.getQueueStats());
+});
+
+// POST /api/iot/settings — apply live, no restart
+app.post('/api/iot/settings', authenticateToken, (req, res) => {
+    const { maxConcurrentDevices } = req.body;
+    if (typeof maxConcurrentDevices !== 'number' || maxConcurrentDevices < 1) {
+        return res.status(400).json({ error: 'maxConcurrentDevices must be a positive number' });
+    }
+    iotManager.setMaxConcurrent(Math.round(maxConcurrentDevices));
+    res.json({ success: true, ...iotManager.getQueueStats() });
+});
+
+// GET /api/iot/queue-status — per-device states
+app.get('/api/iot/queue-status', authenticateToken, (req, res) => {
+    res.json(iotManager.getDeviceStates());
+});
+
+// ── IoT Health Cache (background, non-blocking) ─────────────────────────────
+let iotHealthCache: any = {
+    activeDevices: 0, queuedDevices: 0, idleDevices: 0,
+    pythonProcessesStateD: 0, containerCpuPercent: 0, udpReceiveErrorsDelta: 0,
+    voipRiskLevel: 'LOW', recommendation: ''
+};
+let prevCpuStat: number[] | null = null;
+let prevUdpErrors: number = 0;
+
+function parseProcStat(): number[] {
+    try {
+        const line = fs.readFileSync('/proc/stat', 'utf8').split('\n')[0];
+        return line.split(/\s+/).slice(1).map(Number);
+    } catch { return []; }
+}
+
+function parseUdpErrors(): number {
+    try {
+        const snmp = fs.readFileSync('/proc/net/snmp', 'utf8');
+        const lines = snmp.split('\n');
+        const hdrIdx = lines.findIndex(l => l.startsWith('Udp:'));
+        if (hdrIdx < 0) return 0;
+        const keys = lines[hdrIdx].split(/\s+/);
+        const vals = lines[hdrIdx + 1]?.split(/\s+/) || [];
+        const errIdx = keys.indexOf('InErrors');
+        return errIdx >= 0 ? parseInt(vals[errIdx] || '0') : 0;
+    } catch { return 0; }
+}
+
+function getPythonStateDCount(): number {
+    try {
+        const out = execSync("ps -eo stat,comm | grep -c '^D.*python' 2>/dev/null || echo 0", { encoding: 'utf8', timeout: 2000 });
+        return parseInt(out.trim()) || 0;
+    } catch { return 0; }
+}
+
+function refreshIotHealth(): void {
+    try {
+        const stats = iotManager.getQueueStats();
+        iotHealthCache.activeDevices = stats.active;
+        iotHealthCache.queuedDevices = stats.queued;
+        iotHealthCache.idleDevices = stats.idle;
+        iotHealthCache.maxConcurrentDevices = stats.max;
+
+        // CPU %
+        const curr = parseProcStat();
+        if (prevCpuStat && curr.length > 0) {
+            const total = curr.reduce((a, b) => a + b, 0) - prevCpuStat.reduce((a, b) => a + b, 0);
+            const idle = (curr[3] - prevCpuStat[3]);
+            iotHealthCache.containerCpuPercent = total > 0 ? Math.round((1 - idle / total) * 100) : 0;
+        }
+        prevCpuStat = curr;
+
+        // UDP errors delta
+        const currUdp = parseUdpErrors();
+        iotHealthCache.udpReceiveErrorsDelta = Math.max(0, currUdp - prevUdpErrors);
+        prevUdpErrors = currUdp;
+
+        // State-D processes
+        iotHealthCache.pythonProcessesStateD = getPythonStateDCount();
+
+        // VoIP risk
+        const { containerCpuPercent: cpu, pythonProcessesStateD: stateD } = iotHealthCache;
+        if (cpu > 80 || stateD >= 3) {
+            iotHealthCache.voipRiskLevel = 'HIGH';
+            iotHealthCache.recommendation = 'Reduce IoT concurrency to protect VoIP quality';
+        } else if (cpu > 60 || stateD >= 1) {
+            iotHealthCache.voipRiskLevel = 'MEDIUM';
+            iotHealthCache.recommendation = 'Monitor — VoIP may degrade under sustained load';
+        } else {
+            iotHealthCache.voipRiskLevel = 'LOW';
+            iotHealthCache.recommendation = '';
+        }
+    } catch (e) {
+        log('SYSTEM', `IoT health refresh error: ${e}`, 'error');
+    }
+}
+
+// Background refresh every 5s + push via Socket.IO
+setInterval(() => {
+    refreshIotHealth();
+    io.emit('iot:health', iotHealthCache);
+}, 5000);
+
+// GET /api/system/iot-health
+app.get('/api/system/iot-health', authenticateToken, (req, res) => {
+    res.json(iotHealthCache);
+});
+
+
 app.get('/api/iot/devices', authenticateToken, (req, res) => {
     const devices = getIoTDevices();
 
@@ -9256,10 +9366,11 @@ app.get('/api/iot/devices', authenticateToken, (req, res) => {
     if (process.env.DEBUG_IOT === 'true') {
         log('IOT-REQ', `GET /api/iot/devices - Found ${devices.length} devices`, 'debug');
     }
-    const running = iotManager.getRunningDevices();
+    const deviceStates = iotManager.getDeviceStates();
     const result = devices.map(d => ({
         ...d,
-        running: running.includes(d.id),
+        running: deviceStates[d.id] === 'ACTIVE',
+        deviceState: deviceStates[d.id] || 'STOPPED',
         status: iotManager.getDeviceStatus(d.id)
     }));
     res.json(result);
