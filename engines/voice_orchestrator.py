@@ -15,6 +15,9 @@ DEBUG_MODE = os.getenv('DEBUG', 'false').lower() == 'true'
 
 SYSTEM_SETTINGS_FILE = os.path.join(CONFIG_DIR, 'system-settings.json')
 
+# Watchdog: how long after theoretical call duration before force-killing rtp.py
+WATCHDOG_GRACE_PERIOD_S = 15
+
 def get_auto_restart_voice() -> bool:
     """Read system-settings.json to decide if voice should resume on startup.
     Returns False (safe default) if the file is absent or the flag is not set."""
@@ -239,12 +242,18 @@ def start_call(server, interface):
         env["PYTHONUNBUFFERED"] = "1"
         # Capture stdout for QoS data, let stderr pass through to console for debug logs
         proc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE)
+        # theoretical_duration_s: how long rtp.py should run at most.
+        # rtp.py sends one packet every 20 ms → (num_packets+1) × 20 ms.
+        # We add WATCHDOG_GRACE_PERIOD_S on top before force-killing.
+        theoretical_duration_s = (num_packets + 1) * 0.020
         call_info = {
             "call_id": call_id,
             "pid": proc.pid,
             "target": server['target'],
             "codec": server['codec'],
-            "duration": server['duration']
+            "duration": server['duration'],
+            "start_time": time.time(),                  # wall-clock epoch for watchdog
+            "theoretical_duration_s": theoretical_duration_s,
         }
         timestamp = time.strftime('%H:%M:%S')
         log_call("start", call_info)
@@ -253,6 +262,41 @@ def start_call(server, interface):
     except Exception as e:
         print(f"Failed to start rtp.py: {e}")
         return None
+
+def watchdog_kill_stale(calls: list, grace_period_s: int = WATCHDOG_GRACE_PERIOD_S) -> None:
+    """Kill any rtp.py process that overran its theoretical duration + grace_period.
+    Sends SIGTERM first, then SIGKILL after 3s if still alive.
+    Removes stale entries from `calls` in-place."""
+    global active_calls
+    now = time.time()
+    stale = []
+    for call in list(calls):
+        if call['proc'].poll() is not None:
+            continue  # already exited — normal cleanup handles it
+        elapsed = now - call['info'].get('start_time', now)
+        deadline = call['info'].get('theoretical_duration_s', 0) + grace_period_s
+        if elapsed > deadline:
+            call_id = call['info']['call_id']
+            pid     = call['proc'].pid
+            ts      = time.strftime('%H:%M:%S')
+            print(f"[{ts}] [WATCHDOG] {call_id} killed after {int(elapsed)}s "
+                  f"(deadline={int(deadline)}s, PID={pid})", flush=True)
+            try:
+                call['proc'].send_signal(signal.SIGTERM)
+                time.sleep(3)
+                if call['proc'].poll() is None:
+                    print(f"[{time.strftime('%H:%M:%S')}] [WATCHDOG] {call_id} "
+                          f"SIGTERM ignored — sending SIGKILL (PID {pid})", flush=True)
+                    call['proc'].kill()
+            except Exception as e:
+                print(f"[{time.strftime('%H:%M:%S')}] [WATCHDOG] kill {call_id} failed: {e}",
+                      flush=True)
+            log_call("end", {**call['info'],
+                             "error": f"watchdog_timeout:{int(elapsed)}s"})
+            stale.append(call)
+    for call in stale:
+        active_calls.remove(call)
+
 
 def signal_handler(sig, frame):
     print("Shutting down voice orchestrator...")
@@ -338,7 +382,15 @@ def main():
             active_calls.remove(call)
             
         if control.get("enabled"):
-            if len(active_calls) < control.get("max_simultaneous_calls", 3):
+            max_calls = control.get("max_simultaneous_calls", 3)
+
+            # ── Watchdog pass: kill stale processes, free slots ────────────────
+            watchdog_kill_stale(active_calls)
+
+            # ── Hard limit: count only OS-alive processes ──────────────────────
+            alive_count = sum(1 for c in active_calls if c['proc'].poll() is None)
+
+            if alive_count < max_calls:
                 server = pick_server(servers)
                 if server:
                     new_call = start_call(server, control.get("interface", "eth0"))
@@ -346,10 +398,11 @@ def main():
                         active_calls.append(new_call)
             else:
                 current_time = time.time()
-                if current_time - last_wait_log_time > 60: # Cooldown of 60 seconds
-                    if DEBUG_MODE: 
+                if current_time - last_wait_log_time > 60:  # Cooldown of 60 seconds
+                    if DEBUG_MODE:
                         timestamp = time.strftime('%H:%M:%S')
-                        print(f"[{timestamp}] ℹ️  Wait: Max simultaneous calls reached ({len(active_calls)}/{control.get('max_simultaneous_calls', 3)})")
+                        print(f"[{timestamp}] ℹ️  Wait: Max simultaneous calls reached "
+                              f"({alive_count}/{max_calls})")
                     sys.stdout.flush()
                     last_wait_log_time = current_time
         else:
