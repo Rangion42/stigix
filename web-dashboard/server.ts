@@ -9264,11 +9264,12 @@ app.post('/api/iot/settings', authenticateToken, (req, res) => {
     res.json({ success: true, ...iotManager.getQueueStats() });
 });
 
-// GET /api/iot/queue-status — per-device states + timing info
+// GET /api/iot/queue-status — per-device states + timing info + global traffic rate
 app.get('/api/iot/queue-status', authenticateToken, (req, res) => {
     res.json({
-        states:  iotManager.getDeviceStates(),
-        timings: iotManager.getTimingInfo(),
+        states:      iotManager.getDeviceStates(),
+        timings:     iotManager.getTimingInfo(),
+        trafficRate: iotManager.getTrafficRate(),
     });
 });
 
@@ -9345,6 +9346,8 @@ function refreshIotHealth(): void {
             iotHealthCache.voipRiskLevel = 'LOW';
             iotHealthCache.recommendation = '';
         }
+        // Traffic rate (packets/s, bits/s) aggregated from active IoT device stats
+        iotHealthCache.trafficRate = iotManager.getTrafficRate();
     } catch (e) {
         log('SYSTEM', `IoT health refresh error: ${e}`, 'error');
     }

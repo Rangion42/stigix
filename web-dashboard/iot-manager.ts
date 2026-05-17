@@ -55,6 +55,10 @@ export class IoTManager extends EventEmitter {
     private runningDevices: Map<string, IoTDeviceConfig> = new Map();  // in daemon
     private statsCache: Map<string, any> = new Map();
     private logsCache: Map<string, any[]> = new Map();
+    // Traffic rate tracking — snapshot of last received stats per device
+    private lastStatsSnapshot: Map<string, { packets: number; bytes: number; ts: number }> = new Map();
+    // Per-device pps/bps (refreshed on each stats message, ~every 5s)
+    private deviceRates: Map<string, { pps: number; bps: number }> = new Map();
 
     // ── Concurrency throttle ─────────────────────────────────────────────────
     private maxConcurrentDevices: number = DEFAULT_MAX_CONCURRENT;
@@ -478,10 +482,31 @@ export class IoTManager extends EventEmitter {
                 this.emit('device:stopped', msg);
                 break;
             }
-            case 'stats':
-                this.statsCache.set(device_id, msg.stats);
+            case 'stats': {
+                const incoming = msg.stats;
+                this.statsCache.set(device_id, incoming);
+                // ── Rate calculation ─────────────────────────────────────────
+                const now_ms = Date.now();
+                const prev = this.lastStatsSnapshot.get(device_id);
+                if (prev) {
+                    const deltaSec = (now_ms - prev.ts) / 1000;
+                    if (deltaSec > 0) {
+                        const deltaP = Math.max(0, (incoming.packets_sent || 0) - prev.packets);
+                        const deltaB = Math.max(0, (incoming.bytes_sent   || 0) - prev.bytes);
+                        this.deviceRates.set(device_id, {
+                            pps: deltaP / deltaSec,
+                            bps: deltaB / deltaSec,
+                        });
+                    }
+                }
+                this.lastStatsSnapshot.set(device_id, {
+                    packets: incoming.packets_sent || 0,
+                    bytes:   incoming.bytes_sent   || 0,
+                    ts:      now_ms,
+                });
                 this.emit('device:stats', msg);
                 break;
+            }
             case 'log': {
                 const logs = this.logsCache.get(device_id) || [];
                 logs.push(msg);
@@ -509,6 +534,30 @@ export class IoTManager extends EventEmitter {
             result[id] = { running: this.runningDevices.has(id), ...stats };
         });
         return result;
+    }
+
+    /** Aggregate pps/bps/ppm across all currently tracked devices. */
+    getTrafficRate(): { pps: number; bps: number; ppm: number; bpm: number; activeDevices: number } {
+        // Only count devices that sent a stats update in the last 30s
+        const cutoff = Date.now() - 30_000;
+        let totalPps = 0;
+        let totalBps = 0;
+        let activeDevices = 0;
+        this.deviceRates.forEach((rate, id) => {
+            const snap = this.lastStatsSnapshot.get(id);
+            if (snap && snap.ts >= cutoff) {
+                totalPps += rate.pps;
+                totalBps += rate.bps;
+                activeDevices++;
+            }
+        });
+        return {
+            pps:           Math.round(totalPps),
+            bps:           Math.round(totalBps),
+            ppm:           Math.round(totalPps * 60),
+            bpm:           Math.round(totalBps * 60),
+            activeDevices,
+        };
     }
 
     getDeviceStatus(id: string): any {

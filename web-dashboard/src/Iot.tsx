@@ -69,6 +69,7 @@ export default function Iot({ token }: IotProps) {
     const [iotSettings, setIotSettings] = useState<{ max: number; active: number; queued: number; idle: number }>({ max: 30, active: 0, queued: 0, idle: 0 });
     const [sliderValue, setSliderValue] = useState(30);
     const [iotHealth, setIotHealth] = useState<any>(null);
+    const [trafficRate, setTrafficRate] = useState<{ pps: number; ppm: number; bps: number; activeDevices: number } | null>(null);
     const sliderDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Format elapsed seconds as "2m 14s" or "45s"
@@ -109,6 +110,7 @@ export default function Iot({ token }: IotProps) {
         socket.on('iot:health', (health: any) => {
             setIotHealth(health);
             setIotSettings({ max: health.maxConcurrentDevices || 30, active: health.activeDevices || 0, queued: health.queuedDevices || 0, idle: health.idleDevices || 0 });
+            if (health.trafficRate) setTrafficRate(health.trafficRate);
         });
         return () => { socket.disconnect(); };
     }, []);
@@ -496,6 +498,20 @@ export default function Iot({ token }: IotProps) {
                                     <span className={cn("font-black", warn ? getRiskColor(iotHealth.voipRiskLevel).text : 'text-text-secondary')}>{value}</span>
                                 </div>
                             ))}
+                            {/* Traffic rate */}
+                            {trafficRate && trafficRate.activeDevices > 0 && (
+                                <>
+                                    <div className="h-px bg-border/50 my-1" />
+                                    <div className="flex items-center justify-between text-[10px]">
+                                        <span className="text-text-muted flex items-center gap-1"><TrendingUp size={9} /> IoT pkt/s</span>
+                                        <span className="font-black text-blue-400">{trafficRate.pps.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-[10px]">
+                                        <span className="text-text-muted flex items-center gap-1"><Zap size={9} /> IoT pkt/min</span>
+                                        <span className="font-black text-blue-400">{trafficRate.ppm.toLocaleString()}</span>
+                                    </div>
+                                </>
+                            )}
                             {iotHealth.recommendation && (
                                 <p className={cn("text-[9px] mt-1 leading-relaxed", getRiskColor(iotHealth.voipRiskLevel).text)}>{iotHealth.recommendation}</p>
                             )}
