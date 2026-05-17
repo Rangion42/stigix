@@ -218,8 +218,8 @@ def start_call(server, interface):
         })
         return None
 
-    # Calculate packet count based on duration and 0.02s send interval (20ms/G.711 audio)
-    num_packets = int(server['duration'] / 0.02)
+    # Packet count: rtp.py sends one packet every 30ms (reverted from 20ms / G.711)
+    num_packets = int(server['duration'] / 0.03)
     stream_type = server.get('stream_type', 'audio')
 
     cmd = [
@@ -243,9 +243,9 @@ def start_call(server, interface):
         # Capture stdout for QoS data, let stderr pass through to console for debug logs
         proc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE)
         # theoretical_duration_s: how long rtp.py should run at most.
-        # rtp.py sends one packet every 20 ms → (num_packets+1) × 20 ms.
+        # rtp.py sends one packet every 30ms → (num_packets+1) × 30ms.
         # We add WATCHDOG_GRACE_PERIOD_S on top before force-killing.
-        theoretical_duration_s = (num_packets + 1) * 0.020
+        theoretical_duration_s = (num_packets + 1) * 0.030
         call_info = {
             "call_id": call_id,
             "pid": proc.pid,

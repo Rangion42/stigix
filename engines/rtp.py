@@ -172,10 +172,10 @@ if __name__ == "__main__":
         pt = 96 # Dynamic/H.264
         send_interval = 0.01 # 10ms (approx 1 Mbps)
     else:
-        # Default to high-quality Audio (G.711 @ 20ms)
+        # Default Audio: 30ms ptime (≈33 pps) — stable under load, was G.711@20ms before
         payload_size = 160
-        pt = 8 # PCMA
-        send_interval = 0.02 # 20ms (Standard VoIP)
+        pt = 8  # PCMA
+        send_interval = 0.03  # 30ms (~33 pps) — reverted from 0.02 (50 pps / G.711)
 
     # Generate jittery random payload padding
     udp_payload_parts = []
@@ -196,7 +196,7 @@ if __name__ == "__main__":
     
     timestamp = time.strftime('%H:%M:%S')
     print(f"[{timestamp}] [{args['call_id']}] 🚀 Executing: python3 rtp.py -D {args['destination_ip']} -dport {args['destination_port']} --min-count {args['min_count']} --max-count {args['max_count']} --source-interface {args['source_interface']} --call-id {args['call_id']}", file=sys.stderr)
-    print(f"[{timestamp}] [{args['call_id']}] 📞 RTP Engine STARTED: {args['destination_ip']}:{args['destination_port']} | G.711-ulaw | {int(args['min_count'] * 0.03)}s", file=sys.stderr)
+    print(f"[{timestamp}] [{args['call_id']}] 📞 RTP Engine STARTED: {args['destination_ip']}:{args['destination_port']} | G.711-PCMA@30ms | {int(args['min_count'] * 0.03)}s", file=sys.stderr)
 
     # IP/UDP Length calculation
     # RTP=12, UDP_HDR=8, IP_HDR=20
