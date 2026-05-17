@@ -222,9 +222,48 @@ Stigix uses a **semaphore queue** in the IoT manager. At any time, only `maxConc
 | State | Badge | Meaning |
 |---|---|---|
 | 🟢 **ACTIVE** | Green | Scapy process running, consuming a concurrency slot |
-| 🟡 **QUEUED** | Amber | Waiting for a free slot |
-| 🔵 **IDLE** | Blue | Cycle complete, waiting `traffic_interval` seconds before re-queuing |
-| ⚫ **Stopped** | Gray | Manually disabled by user |
+| 🟡 **QUEUED** | Amber | Waiting for a free slot — will activate automatically |
+| 🔵 **IDLE** | Blue | Cycle complete, sleeping `traffic_interval` seconds before re-queuing |
+| ⚫ **Stopped** | Gray | Manually removed from rotation by the user |
+
+**Full state transition diagram:**
+
+```
+                ┌──────────────────────────────────────────────┐
+                │          USER: Start button                  │
+                ▼                                              │
+ ──────────  slot libre ?                                      │
+│ STOPPED  │──────┬────────────────┐                           │
+ ──────────       │ OUI            │ NON                       │
+                  ▼                ▼                           │
+            ─────────        ─────────                         │
+           │ ACTIVE  │      │ QUEUED  │◄──────────────┐         │
+            ─────────        ─────────               │         │
+               │  ▲               │                  │         │
+  cycleTimer   │  │ promoteNext   │ slot se libère   │         │
+  expire       │  └───────────────┘                  │         │
+               │                                     │         │
+               ▼                                     │         │
+            ─────────   idleTimer expire              │         │
+           │  IDLE   │   slot libre ? ───────────────┘         │
+            ─────────   slot plein ? ──────────► QUEUED        │
+               │                                               │
+               │  USER: Shut (depuis IDLE ou ACTIVE)           │
+               └───────────────────────────────────────────────┘
+```
+
+| De → Vers | Déclencheur |
+|---|---|
+| STOPPED → **ACTIVE** | `startDevice()`, slot disponible |
+| STOPPED → **QUEUED** | `startDevice()`, slots pleins |
+| QUEUED → **ACTIVE** | `promoteNextQueued()` — un slot se libère |
+| ACTIVE → **IDLE** | `cycleTimer` expire (`traffic_interval` s) → stop daemon |
+| IDLE → **ACTIVE** | `idleTimer` expire → slot disponible |
+| IDLE → **QUEUED** | `idleTimer` expire → slots pleins |
+| ACTIVE → **STOPPED** | User clique **Shut** |
+| IDLE → **STOPPED** | User clique **Shut** |
+| QUEUED → **STOPPED** | User clique **Dequeue** |
+| QUEUED → **ACTIVE** | `setMaxConcurrent()` augmenté → promote immédiat |
 
 **Rotation cycle:**
 
@@ -232,12 +271,12 @@ Stigix uses a **semaphore queue** in the IoT manager. At any time, only `maxConc
 User starts 163 devices
         │
         ▼
-  30 → ACTIVE (Scapy sends traffic)
- 133 → QUEUED (waiting for a slot)
+  30 → ACTIVE  (traffic_interval seconds of Scapy traffic)
+ 133 → QUEUED  (waiting for a slot)
         │
-        ▼  (device completes its DHCP + traffic cycle)
+        ▼  cycleTimer expires → stop sent to daemon
         │
-      IDLE ──── waits traffic_interval seconds ──── re-queues
+      IDLE ──── idleTimer: traffic_interval seconds ──── re-queues
         │
         ▼
    Slot freed → next QUEUED becomes ACTIVE immediately
@@ -259,18 +298,18 @@ The **IoT Concurrency Control** panel appears at the top of the IoT tab:
   - 🟡 **In Queue** — QUEUED + IDLE devices (hidden when 0)
   - ⚫ **Stopped** — manually disabled devices
 
-**Per-device card:**
+### Per-device card — timing indicators
 
-Each device card displays a state badge and a context-aware action button:
+Each device card shows **real-time timing info** below the state badge, updated every second client-side:
 
-| Device state | Badge color | Status label | Action button |
+| Device state | Badge | Timing indicator | Action button |
 |---|---|---|---|
-| ACTIVE | 🟢 Green | Running | **Shut** (red) — stops the device |
-| QUEUED | 🟡 Amber | Queued | **Dequeue** (amber) — removes from queue |
-| IDLE | 🔵 Blue | Idle | **Cancel** (blue) — cancels the idle timer |
-| STOPPED | ⚫ Gray | Stopped | **Start** (blue) — adds to queue or activates |
+| ACTIVE | 🟢 Running | Elapsed time since activation (e.g. `2m 14s`) | **Shut** (red) — removes from rotation |
+| IDLE | 🔵 Idle | Countdown before re-queue (e.g. `45s left`) | **Shut** (red) — removes from rotation |
+| QUEUED | 🟡 Queued | Position in queue (e.g. `#12`) | **Dequeue** (amber) — removes from rotation |
+| STOPPED | ⚫ Stopped | — | **Start** (blue) — adds to queue or activates |
 
-> QUEUED devices do **not** show a Start button — they are already managed by the throttle and will activate automatically when a slot is free. Clicking **Dequeue** removes them from the managed set entirely.
+> Both **ACTIVE** and **IDLE** use the same red **Shut** button — from the user's perspective both states mean "the device is in the rotation". Clicking Shut removes it entirely. IDLE is just an internal sleep between traffic cycles.
 
 ### System Health mini-panel
 
@@ -310,11 +349,27 @@ This file is optional. If absent, the system defaults to 30. It is **upgrade-saf
 |---|---|---|
 | `/api/iot/settings` | GET | Returns `{ max, active, queued, idle }` |
 | `/api/iot/settings` | POST | Body: `{ maxConcurrentDevices: number }` — applies live |
-| `/api/iot/queue-status` | GET | Per-device state map `{ [id]: 'ACTIVE'\|'QUEUED'\|'IDLE'\|'STOPPED' }` |
+| `/api/iot/queue-status` | GET | Returns `{ states: { [id]: DeviceState }, timings: { [id]: TimingInfo } }` |
+| `/api/iot/devices` | GET | Device list with `deviceState` and `timing` fields merged in |
+| `/api/iot/bad-behavior` | GET | Returns `{ enabled: boolean }` — current global attack mode |
 | `/api/system/iot-health` | GET | CPU%, UDP errors/s, D-state count, VoIP risk level |
+
+**TimingInfo** object per device:
+```json
+// ACTIVE device
+{ "activatedAt": 1747386000000 }           // Unix ms — client computes elapsed
+
+// IDLE device
+{ "idledAt": 1747386240000, "cycleSeconds": 240 }  // client computes countdown
+
+// QUEUED device
+{ "queuePosition": 12 }                    // 1-based position in the queue
+```
 
 ---
 
+
+---
 
 ### Protocol Support Details
 - **`dhcp`**: Triggers a Scapy-based DHCP state machine (Discover → Offer → Request → Ack) with RFC 2131 INIT-REBOOT lease persistence (see below).
@@ -324,7 +379,60 @@ This file is optional. If absent, the system defaults to 30. It is **upgrade-saf
 
 ---
 
+## ⏱️ Duty Cycle & `traffic_interval`
+
+The **`traffic_interval`** field (shown as **Interval** on each device card) is the single parameter that controls the full duty cycle of a managed device.
+
+### What it controls
+
+| Phase | Duration | What happens |
+|---|---|---|
+| **ACTIVE** | `traffic_interval` seconds | Scapy runs, traffic is generated (min 30s enforced) |
+| **IDLE** | `traffic_interval` seconds | Device sleeps, no packets sent |
+| **Full cycle** | `2 × traffic_interval` | Before the device can run again |
+
+**Example — Interval: 240s** (like the Philips UltraSound Machine):
+```
+ACTIVE  240s  → DHCP INIT-REBOOT, ARP, DNS, HTTP traffic
+IDLE    240s  → silent (countdown visible: "3m left")
+─────────────────────────────────────────────────────
+Total   480s (~8 min) per cycle
+```
+
+### Expected queue wait time
+
+With N devices and M slots:
+
+```
+Avg cycle = 2 × avg(traffic_interval) ≈ 2 × 180s = 360s
+Slot rate  = M / 360s  (e.g. 30 / 360 = 1 slot per 12s)
+Queue wait ≈ (N − M) × 12s  (e.g. 133 × 12s ≈ 26 min)
+```
+
+> In practice, devices get their turn roughly every `2 × traffic_interval × (N/M)` seconds. This is realistic — real IoT devices don't send traffic continuously; they operate in burst cycles then sleep.
+
+### Setting `traffic_interval`
+
+- **Via import scripts**: assigned randomly between 60–300s at import time (`random.randint(60, 300)`)
+- **Via JSON**: edit the `traffic_interval` field directly
+- **Via UI**: use the Edit modal on each device card
+
+### DHCP on re-activation (wake from IDLE)
+
+When a device goes IDLE → ACTIVE, it does **not** do a full DHCP Discover. It uses **RFC 2131 INIT-REBOOT** — a single broadcast REQUEST for the same IP it had before (stored in `dhcp_leases.json`). This is exactly how real IoT devices behave when waking from sleep:
+
+```
+IDLE → ACTIVE:
+  DHCP REQUEST (requested_addr = last IP)  →  ACK  →  same IP confirmed (< 1s)
+  (no DISCOVER, no OFFER — fast path)
+```
+
+The IP only changes if the DHCP server NAKs the INIT-REBOOT (subnet change, lease expired), in which case the device falls back to a full Discover automatically.
+
+---
+
 ## 📋 DHCP Lease Persistence (RFC 2131 INIT-REBOOT)
+
 
 By default, a DHCP server with no MAC reservations may assign a **different IP** to a device after a container restart. To solve this, the IoT emulator persists each device's assigned IP in a lease file that survives restarts.
 
