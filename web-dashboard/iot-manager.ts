@@ -153,7 +153,13 @@ export class IoTManager extends EventEmitter {
             if (state === 'QUEUED') {
                 const cfg = this.managedDevices.get(id);
                 if (cfg) {
-                    this.activateDevice(cfg).catch(e => log('IOT', `Promote failed ${id}: ${e}`, 'error'));
+                    // MUST set ACTIVE synchronously before the async call — same as startDevice().
+                    // Otherwise getActiveCount() under-counts and multiple promotions race.
+                    this.deviceStates.set(id, 'ACTIVE');
+                    this.activateDevice(cfg).catch(e => {
+                        log('IOT', `Promote failed ${id}: ${e}`, 'error');
+                        this.deviceStates.set(id, 'QUEUED'); // rollback
+                    });
                     return;
                 }
             }
@@ -166,7 +172,14 @@ export class IoTManager extends EventEmitter {
         if (!cfg || this.deviceStates.get(deviceId) !== 'IDLE') return;
 
         if (this.getActiveCount() < this.maxConcurrentDevices) {
-            this.activateDevice(cfg).catch(e => log('IOT', `Requeue activate failed ${deviceId}: ${e}`, 'error'));
+            // MUST set ACTIVE synchronously before the async call.
+            // If we don't, deviceStates stays 'IDLE'; when the daemon later emits 'stopped',
+            // the handler checks currentState === 'ACTIVE' → false → no idleTimer → device stuck.
+            this.deviceStates.set(deviceId, 'ACTIVE');
+            this.activateDevice(cfg).catch(e => {
+                log('IOT', `Requeue activate failed ${deviceId}: ${e}`, 'error');
+                this.deviceStates.set(deviceId, 'QUEUED'); // rollback
+            });
         } else {
             this.deviceStates.set(deviceId, 'QUEUED');
             log('IOT', `Device ${deviceId} re-queued (slots full)`);
