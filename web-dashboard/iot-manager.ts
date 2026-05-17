@@ -60,7 +60,8 @@ export class IoTManager extends EventEmitter {
     private maxConcurrentDevices: number = DEFAULT_MAX_CONCURRENT;
     private managedDevices: Map<string, IoTDeviceConfig> = new Map();  // all user-requested
     private deviceStates: Map<string, DeviceState> = new Map();
-    private idleTimers: Map<string, NodeJS.Timeout> = new Map();
+    private idleTimers: Map<string, NodeJS.Timeout> = new Map();   // IDLE → re-queue
+    private cycleTimers: Map<string, NodeJS.Timeout> = new Map();  // ACTIVE → cycle stop
     private configDir: string;
 
     // ── Global bad behavior state ─────────────────────────────────────────────
@@ -123,6 +124,28 @@ export class IoTManager extends EventEmitter {
         this.runningDevices.set(config.id, config);
         this.sendCommand({ cmd: 'start', device: config });
         log('IOT', `Activated: ${config.id} [${this.getActiveCount()}/${this.maxConcurrentDevices}]`);
+
+        // Schedule automatic cycle stop so queued devices get their turn.
+        // The daemon loops indefinitely — it never emits 'stopped' on its own.
+        // After traffic_interval seconds we stop the device; the 'stopped' handler
+        // then sets it IDLE → re-queues after traffic_interval → promotes next QUEUED.
+        const cycleMs = Math.max(30_000, (config.traffic_interval || 60) * 1000);
+        const cycleTimer = setTimeout(() => this.endDeviceCycle(config.id), cycleMs);
+        this.cycleTimers.set(config.id, cycleTimer);
+        log('IOT', `Cycle timer set for ${config.id}: ${Math.round(cycleMs / 1000)}s`);
+    }
+
+    /** Called when a device's cycle timer expires — stops it so the next QUEUED can run. */
+    private endDeviceCycle(deviceId: string): void {
+        this.cycleTimers.delete(deviceId);
+        if (this.deviceStates.get(deviceId) !== 'ACTIVE') return; // already stopped/dequeued
+        if (!this.managedDevices.has(deviceId)) return;
+        log('IOT', `Cycle complete for ${deviceId} — stopping for rotation`);
+        // Remove from runningDevices now; the daemon will confirm via 'stopped' event.
+        // We DON'T remove from managedDevices so the device stays in the rotation.
+        this.runningDevices.delete(deviceId);
+        this.sendCommand({ cmd: 'stop', device_id: deviceId });
+        // The existing 'stopped' handler will: set IDLE → wait traffic_interval → re-queue
     }
 
     private promoteNextQueued(): void {
@@ -178,8 +201,11 @@ export class IoTManager extends EventEmitter {
     }
 
     async stopDevice(deviceId: string): Promise<void> {
-        const timer = this.idleTimers.get(deviceId);
-        if (timer) { clearTimeout(timer); this.idleTimers.delete(deviceId); }
+        // Clear both timers unconditionally
+        const idle = this.idleTimers.get(deviceId);
+        if (idle) { clearTimeout(idle); this.idleTimers.delete(deviceId); }
+        const cycle = this.cycleTimers.get(deviceId);
+        if (cycle) { clearTimeout(cycle); this.cycleTimers.delete(deviceId); }
 
         const state = this.deviceStates.get(deviceId);
         this.managedDevices.delete(deviceId);
@@ -198,7 +224,9 @@ export class IoTManager extends EventEmitter {
     async stopAll(): Promise<void> {
         log('IOT', `Stopping all ${this.managedDevices.size} managed devices...`);
         for (const timer of this.idleTimers.values()) clearTimeout(timer);
+        for (const timer of this.cycleTimers.values()) clearTimeout(timer);
         this.idleTimers.clear();
+        this.cycleTimers.clear();
         this.managedDevices.clear();
         this.deviceStates.clear();
         this.runningDevices.clear();
