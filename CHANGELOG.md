@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.4.0-patch.8] - 2026-05-19
+### Added
+- **IoT Simulation** 🧨 New **Vulnerability Report** import (Import → Vulnerability Report in IoT toolbar):
+  - New script `iot/import_vuln_csv.py` handles Palo Alto CVE/Vulnerability CSV format (one row per CVE per device)
+  - Aggregates rows by device (Device Name + IP + MAC), computes a composite **Danger Score** = Risk Score + Critical CVEs×15 + High CVEs×8 + Medium×3 + APT groups×5 + ICS-CERT×10 + Max CVSS×2
+  - Selects top N devices by danger score (30 / 50 / 100 / All)
+  - APT group associations drive `beacon` behavior; ICS-CERT flag drives `port_scan`; Critical/High CVEs drive `pan_test_domains`
+  - Stores CVE metadata in `_vuln_meta` per device (top CVEs, APT groups, ICS flag, danger score)
+  - New `POST /api/iot/import-vuln-csv` endpoint in `server.ts`
+  - Orange-themed import modal with danger score formula explanation, ICS-CERT count in success banner
+
 ## [v1.4.0-patch.7] - 2026-05-19
 ### Performance
 - **IoT Bad Behavior** ⚡ Option B — reduced Scapy raw socket load across all attack handlers to prevent D-state process accumulation under concurrent device load:

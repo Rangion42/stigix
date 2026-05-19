@@ -62,6 +62,18 @@ export default function Iot({ token }: IotProps) {
     });
     const [prismaLoading, setPrismaLoading] = useState(false);
     const [prismaResult, setPrismaResult] = useState<{ imported: number; bad_behavior: number } | null>(null);
+    // Vulnerability CSV import state
+    const [showVulnModal, setShowVulnModal] = useState(false);
+    const [vulnFile, setVulnFile] = useState<File | null>(null);
+    const [vulnOpts, setVulnOpts] = useState({
+        max_devices: 50,
+        only_iot: false,
+        bad_behavior: 'auto' as 'auto' | 'all' | 'none' | 'percentage',
+        security_percentage: 80,
+        merge: false,
+    });
+    const [vulnLoading, setVulnLoading] = useState(false);
+    const [vulnResult, setVulnResult] = useState<{ imported: number; bad_behavior: number; ics_cert_devices: number } | null>(null);
     const [showImportDropdown, setShowImportDropdown] = useState(false);
     const importDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -312,6 +324,7 @@ export default function Iot({ token }: IotProps) {
 
     // Required Prisma IoT Security CSV columns (subset — at least these must be present)
     const PRISMA_REQUIRED_COLS = ['hostname', 'mac address', 'category', 'profile_vertical'];
+    const VULN_REQUIRED_COLS   = ['device name', 'ip address', 'mac address', 'cve', 'cvss', 'severity'];
 
     const handlePrismaImport = async () => {
         if (!prismaFile) return;
@@ -367,6 +380,61 @@ export default function Iot({ token }: IotProps) {
             alert('❌ Import error: ' + e.message);
         } finally {
             setPrismaLoading(false);
+        }
+    };
+
+    const handleVulnImport = async () => {
+        if (!vulnFile) return;
+        setVulnLoading(true);
+        setVulnResult(null);
+
+        try {
+            const csv_content = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target?.result as string);
+                reader.onerror = reject;
+                reader.readAsText(vulnFile);
+            });
+
+            // Client-side format validation
+            const firstLine = csv_content.split(/\r?\n/)[0] || '';
+            const headers = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+            const missing = VULN_REQUIRED_COLS.filter(col => !headers.includes(col));
+            if (missing.length > 0) {
+                alert(
+                    `❌ Invalid CSV format.\n\nThis doesn't look like a Palo Alto Vulnerability export.\n\nMissing columns: ${missing.join(', ')}\n\nExpected columns include: ${VULN_REQUIRED_COLS.join(', ')}`
+                );
+                setVulnLoading(false);
+                return;
+            }
+
+            const body: Record<string, any> = {
+                csv_content,
+                merge: vulnOpts.merge,
+            };
+            if (vulnOpts.max_devices > 0)               body.max_devices = vulnOpts.max_devices;
+            if (vulnOpts.only_iot)                       body.only_iot = true;
+            if (vulnOpts.bad_behavior === 'all')         body.enable_security = true;
+            if (vulnOpts.bad_behavior === 'none')        body.security_percentage = 0;
+            if (vulnOpts.bad_behavior === 'percentage')  body.security_percentage = vulnOpts.security_percentage;
+
+            const res = await fetch('/api/iot/import-vuln-csv', {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify(body),
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                setVulnResult({ imported: data.imported, bad_behavior: data.bad_behavior, ics_cert_devices: data.ics_cert_devices || 0 });
+                fetchDevices();
+            } else {
+                alert('❌ Import failed: ' + (data.detail || data.error));
+            }
+        } catch (e: any) {
+            alert('❌ Import error: ' + e.message);
+        } finally {
+            setVulnLoading(false);
         }
     };
 
@@ -621,6 +689,19 @@ export default function Iot({ token }: IotProps) {
                                         <span className="text-sm font-bold">Device Security Assets</span>
                                     </div>
                                     <p className="text-[10px] text-text-muted leading-relaxed">Import devices from a Palo Alto IoT Security CSV report (Inventory Export).</p>
+                                </button>
+
+                                <div className="h-px bg-border my-1 mx-2" />
+
+                                <button
+                                    onClick={() => { setShowImportDropdown(false); setVulnFile(null); setVulnResult(null); setShowVulnModal(true); }}
+                                    className="w-full flex flex-col gap-1 p-3 hover:bg-orange-500/10 rounded-xl text-left group transition-colors"
+                                >
+                                    <div className="flex items-center gap-2 text-orange-400">
+                                        <AlertTriangle size={18} />
+                                        <span className="text-sm font-bold">Vulnerability Report</span>
+                                    </div>
+                                    <p className="text-[10px] text-text-muted leading-relaxed">Import from a Palo Alto CVE/Vulnerability export — aggregates by device, ranks by danger score (CVEs + APT groups + ICS-CERT).</p>
                                 </button>
                             </div>
                         )}
@@ -1149,6 +1230,187 @@ export default function Iot({ token }: IotProps) {
                                     className="flex-1 px-4 py-3 bg-purple-600 text-white font-black rounded-xl hover:bg-purple-500 transition-all shadow-lg shadow-purple-900/20 uppercase tracking-widest text-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
                                     {prismaLoading ? <><Loader2 size={16} className="animate-spin" /> Converting...</> : <><FileSpreadsheet size={16} /> Convert & Import</>}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Vulnerability CSV Import Modal ── */}
+            {showVulnModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+                    <div className="bg-card border border-border rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
+                        <div className="p-6 border-b border-border flex items-center justify-between bg-card-secondary">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-orange-500/20 rounded-xl">
+                                    <AlertTriangle size={20} className="text-orange-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-foreground">Vulnerability Report</h3>
+                                    <p className="text-xs text-text-muted">Palo Alto IoT Security — CVE export (one row per CVE)</p>
+                                </div>
+                            </div>
+                            <button onClick={() => { setShowVulnModal(false); setVulnResult(null); }} className="text-text-muted hover:text-foreground transition-colors">
+                                <X size={22} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-5">
+                            {/* File picker */}
+                            <label className={cn(
+                                "flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-all",
+                                vulnFile ? "border-orange-500/50 bg-orange-500/5" : "border-border hover:border-orange-500/40 hover:bg-orange-500/5"
+                            )}>
+                                <AlertTriangle size={28} className={vulnFile ? "text-orange-400" : "text-text-muted"} />
+                                {vulnFile ? (
+                                    <div className="text-center">
+                                        <p className="text-sm font-bold text-orange-400">{vulnFile.name}</p>
+                                        <p className="text-xs text-text-muted mt-0.5">{(vulnFile.size / 1024).toFixed(1)} KB</p>
+                                    </div>
+                                ) : (
+                                    <div className="text-center">
+                                        <p className="text-sm font-bold text-text-secondary">Drop CSV file or click to browse</p>
+                                        <p className="text-xs text-text-muted mt-0.5">Palo Alto Vulnerability export (.csv) — one row per CVE</p>
+                                    </div>
+                                )}
+                                <input
+                                    type="file"
+                                    accept=".csv,text/csv"
+                                    className="hidden"
+                                    onChange={e => { setVulnFile(e.target.files?.[0] || null); setVulnResult(null); }}
+                                />
+                            </label>
+
+                            {/* Info banner: danger score explanation */}
+                            <div className="flex items-start gap-2 p-3 bg-orange-500/5 border border-orange-500/20 rounded-xl">
+                                <AlertTriangle size={14} className="text-orange-400 mt-0.5 shrink-0" />
+                                <p className="text-[10px] text-text-muted leading-relaxed">
+                                    Devices are ranked by <span className="text-orange-400 font-bold">Danger Score</span>: Risk Score + Critical CVEs×15 + High CVEs×8 + APT groups×5 + ICS-CERT×10 + Max CVSS×2. Top N are selected.
+                                </p>
+                            </div>
+
+                            {/* Options */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Max Devices</label>
+                                    <div className="flex gap-1 flex-wrap">
+                                        {[30, 50, 100, 0].map(n => (
+                                            <button
+                                                key={n}
+                                                onClick={() => setVulnOpts(o => ({ ...o, max_devices: n }))}
+                                                className={cn(
+                                                    "px-2.5 py-1 rounded-lg text-xs font-bold border transition-all",
+                                                    vulnOpts.max_devices === n
+                                                        ? "bg-orange-600 border-transparent text-white"
+                                                        : "bg-card-secondary border-border text-text-muted hover:border-orange-500/50"
+                                                )}
+                                            >
+                                                {n === 0 ? 'All' : n}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Device Filter</label>
+                                    <div className="flex gap-1">
+                                        {[{ v: false, l: 'All' }, { v: true, l: 'IoT only' }].map(({ v, l }) => (
+                                            <button
+                                                key={l}
+                                                onClick={() => setVulnOpts(o => ({ ...o, only_iot: v }))}
+                                                className={cn(
+                                                    "px-2.5 py-1 rounded-lg text-xs font-bold border transition-all",
+                                                    vulnOpts.only_iot === v
+                                                        ? "bg-orange-600 border-transparent text-white"
+                                                        : "bg-card-secondary border-border text-text-muted hover:border-orange-500/50"
+                                                )}
+                                            >{l}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Bad Behavior (Attack Simulation)</label>
+                                <div className="flex gap-1 flex-wrap">
+                                    {[
+                                        { v: 'auto',       l: 'Auto (CVE/APT)' },
+                                        { v: 'all',        l: 'All devices' },
+                                        { v: 'percentage', l: 'Percentage' },
+                                        { v: 'none',       l: 'None' },
+                                    ].map(({ v, l }) => (
+                                        <button
+                                            key={v}
+                                            onClick={() => setVulnOpts(o => ({ ...o, bad_behavior: v as any }))}
+                                            className={cn(
+                                                "px-2.5 py-1 rounded-lg text-xs font-bold border transition-all",
+                                                vulnOpts.bad_behavior === v
+                                                    ? "bg-red-600 border-transparent text-white"
+                                                    : "bg-card-secondary border-border text-text-muted hover:border-red-500/50"
+                                            )}
+                                        >{l}</button>
+                                    ))}
+                                </div>
+                                {vulnOpts.bad_behavior === 'percentage' && (
+                                    <div className="flex items-center gap-3 pt-1 animate-in fade-in duration-200">
+                                        <input
+                                            type="range" min={1} max={100}
+                                            value={vulnOpts.security_percentage}
+                                            onChange={e => setVulnOpts(o => ({ ...o, security_percentage: Number(e.target.value) }))}
+                                            className="flex-1 accent-red-500"
+                                        />
+                                        <span className="text-xs font-black text-red-400 w-10 text-right">{vulnOpts.security_percentage}%</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 bg-card-secondary rounded-2xl border border-border">
+                                <div>
+                                    <p className="text-xs font-bold text-text-secondary">Import mode</p>
+                                    <p className="text-[10px] text-text-muted">{vulnOpts.merge ? 'Add to existing devices (dedup by ID)' : 'Replace all existing devices'}</p>
+                                </div>
+                                <button
+                                    onClick={() => setVulnOpts(o => ({ ...o, merge: !o.merge }))}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-xl text-xs font-bold border transition-all",
+                                        vulnOpts.merge
+                                            ? "bg-green-500/20 border-green-500/40 text-green-400"
+                                            : "bg-orange-500/20 border-orange-500/40 text-orange-400"
+                                    )}
+                                >
+                                    {vulnOpts.merge ? '➕ Merge' : '🔄 Replace'}
+                                </button>
+                            </div>
+
+                            {/* Result banner */}
+                            {vulnResult && (
+                                <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-2xl px-4 py-3 animate-in fade-in duration-300">
+                                    <CheckCircle2 size={18} className="text-green-400 shrink-0" />
+                                    <div>
+                                        <p className="text-sm font-bold text-green-400">Import successful!</p>
+                                        <p className="text-xs text-text-muted">
+                                            {vulnResult.imported} devices imported — {vulnResult.bad_behavior} with bad behavior
+                                            {vulnResult.ics_cert_devices > 0 && <span className="text-orange-400 font-bold ml-1">· {vulnResult.ics_cert_devices} ICS-CERT ⚠️</span>}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="px-6 pb-6 flex gap-3">
+                            <button
+                                onClick={() => { setShowVulnModal(false); setVulnResult(null); }}
+                                className="flex-1 px-4 py-3 bg-card-secondary border border-border text-text-muted font-bold rounded-xl hover:bg-card-hover transition-all tracking-widest text-xs"
+                            >
+                                {vulnResult ? 'Close' : 'Cancel'}
+                            </button>
+                            {!vulnResult && (
+                                <button
+                                    onClick={handleVulnImport}
+                                    disabled={!vulnFile || vulnLoading}
+                                    className="flex-1 px-4 py-3 bg-orange-600 text-white font-black rounded-xl hover:bg-orange-500 transition-all shadow-lg shadow-orange-900/20 uppercase tracking-widest text-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {vulnLoading ? <><Loader2 size={16} className="animate-spin" /> Analyzing...</> : <><AlertTriangle size={16} /> Analyze & Import</>}
                                 </button>
                             )}
                         </div>
