@@ -5,10 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2026-05-12
+## [v1.4.0-patch.0-docs] - 2026-05-12
 ### Documentation
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
+
+## [v1.4.0-patch.11] - 2026-05-19
+### Fixed
+- **IoT Import Modals** 📱 Wider, scrollable import dialogs for both Device Security Assets and Vulnerability Report importers:
+  - `max-w-lg` → `max-w-2xl` (672px) — prevents overflow of long Prisma export filenames (e.g. `cloudsasedemo_vulnerability_detail_..._report.csv`)
+  - `flex-col + max-h-[90vh]` on modal container — modal never overflows the screen
+  - Content area: `overflow-y-auto` — options scroll independently of header/footer
+  - Footer (Cancel / Import button): `shrink-0 + border-t` — always visible, visually separated
+  - Filename: `truncate + title={file.name}` — ellipsis on long names, full name on hover
+
+## [v1.4.0-patch.10] - 2026-05-19
+### Fixed
+- **IoT Import** 🏷️ MAC-address device names now resolved to human-readable profile-based names in both `import_vuln_csv.py` and `import_prisma_devices.py`:
+  - `is_mac_like()`: detects `xx:xx:xx:xx:xx:xx` pattern in Device Name field
+  - `resolve_device_name()` / updated `make_name()`: fallback chain Profile → Vendor+Model → Vendor+"Device" → "IoT Device"
+  - Shared `name_counters` dict per import run: same base name auto-increments (`Raspberry Pi Device #1`, `#2`, `#3`...)
+  - Real non-MAC names pass through unchanged
 
 ## [v1.4.0-patch.9] - 2026-05-19
 ### Added

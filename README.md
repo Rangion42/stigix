@@ -1,6 +1,6 @@
 # 🕸️ Stigix — Advanced Networking & Security Simulation Environment
 
-[![Version](https://img.shields.io/badge/Version-1.4.0--patch.4-blue.svg)](https://github.com/jsuzanne/stigix/releases)
+[![Version](https://img.shields.io/badge/Version-1.4.0--patch.11-blue.svg)](https://github.com/jsuzanne/stigix/releases)
 [![Docker Pulls](https://img.shields.io/docker/pulls/jlsuzanne/stigix)](https://hub.docker.com/r/jlsuzanne/stigix)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -57,7 +57,7 @@ This project is my way to turn all that lab and demo experience into an open-sou
 - **Voice Simulation (RTP)** - Simulate real-time voice calls (G.711, G.729) with Scapy-based packet forging. [Read more](docs/VOICE_SIMULATION.md)
 - **Speedtest (XFR)**: High-performance throughput and latency validation with real-time telemetry. [Learn more about XFR testing](docs/XFR_TESTING.md). 🚀
 - **IoT/SaaS Emulation**: Pre-populated application targets for SD-WAN policy verification.
-- **IoT Simulation** - Simulate a variety of IoT devices (Cameras, Sensors) with Scapy-based DHCP and ARP support for "Real-on-the-Wire" physical network presence. Includes **Security Testing / Attack Mode** to validate malicious behavior detection (DNS Flood, C2 Beacon, Port Scan, Data Exfiltration). [Read more](docs/IOT_SIMULATION.md)
+- **IoT Simulation** - Simulate a variety of IoT devices (Cameras, Sensors, Raspberry Pi, Industrial controllers) with Scapy-based DHCP and ARP support for "Real-on-the-Wire" physical network presence. Includes **Security Testing / Attack Mode** to validate malicious behavior detection (DNS Flood, C2 Beacon, Port Scan, Data Exfiltration). Import from **Palo Alto Device Security CSV** or **Vulnerability Report CSV** (CVE-based, Danger Score ranking, APT attribution, ICS-CERT detection). MAC-address device names are automatically resolved to human-readable profile-based names on import. [Read more](docs/IOT_SIMULATION.md)
 - **Unified Source/Target Architecture** - Every Stigix instance is versatile. It can simultaneously act as a **Source** (generating traffic) and a **Target** (responding to echo/bandwidth/SLA probes). 
 - **Active by Default** - High-precision traffic and responsive services (Voice Echo, XFR, HTTP SLA) are started automatically upon deployment. Any instance can be used as a test target by any other instance.
 - **Prisma SD-WAN Integration** - Automatic discovery of sites and LAN interfaces via API for "Zero-Config" connectivity probes and path validation. [Read more](docs/PRISMA-SDWAN_INTEGRATION.md)
@@ -110,6 +110,15 @@ This project is my way to turn all that lab and demo experience into an open-sou
 ## 🆕 What's New
 
 The project is evolving rapidly with new features and refinements added in every release.
+
+### Highlights in v1.4.0 *(current)*
+- **Vulnerability Report Import** 🧨 — New import option in the IoT toolbar for Palo Alto IoT Security **Vulnerability CSV** exports (one row per CVE per device). Aggregates by device, computes a **Danger Score** (Risk Score + Critical CVEs×15 + High CVEs×8 + APT groups×5 + ICS-CERT×10 + Max CVSS×2), and selects the top N most dangerous devices. APT groups → `beacon`, ICS-CERT → `port_scan`, Critical/High CVEs → `pan_test_domains`. [Read docs](docs/IOT_SIMULATION.md#4-vulnerability-report-import)
+- **CVE Threat Intel on Device Cards** 🔍 — Vuln-imported device cards now show an orange threat panel with Danger Score, CVE count/severity, Max CVSS, APT groups, ICS-CERT badge, and top CVE pills directly in the IoT grid.
+- **Smart Device Naming** 🏷️ — When a CSV export contains MAC addresses as device names (common in large Prisma exports), both importers automatically generate human-readable names from the `Profile` field (e.g. `Raspberry Pi Device #1`, `Raspberry Pi Device #2`).
+- **Throttled Attack Traffic** ⚡ — All bad behavior attack cycles reduced (beacon 10s→45s, dns_flood 15s→60s, port_scan 30s→120s) to prevent Scapy raw socket pressure and Python D-state accumulation under concurrent device load.
+- **Device Sequence Numbers** 🔢 — Persistent `#N` index on every device card, sorted consistently across all filter states (All / Active / Queued / Idle / Stopped).
+- **IoT Advanced Debug Monitor** 📊 — New collapsible diagnostics section in Settings → System with 4 time-series charts: Device States, System Health (CPU/D-state), Traffic Rate (pps/ppm), and Experience Score. 15m / 1h / 6h time window.
+- **FIFO Concurrency Scheduler** 🔄 — Replaced non-deterministic map iteration with a proper FIFO queue — devices at end of list no longer starve. Concurrency throttle prevents Scapy overload.
 
 ### Highlights in v1.3.0
 - **State Persistence** 💾 — New **Settings → System Info** panel with per-service toggles (Traffic, Probes, IoT, Voice). Each service restores its exact pre-reboot state: only services that were active before shutdown resume automatically. Defaults: Traffic ON, Probes ON, IoT OFF (requires config), Voice OFF (requires server config). [Read docs](docs/IOT_SIMULATION.md#-state-persistence) [Voice docs](docs/VOICE_SIMULATION.md#-state-persistence)
