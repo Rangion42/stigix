@@ -195,6 +195,79 @@ python iot/import_prisma_devices.py -i "iot device bad sources.csv" -o devices.j
 
 ---
 
+#### 4. Vulnerability Report Import *(New — CVE-based, richest threat intel)*
+
+When your customer has a **Palo Alto IoT Security Vulnerability Report** (exported from IoT Security → Vulnerabilities), use `import_vuln_csv.py` to import it. Unlike the Inventory export (one row per device), this format has **one row per CVE per device** — so a device with 9 CVEs generates 9 rows.
+
+**What makes it richer:**
+- ✅ **CVE details**: CVSS score, Severity, ICS-CERT alerts, detection status per row
+- ✅ **APT attribution**: `APT Names` field links CVEs to known threat actors (e.g. `FruityArmor`, `Fancy Bear`, `Cobalt Spider`)
+- ✅ **Automatic aggregation**: rows are grouped by device (Device Name + IP + MAC)
+- ✅ **Danger Score** ranking to select the most dangerous devices first
+- ✅ **Threat-aware bad behavior**: APT groups → `beacon`, ICS-CERT → `port_scan`, Critical/High CVEs → `pan_test_domains`
+
+**Danger Score formula:**
+```
+Danger Score = Risk Score (0–100)
+             + Critical CVEs × 15
+             + High CVEs × 8
+             + Medium CVEs × 3
+             + Unique APT Groups × 5
+             + ICS-CERT presence × 10
+             + Max CVSS × 2
+```
+
+**Expected CSV format** (columns, one row per CVE):
+```
+Device Name, IP Address, MAC Address, Risk Score, Risk Level, Profile, Profile Vertical,
+Vendor, Model, OS, Serial Number, Asset Tag, Site, Site Name,
+CVE, ICS-Cert, CVSS, Severity, Status, ..., APT Names, ...
+```
+
+**Import via UI (Recommended):**
+
+1. Go to **IoT Simulation** → click **Import** button → select **Vulnerability Report** (orange icon)
+2. Drop your vulnerability CSV file — the UI validates columns client-side
+3. Choose Max Devices (30 / 50 / 100 / All), Device Filter, Bad Behavior mode, Import mode
+4. Click **Analyze & Import** — result shows device count, bad behavior count, and ICS-CERT device count
+
+**Bad Behavior modes in the import modal:**
+
+| Mode | Description |
+|---|---|
+| **Auto (CVE/APT)** | Default — behavior derived from threat intel: APT→beacon, ICS-CERT→port_scan, CVE→pan_test_domains |
+| **All devices** | Force bad behavior on every imported device (regardless of CVE severity) |
+| **Percentage** | Enable bad behavior on a random N% of devices |
+| **None** | Import clean devices — no attack simulation |
+
+**Or via CLI:**
+```bash
+# Export Vulnerability Report from PAN IoT Security → Vulnerabilities tab as CSV, then:
+python iot/import_vuln_csv.py -i vulns.csv -o devices.json
+
+# Top 30 most dangerous devices by Danger Score
+python iot/import_vuln_csv.py -i vulns.csv -o devices.json --max-devices 30
+
+# IoT devices only (filter by Profile Vertical)
+python iot/import_vuln_csv.py -i vulns.csv -o devices.json --max-devices 50 --only-iot
+
+# Force bad behavior on 80% of devices
+python iot/import_vuln_csv.py -i vulns.csv -o devices.json --security-percentage 80
+
+# Merge with existing device config (dedup by ID)
+python iot/import_vuln_csv.py -i vulns.csv -o devices.json --merge
+```
+
+**Rich device description** (auto-generated, visible in device card):
+```
+OS: Windows 10 | Risk: Low (30/100) | CVEs: 9 total — 0 critical / 8 high | Max CVSS: 8.8
+Top CVEs: CVE-2021-34527 (CVSS 8.8 High), CVE-2021-1675 (CVSS 7.8 High), ...
+APT Groups (7): Cobalt Spider, Fancy Bear, Vice Society, Mustang Panda, ...
+Site: Default Site | Danger Score: 121
+```
+
+---
+
 **Then (CLI workflow only):**
 1. Copy the generated JSON
 2. Go to the **IoT Tab** in the dashboard
@@ -492,19 +565,54 @@ Leases are stored in **`/app/config/dhcp_leases.json`**, which maps to the `./co
 
 ## 🛡️ Security Testing (Bad Behavior)
 
-The IoT engine includes a **Security Testing** mode designed to validate malicious behavior detection (e.g., Palo Alto Networks IoT Security). 
+The IoT engine includes a **Security Testing** mode designed to validate malicious behavior detection (e.g., Palo Alto Networks IoT Security).
 
 When **Bad Behavior** is enabled, the simulated device will generate traffic patterns matching known attack profiles:
-- **DNS Flood**: Rapid DNS queries to various domains.
+- **DNS Flood**: Rapid DNS queries to suspicious domains, repeated periodically.
 - **C2 Beacon**: Periodic "heartbeat" connections to simulated Command & Control domains.
-- **Port Scan**: Internal scanning of the local subnet.
-- **Data Exfil**: Simulated large data transfers to external IPs.
-- **PAN Test Domains**: Generates traffic to official Palo Alto test domains for guaranteed detection.
+- **Port Scan**: Internal reconnaissance scanning local gateway and neighbors.
+- **Data Exfil**: Simulated large data transfers (1400-byte TCP payloads) to external IPs.
+- **PAN Test Domains**: Traffic to official Palo Alto test domains — **guaranteed detection by PAN-OS DNS Security and URL Filtering**.
 
 *Security testing dashboard for triggering malicious traffic patterns and C2 beaconing:*
 <img src="screenshots/05-IOT/02-iot-edit-device-bad-behavior.png" width="700" alt="IoT Bad Behavior Configuration" />
 
 
+
+### `behavior_type` Reference
+
+Each device's `security.behavior_type` is a list of attack pattern identifiers. Multiple values run as **parallel threads** simultaneously.
+
+| `behavior_type` value | What it generates | Cycle | Burst | Scapy protocol |
+|---|---|---|---|---|
+| `"pan_test_domains"` | 2 DNS queries to PAN test domains + 1 URL HTTPS/HTTP SYN | Every **90s** | 2 DNS + 2 TCP | `IP/UDP/DNS`, `IP/TCP SYN` |
+| `"beacon"` | 1 DNS + 1 TCP SYN to fake C2 domain | Every **45s** | 2 packets | `IP/UDP/DNS`, `IP/TCP SYN` |
+| `"dns_flood"` | Burst of DNS queries to suspicious domains | Every **60s** | 3 queries | `IP/UDP/DNS` |
+| `"port_scan"` | TCP SYN to 10 common ports on a random target | Every **120s** | 10 SYNs | `IP/TCP SYN` |
+| `"data_exfil"` | 2 large TCP uploads (1400 bytes each) to external IPs | Every **90s** | 2 packets | `IP/TCP` with payload |
+| `"random"` | Picks one of the above at random per cycle | Every **20–60s** | Varies | Mixed |
+
+> **Load note (v1.4.0-patch.7):** Intervals were tuned to reduce Scapy raw socket pressure. This prevents Python D-state accumulation under concurrent device load while still generating detectable attack patterns.
+
+### Bad Behavior Import Modes (UI)
+
+When importing via **Device Security Assets** or **Vulnerability Report**, the modal offers four Bad Behavior modes:
+
+| Mode | Device Security Assets | Vulnerability Report |
+|---|---|---|
+| **Auto** | Derived from `ml_risk_level` (Critical/High → bad behavior) | Derived from CVE severity + APT groups + ICS-CERT |
+| **All devices** | Every device gets bad behavior | Every device gets bad behavior |
+| **Percentage** | Random N% of devices | Random N% of devices |
+| **None** | No bad behavior, clean simulation | No bad behavior, clean simulation |
+
+**Auto mode (Vulnerability Report)** maps threat intel to specific behaviors:
+
+| Signal | `behavior_type` assigned |
+|---|---|
+| APT groups present | `beacon` — realistic C2 heartbeat pattern |
+| ICS-CERT alert | `port_scan` — OT lateral movement simulation |
+| Critical or High CVEs | `pan_test_domains` — guaranteed PAN detection |
+| No threat signal | `random` — mixed low-noise background |
 
 ### JSON Security Configuration
 
@@ -520,7 +628,7 @@ Guaranteed to be detected by PAN-OS DNS Security and URL Filtering.
 ```
 
 #### 2. C2 Beaconing
-Simulates a classic malware heartbeat every 10 seconds.
+Simulates a classic malware heartbeat every 45 seconds.
 ```json
 "security": {
   "bad_behavior": true,
@@ -529,7 +637,7 @@ Simulates a classic malware heartbeat every 10 seconds.
 ```
 
 #### 3. DNS Flood
-Rapid burst of DNS queries for malicious domains.
+Burst of 3 DNS queries to suspicious domains, repeated every 60s.
 ```json
 "security": {
   "bad_behavior": true,
@@ -538,7 +646,7 @@ Rapid burst of DNS queries for malicious domains.
 ```
 
 #### 4. Port Scan
-Internal reconnaissance scanning local gateway and neighbors.
+Internal reconnaissance scanning local gateway and neighbors (10 ports, every 120s).
 ```json
 "security": {
   "bad_behavior": true,
@@ -547,7 +655,7 @@ Internal reconnaissance scanning local gateway and neighbors.
 ```
 
 #### 5. Data Exfiltration
-Large TCP uploads to known malicious external IPs.
+Large TCP uploads (1400 bytes each) to known malicious external IPs, every 90s.
 ```json
 "security": {
   "bad_behavior": true,
@@ -561,6 +669,15 @@ Launches multiple attack threads simultaneously for high complexity.
 "security": {
   "bad_behavior": true,
   "behavior_type": ["random", "dns_flood", "beacon"]
+}
+```
+
+#### 7. Full Threat Profile (APT device)
+Combines realistic C2 beaconing, OT lateral movement, and guaranteed PAN detection.
+```json
+"security": {
+  "bad_behavior": true,
+  "behavior_type": ["beacon", "port_scan", "pan_test_domains"]
 }
 ```
 

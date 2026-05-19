@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.4.0-patch.9] - 2026-05-19
+### Added
+- **IoT Device Cards** 🔍 Description and vulnerability threat intel now displayed on each device card (non-compact mode):
+  - **Vuln-imported devices** (`_vuln_meta`): orange threat intel panel with Danger Score badge, CVE count, severity breakdown (Critical/High), Max CVSS, APT group count, ICS-CERT warning, top CVE pills (mono font), APT group names list, OS + Site info
+  - **Other devices**: description field shown as inline chip-tags (split by ` | `) or plain italic text
+- **Docs** 📖 Updated `IOT_SIMULATION.md`:
+  - Added Method 4 — Vulnerability Report Import with full CLI reference, Danger Score formula, expected CSV format, and UI walkthrough
+  - New `behavior_type` reference table with cycle/burst/protocol details per attack type (post patch.7 tuning)
+  - New Bad Behavior import modes comparison table (Auto vs All vs Percentage vs None) for both importers
+  - Auto mode APT/ICS-CERT → behavior_type mapping table
+  - Updated all bad behavior timing docs (beacon 10s→45s, dns_flood 15s→60s, etc.)
+  - Added Example 7: Full Threat Profile (beacon + port_scan + pan_test_domains)
+
 ## [v1.4.0-patch.8] - 2026-05-19
 ### Added
 - **IoT Simulation** 🧨 New **Vulnerability Report** import (Import → Vulnerability Report in IoT toolbar):
