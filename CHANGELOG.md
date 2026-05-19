@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.4.0-patch.7] - 2026-05-19
+### Performance
+- **IoT Bad Behavior** ⚡ Option B — reduced Scapy raw socket load across all attack handlers to prevent D-state process accumulation under concurrent device load:
+  - `dns_flood`: burst 10→**3** queries, sleep 0.5s→1s between, cycle 15s→**60s**
+  - `port_scan`: sleep 0.1s→**0.5s** between ports, cycle 30s→**120s**
+  - `beacon`: inter-packet 1s→2s, cycle 10s→**45s**
+  - `data_exfil`: burst 5→**2** packets, sleep 0.5s→1s between, cycle 20s→**90s**
+  - `pan_test_domains`: burst 5→**2** DNS queries, 3→**1** URL targets per cycle, inter-packet 1→2s, cycle 20s→**90s**
+  - `random` mix: cycle 5–15s→**20–60s**
+
 ## [v1.4.0-patch.6] - 2026-05-19
 ### Fixed
 - **IoT Simulation** 🔢 Device cards are now always sorted by their original sequence index (#1, #2, … #N) regardless of the active state filter (ALL / ACTIVE / QUEUED / IDLE / STOPPED). Previously, the display order was non-deterministic depending on which devices matched the filter.

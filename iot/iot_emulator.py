@@ -469,7 +469,7 @@ class IoTDevice:
         
         while self.running and (ENABLE_BAD_BEHAVIOR and self.stats.get("bad_behavior_active")):
             try:
-                for _ in range(10):  # Burst of 10 queries
+                for _ in range(3):  # Burst of 3 queries (was 10) — reduced Scapy load
                     if not self.running or not (ENABLE_BAD_BEHAVIOR and self.stats.get("bad_behavior_active")):
                         return  # Stop immediately on clean mode
                     domain = random.choice(self.SUSPICIOUS_DOMAINS)
@@ -482,12 +482,12 @@ class IoTDevice:
                     self._send(pkt, protocol="bad_dns", verbose=0)
                     self.log("warning", f"💀 [dns_flood] Query: {domain} → {dns_server}")
                     
-                    time.sleep(0.5)
+                    time.sleep(1)  # was 0.5s
                 
             except Exception as e:
                 self.log("error", f"❌ Bad DNS flood error: {e}")
             
-            time.sleep(15)  # Repeat every 15s
+            time.sleep(60)  # was 15s — repeat every 60s to reduce Scapy load
     
     def _bad_port_scan(self):
         """Simulate port scanning behavior"""
@@ -519,12 +519,12 @@ class IoTDevice:
                     self._send(pkt, protocol="bad_scan", verbose=0)
                     self.log("warning", f"💀 [port_scan] Scan: {target}:{port}")
                     
-                    time.sleep(0.1)
+                    time.sleep(0.5)  # was 0.1s — reduce raw socket rate
                 
             except Exception as e:
                 self.log("error", f"❌ Bad port scan error: {e}")
             
-            time.sleep(30)  # Repeat every 30s
+            time.sleep(120)  # was 30s — repeat every 120s to reduce Scapy load
     
     def _bad_beacon(self):
         """Simulate C2 beacon behavior (regular DNS/HTTP to same suspicious domain)"""
@@ -546,7 +546,7 @@ class IoTDevice:
                 
                 if not self.running or not (ENABLE_BAD_BEHAVIOR and self.stats.get("bad_behavior_active")):
                     return
-                time.sleep(1)
+                time.sleep(2)  # was 1s
                 
                 # HTTP beacon (SYN to fake C2)
                 pkt_http = IP(src=self.ip, dst=beacon_ip) / \
@@ -558,7 +558,7 @@ class IoTDevice:
             except Exception as e:
                 self.log("error", f"❌ Bad beacon error: {e}")
             
-            time.sleep(10)  # Every 10s (classic beacon interval)
+            time.sleep(45)  # was 10s — realistic beacon interval, much lower Scapy rate
     
     def _bad_data_exfil(self):
         """Simulate data exfiltration (large uploads to external IPs)"""
@@ -573,8 +573,8 @@ class IoTDevice:
             try:
                 target_ip, target_port = random.choice(exfil_targets)
                 
-                # Send multiple large TCP packets
-                for _ in range(5):
+                # Send 2 large TCP packets (was 5) — reduced Scapy burst
+                for _ in range(2):
                     if not self.running or not (ENABLE_BAD_BEHAVIOR and self.stats.get("bad_behavior_active")):
                         return
                     payload = Raw(b"X" * 1400)  # Large payload
@@ -585,12 +585,12 @@ class IoTDevice:
                     self._send(pkt, protocol="bad_exfil", verbose=0)
                     self.log("warning", f"💀 [data_exfil] Upload: {target_ip}:{target_port} ({len(payload)} bytes)")
                     
-                    time.sleep(0.5)
+                    time.sleep(1)  # was 0.5s
                 
             except Exception as e:
                 self.log("error", f"❌ Bad exfil error: {e}")
             
-            time.sleep(20)  # Every 20s
+            time.sleep(90)  # was 20s — reduce Scapy exfil frequency
     
     def _bad_pan_test_domains(self):
         """Test with official Palo Alto Networks test domains for GUARANTEED detection"""
@@ -601,8 +601,8 @@ class IoTDevice:
         
         while self.running and (ENABLE_BAD_BEHAVIOR and self.stats.get("bad_behavior_active")):
             try:
-                # DNS Security tests - cycle through PAN test domains
-                for _ in range(5):  # Burst of 5 DNS queries
+                # DNS Security tests — 2 queries per cycle (was 5)
+                for _ in range(2):
                     if not self.running or not (ENABLE_BAD_BEHAVIOR and self.stats.get("bad_behavior_active")):
                         return
                     domain = random.choice(self.PAN_DNS_TEST_DOMAINS)
@@ -615,41 +615,37 @@ class IoTDevice:
                     self._send(pkt, protocol="bad_pan_dns", verbose=0)
                     self.log("warning", f"💀 [pan_test] DNS Security: {domain} → {dns_server}")
                     
-                    time.sleep(1)
+                    time.sleep(2)  # was 1s
                 
-                time.sleep(5)
+                time.sleep(10)  # was 5s
                 
-                # URL Filtering tests (HTTP/HTTPS SYN to trigger detection)
-                for _ in range(3):
-                    if not self.running or not (ENABLE_BAD_BEHAVIOR and self.stats.get("bad_behavior_active")):
-                        return
+                # URL Filtering tests — 1 target per cycle (was 3)
+                if self.running and (ENABLE_BAD_BEHAVIOR and self.stats.get("bad_behavior_active")):
                     host, path = random.choice(self.PAN_URL_TEST_TARGETS)
                     
-                    # urlfiltering.paloaltonetworks.com IP (one of their test IPs)
                     pan_url_ip = "35.223.6.162"
                     
-                    # HTTPS (443) - will trigger SNI-based detection if SSL inspection enabled
+                    # HTTPS (443)
                     pkt_https = IP(src=self.ip, dst=pan_url_ip) / \
                                TCP(sport=random.randint(1024, 65535), dport=443, flags="S")
                     
                     self._send(pkt_https, protocol="bad_pan_url", verbose=0)
                     self.log("warning", f"💀 [pan_test] URL Filter HTTPS: {host}{path} → {pan_url_ip}:443")
                     
-                    time.sleep(2)
+                    time.sleep(3)  # was 2s
                     
-                    # HTTP (80)
-                    pkt_http = IP(src=self.ip, dst=pan_url_ip) / \
-                              TCP(sport=random.randint(1024, 65535), dport=80, flags="S")
-                    
-                    self._send(pkt_http, protocol="bad_pan_url", verbose=0)
-                    self.log("warning", f"💀 [pan_test] URL Filter HTTP: {host}{path} → {pan_url_ip}:80")
-                    
-                    time.sleep(2)
+                    if self.running and (ENABLE_BAD_BEHAVIOR and self.stats.get("bad_behavior_active")):
+                        # HTTP (80)
+                        pkt_http = IP(src=self.ip, dst=pan_url_ip) / \
+                                  TCP(sport=random.randint(1024, 65535), dport=80, flags="S")
+                        
+                        self._send(pkt_http, protocol="bad_pan_url", verbose=0)
+                        self.log("warning", f"💀 [pan_test] URL Filter HTTP: {host}{path} → {pan_url_ip}:80")
                 
             except Exception as e:
                 self.log("error", f"❌ PAN test domains error: {e}")
             
-            time.sleep(20)  # Repeat every 20s
+            time.sleep(90)  # was 20s — much less frequent to reduce Scapy load
     
     def _bad_random_mix(self):
         """Random mix of all bad behaviors"""
@@ -669,7 +665,7 @@ class IoTDevice:
             except Exception as e:
                 self.log("error", f"❌ Bad random behavior error: {e}")
             
-            time.sleep(random.randint(5, 15))
+            time.sleep(random.randint(20, 60))  # was 5–15s — reduce random mix frequency
     
     def _bad_dns_suspicious_single(self):
         """Send one suspicious DNS query"""
