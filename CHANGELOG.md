@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.4.0-patch.5] - 2026-05-19
+### Added
+- **Settings › System** 🔍 New collapsible **IoT Advanced Debug Monitor** section, placed above the Live Docker stats. Polls every **30s** (low-overhead) and stores up to 720 data points in memory (6h coverage). Features 4 time-series charts: Device States (Active/Queued/Idle stacked area), System Health (CPU% · D-state · UDP errors), Traffic Rate (pps · ppm), and Global Experience Score + Voice MOS. Time window selector: **15m / 1h / 6h**. Purple reference lines mark `MaxConcurrent` config changes. Attack Mode (bad behavior) status shown in the toolbar. Designed to capture slow Scapy-induced degradation (D-state process blocking) correlated with concurrency settings.
+
 ## [v1.4.0-patch.4] - 2026-05-19
 ### Fixed
 - **IoT Simulation** 🐛 Fixed a critical concurrency starvation bug where devices at the end of the list would never leave the QUEUED state. A proper FIFO queue replaces the map iteration for fairer rotation.

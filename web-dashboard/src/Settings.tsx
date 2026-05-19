@@ -1,10 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     RefreshCw, Download, AlertCircle, CheckCircle, Clock, Shield, Globe, Lock, Terminal,
     Network, Sliders, ChevronDown, ChevronRight, Server, CheckCircle2, Upload, Power,
     Settings as SettingsIcon, Database, Activity, Cpu, Plus, Edit2, Trash2, MapPin, Zap, Info, XCircle, ShieldAlert, Layers,
-    Clipboard, ExternalLink, BarChart3, AlertTriangle, Gauge
+    Clipboard, ExternalLink, BarChart3, AlertTriangle, Gauge, Bug, TrendingUp
 } from 'lucide-react';
+import {
+    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
+    ResponsiveContainer, AreaChart, Area, ReferenceLine, Legend
+} from 'recharts';
 import { clsx } from 'clsx';
 import { Favicon } from './components/Favicon';
 import { twMerge } from 'tailwind-merge';
@@ -115,6 +119,270 @@ const BetaBadge = ({ className }: { className?: string }) => (
         Beta
     </span>
 );
+
+// ─── IoT Advanced Debug Monitor ──────────────────────────────────────────────
+
+const MAX_HISTORY_PTS = 720; // 720 × 30s = 6h
+
+interface DebugPoint {
+    ts: number;
+    time: string;
+    active: number;
+    queued: number;
+    idle: number;
+    cpu: number;
+    dstate: number;
+    udp: number;
+    pps: number;
+    ppm: number;
+    attackMode: boolean;
+    maxConcurrent: number;
+    globalScore: number | null;
+    avgMos: number | null;
+}
+
+function IoTDebugMonitor({ token }: { token: string }) {
+    const [open, setOpen] = useState(false);
+    const [timeWindow, setTimeWindow] = useState<'15m' | '1h' | '6h'>('1h');
+    const historyRef = useRef<DebugPoint[]>([]);
+    const [points, setPoints] = useState<DebugPoint[]>([]);
+    const [concMarkers, setConcMarkers] = useState<{ label: string; value: number }[]>([]);
+    const lastMaxConc = useRef<number | null>(null);
+
+    const authH = useCallback(() => ({ 'Authorization': `Bearer ${token}` }), [token]);
+
+    const collect = useCallback(async () => {
+        try {
+            const [healthRes, bbRes, voiceRes, connRes] = await Promise.allSettled([
+                fetch('/api/system/iot-health', { headers: authH() }),
+                fetch('/api/iot/bad-behavior', { headers: authH() }),
+                fetch('/api/voice/stats', { headers: authH() }),
+                fetch('/api/connectivity/stats?range=15m', { headers: authH() }),
+            ]);
+
+            const health = healthRes.status === 'fulfilled' && healthRes.value.ok ? await healthRes.value.json() : {};
+            const bb = bbRes.status === 'fulfilled' && bbRes.value.ok ? await bbRes.value.json() : {};
+            const voiceData = voiceRes.status === 'fulfilled' && voiceRes.value.ok ? await voiceRes.value.json() : {};
+            const conn = connRes.status === 'fulfilled' && connRes.value.ok ? await connRes.value.json() : {};
+
+            const active = health.activeDevices ?? 0;
+            const queued = health.queuedDevices ?? 0;
+            const idle   = health.idleDevices   ?? 0;
+            const maxC   = health.maxConcurrentDevices ?? lastMaxConc.current ?? 0;
+            const tr     = health.trafficRate   ?? {};
+
+            const mosCalls: any[] = (voiceData.stats || []).slice(0, 20).filter((c: any) => (c.mos_score ?? 0) > 0);
+            const avgMos = mosCalls.length > 0
+                ? parseFloat((mosCalls.reduce((s: number, c: any) => s + c.mos_score, 0) / mosCalls.length).toFixed(2))
+                : null;
+
+            const now = Date.now();
+            const label = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            if (lastMaxConc.current !== null && lastMaxConc.current !== maxC) {
+                setConcMarkers(prev => [...prev.slice(-20), { label, value: maxC }]);
+            }
+            lastMaxConc.current = maxC;
+
+            const pt: DebugPoint = {
+                ts: now, time: label,
+                active, queued, idle,
+                cpu:    health.containerCpuPercent    ?? 0,
+                dstate: health.pythonProcessesStateD  ?? 0,
+                udp:    health.udpReceiveErrorsDelta  ?? 0,
+                pps:    tr.pps ?? 0,
+                ppm:    tr.ppm ?? 0,
+                attackMode:    bb.enabled ?? false,
+                maxConcurrent: maxC,
+                globalScore: conn.globalHealth ?? null,
+                avgMos,
+            };
+
+            historyRef.current = [...historyRef.current.slice(-(MAX_HISTORY_PTS - 1)), pt];
+            setPoints([...historyRef.current]);
+        } catch { /* silently ignore */ }
+    }, [authH]);
+
+    useEffect(() => {
+        if (!open) return;
+        collect();
+        const iv = setInterval(collect, 30000);
+        return () => clearInterval(iv);
+    }, [open, collect]);
+
+    const visiblePoints = React.useMemo(() => {
+        const ms = timeWindow === '15m' ? 15 * 60e3 : timeWindow === '1h' ? 60 * 60e3 : 6 * 60 * 60e3;
+        const cutoff = Date.now() - ms;
+        return points.filter(p => p.ts >= cutoff);
+    }, [points, timeWindow]);
+
+    const lastPt = points[points.length - 1];
+
+    const tStyle = {
+        contentStyle: { backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '10px' },
+        itemStyle:    { color: 'var(--text-primary)', fontSize: '10px', fontWeight: 700 },
+        labelStyle:   { color: 'var(--text-muted)', fontSize: '9px', fontWeight: 700, marginBottom: 2 },
+    };
+
+    return (
+        <div className="pt-8 border-t border-border/50">
+            <button onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between mb-2 group">
+                <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-violet-500/10 rounded-lg text-violet-400"><Bug size={16} /></div>
+                    <div className="text-left">
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-black text-text-primary tracking-tight uppercase">IoT Advanced Debug Monitor</span>
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-violet-500/20 text-violet-400 border border-violet-500/30">Debug</span>
+                        </div>
+                        <p className="text-[10px] text-text-muted mt-0.5">Time-series · 30s polling · up to 6h · detect Scapy degradation</p>
+                    </div>
+                </div>
+                <ChevronRight size={16} className={cn('text-text-muted transition-transform duration-200', open && 'rotate-90')} />
+            </button>
+
+            {open && (
+                <div className="mt-4 space-y-4 animate-in fade-in duration-300">
+                    {/* Toolbar */}
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-0.5 bg-card-secondary rounded-lg border border-border p-0.5">
+                            {(['15m', '1h', '6h'] as const).map(w => (
+                                <button key={w} onClick={() => setTimeWindow(w)} className={cn(
+                                    'px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter transition-all',
+                                    timeWindow === w ? 'bg-violet-600 text-white shadow' : 'text-text-muted hover:text-text-primary'
+                                )}>{w}</button>
+                            ))}
+                        </div>
+                        {lastPt && (
+                            <div className="flex items-center gap-3 flex-wrap text-[10px] font-bold">
+                                <span className="text-text-muted">@<span className="text-text-primary">{lastPt.time}</span></span>
+                                <span className={cn(lastPt.attackMode ? 'text-red-400' : 'text-emerald-400')}>
+                                    AttackMode <span className="font-black">{lastPt.attackMode ? 'ON' : 'OFF'}</span>
+                                </span>
+                                <span className="text-text-muted">MaxConc: <span className="font-black text-blue-400">{lastPt.maxConcurrent}</span></span>
+                                {lastPt.globalScore !== null && <span className={cn('font-black', lastPt.globalScore >= 80 ? 'text-emerald-400' : lastPt.globalScore >= 50 ? 'text-amber-400' : 'text-red-400')}>Score {lastPt.globalScore}/100</span>}
+                                {lastPt.avgMos !== null && <span className={cn('font-black', lastPt.avgMos >= 4 ? 'text-emerald-400' : lastPt.avgMos >= 3 ? 'text-amber-400' : 'text-red-400')}>MOS {lastPt.avgMos}</span>}
+                            </div>
+                        )}
+                        <button onClick={collect} className="text-[10px] text-text-muted hover:text-violet-400 flex items-center gap-1 transition-colors">
+                            <RefreshCw size={11} /> Refresh
+                        </button>
+                    </div>
+
+                    {visiblePoints.length === 0 ? (
+                        <div className="h-20 flex items-center justify-center text-text-muted text-xs italic opacity-60 border border-dashed border-border rounded-xl">
+                            Collecting data… first sample in ~30s
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-4">
+                            {/* IoT States */}
+                            <div className="bg-card border border-border rounded-xl p-4">
+                                <div className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <Activity size={12} className="text-emerald-400" /> Device States (Active · Queued · Idle)
+                                </div>
+                                <div className="h-[110px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={visiblePoints} margin={{ top: 2, right: 4, bottom: 0, left: -28 }}>
+                                            <defs>
+                                                <linearGradient id="dbgA" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#22c55e" stopOpacity={0.35} /><stop offset="95%" stopColor="#22c55e" stopOpacity={0} /></linearGradient>
+                                                <linearGradient id="dbgQ" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f59e0b" stopOpacity={0.35} /><stop offset="95%" stopColor="#f59e0b" stopOpacity={0} /></linearGradient>
+                                                <linearGradient id="dbgI" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} /><stop offset="95%" stopColor="#3b82f6" stopOpacity={0} /></linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} vertical={false} />
+                                            <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={8} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                                            <YAxis stroke="var(--text-muted)" fontSize={8} tickLine={false} axisLine={false} width={26} />
+                                            <ReTooltip {...tStyle} />
+                                            {concMarkers.map((m, i) => (
+                                                <ReferenceLine key={i} x={m.label} stroke="#a78bfa" strokeDasharray="3 2" strokeOpacity={0.8}
+                                                    label={{ value: `→${m.value}`, position: 'insideTopRight', fontSize: 8, fill: '#a78bfa', offset: 4 }} />
+                                            ))}
+                                            <Area type="monotone" dataKey="active" stackId="s" stroke="#22c55e" strokeWidth={1.5} fill="url(#dbgA)" name="Active" dot={false} />
+                                            <Area type="monotone" dataKey="queued" stackId="s" stroke="#f59e0b" strokeWidth={1.5} fill="url(#dbgQ)" name="Queued" dot={false} />
+                                            <Area type="monotone" dataKey="idle"   stackId="s" stroke="#3b82f6" strokeWidth={1.5} fill="url(#dbgI)" name="Idle"   dot={false} />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* System Health */}
+                            <div className="bg-card border border-border rounded-xl p-4">
+                                <div className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <Cpu size={12} className="text-orange-400" /> System Health — CPU% · D-state · UDP Errors
+                                </div>
+                                <div className="h-[100px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={visiblePoints} margin={{ top: 2, right: 4, bottom: 0, left: -28 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} vertical={false} />
+                                            <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={8} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                                            <YAxis yAxisId="pct" domain={[0, 100]} stroke="var(--text-muted)" fontSize={8} tickLine={false} axisLine={false} width={26} />
+                                            <YAxis yAxisId="cnt" orientation="right" stroke="var(--text-muted)" fontSize={8} tickLine={false} axisLine={false} width={22} />
+                                            <ReTooltip {...tStyle} />
+                                            <ReferenceLine yAxisId="pct" y={80} stroke="#ef4444" strokeDasharray="3 2" strokeOpacity={0.4} />
+                                            <Line yAxisId="pct" type="monotone" dataKey="cpu"    stroke="#f97316" strokeWidth={1.5} dot={false} name="CPU %" />
+                                            <Line yAxisId="cnt" type="monotone" dataKey="dstate" stroke="#ef4444" strokeWidth={1.5} dot={false} name="D-state" strokeDasharray="4 2" />
+                                            <Line yAxisId="cnt" type="monotone" dataKey="udp"    stroke="#a78bfa" strokeWidth={1}   dot={false} name="UDP err"  strokeDasharray="2 2" />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Traffic rate */}
+                            <div className="bg-card border border-border rounded-xl p-4">
+                                <div className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <TrendingUp size={12} className="text-blue-400" /> Traffic Rate — pps · ppm
+                                </div>
+                                <div className="h-[90px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={visiblePoints} margin={{ top: 2, right: 4, bottom: 0, left: -28 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} vertical={false} />
+                                            <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={8} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                                            <YAxis yAxisId="pps" stroke="var(--text-muted)" fontSize={8} tickLine={false} axisLine={false} width={26} />
+                                            <YAxis yAxisId="ppm" orientation="right" stroke="var(--text-muted)" fontSize={8} tickLine={false} axisLine={false} width={28} />
+                                            <ReTooltip {...tStyle} />
+                                            <Line yAxisId="pps" type="monotone" dataKey="pps" stroke="#38bdf8" strokeWidth={1.5} dot={false} name="pps" />
+                                            <Line yAxisId="ppm" type="monotone" dataKey="ppm" stroke="#818cf8" strokeWidth={1}   dot={false} name="ppm" strokeDasharray="4 2" />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Global score + Voice MOS */}
+                            {visiblePoints.some(p => p.globalScore !== null || p.avgMos !== null) && (
+                                <div className="bg-card border border-border rounded-xl p-4">
+                                    <div className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-3 flex items-center gap-2">
+                                        <Gauge size={12} className="text-indigo-400" /> Global Experience Score · Voice MOS
+                                    </div>
+                                    <div className="h-[90px]">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <LineChart data={visiblePoints} margin={{ top: 2, right: 4, bottom: 0, left: -28 }}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} vertical={false} />
+                                                <XAxis dataKey="time" stroke="var(--text-muted)" fontSize={8} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                                                <YAxis yAxisId="sc" domain={[0, 100]} stroke="var(--text-muted)" fontSize={8} tickLine={false} axisLine={false} width={26} />
+                                                <YAxis yAxisId="mos" orientation="right" domain={[0, 5]} stroke="var(--text-muted)" fontSize={8} tickLine={false} axisLine={false} width={22} />
+                                                <ReTooltip {...tStyle} />
+                                                <ReferenceLine yAxisId="sc" y={80} stroke="#22c55e" strokeDasharray="3 2" strokeOpacity={0.3} />
+                                                <ReferenceLine yAxisId="sc" y={50} stroke="#f59e0b" strokeDasharray="3 2" strokeOpacity={0.3} />
+                                                <Line yAxisId="sc"  type="monotone" dataKey="globalScore" stroke="#6366f1" strokeWidth={2}   dot={false} name="Score/100" connectNulls />
+                                                <Line yAxisId="mos" type="monotone" dataKey="avgMos"      stroke="#22d3ee" strokeWidth={1.5} dot={false} name="Avg MOS"   connectNulls strokeDasharray="4 2" />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex items-start gap-2 text-[10px] text-text-muted bg-violet-500/5 border border-violet-500/20 rounded-lg px-3 py-2">
+                                <Info size={11} className="text-violet-400 mt-0.5 shrink-0" />
+                                <span>
+                                    Polling every <strong>30s</strong>. Purple markers = MaxConcurrent changed. D-state ≥ 2 indicates blocked Scapy processes.
+                                    Data is in-memory only — resets on page reload.
+                                </span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab }: { 
     token: string, 
@@ -2710,6 +2978,9 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                     </div>
                                 </div>
                             )}
+
+                            {/* ── IoT Advanced Debug Monitor ─────────────────────────────────────── */}
+                            <IoTDebugMonitor token={token} />
 
                             {/* Live Docker Stats */}
                             <div className="pt-8 border-t border-border/50">
