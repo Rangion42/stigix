@@ -218,6 +218,74 @@ Danger Score = Risk Score (0–100)
              + Max CVSS     ×  2    (integer part, e.g. 9.8 → 19)
 ```
 
+#### 📄 From raw CSV rows to Danger Score — full worked example
+
+A vulnerability export has **one row per CVE per device**. The importer aggregates all rows that share the same `Device Name + IP + MAC` into a single device record.
+
+Here is a representative subset of the CSV rows for **Raspberry Pi Device #3** (real export, shortened for clarity):
+
+```csv
+Device Name,IP Address,MAC Address,Risk Score,Profile,OS,Site Name,CVE,ICS-Cert,CVSS,Severity,APT Names
+b8:27:eb:c7:e9:c9,10.0.5.19,b8:27:eb:c7:e9:c9,30,Raspberry Pi Device,Linux Raspberry Pi Os,Branch 5 - Florida,CVE-2023-38427,YES,9.8,Critical,
+b8:27:eb:c7:e9:c9,10.0.5.19,b8:27:eb:c7:e9:c9,30,Raspberry Pi Device,Linux Raspberry Pi Os,Branch 5 - Florida,CVE-2023-38429,YES,9.8,Critical,
+b8:27:eb:c7:e9:c9,10.0.5.19,b8:27:eb:c7:e9:c9,30,Raspberry Pi Device,Linux Raspberry Pi Os,Branch 5 - Florida,CVE-2023-38426,YES,9.8,Critical,
+b8:27:eb:c7:e9:c9,10.0.5.19,b8:27:eb:c7:e9:c9,30,Raspberry Pi Device,Linux Raspberry Pi Os,Branch 5 - Florida,CVE-2023-38430,YES,9.8,Critical,
+b8:27:eb:c7:e9:c9,10.0.5.19,b8:27:eb:c7:e9:c9,30,Raspberry Pi Device,Linux Raspberry Pi Os,Branch 5 - Florida,CVE-2023-38431,YES,9.8,Critical,
+b8:27:eb:c7:e9:c9,10.0.5.19,b8:27:eb:c7:e9:c9,30,Raspberry Pi Device,Linux Raspberry Pi Os,Branch 5 - Florida,CVE-2023-38432,YES,9.8,Critical,
+b8:27:eb:c7:e9:c9,10.0.5.19,b8:27:eb:c7:e9:c9,30,Raspberry Pi Device,Linux Raspberry Pi Os,Branch 5 - Florida,CVE-2023-38433,YES,9.8,Critical,
+b8:27:eb:c7:e9:c9,10.0.5.19,b8:27:eb:c7:e9:c9,30,Raspberry Pi Device,Linux Raspberry Pi Os,Branch 5 - Florida,CVE-2023-20569,NO,5.6,High,
+b8:27:eb:c7:e9:c9,10.0.5.19,b8:27:eb:c7:e9:c9,30,Raspberry Pi Device,Linux Raspberry Pi Os,Branch 5 - Florida,CVE-2023-20588,NO,7.5,High,
+...  (22 rows total for this device)
+```
+
+**Step 1 — Aggregation** (all rows with same MAC `b8:27:eb:c7:e9:c9` are merged):
+
+```
+device["mac"]         = "b8:27:eb:c7:e9:c9"
+device["risk_score"]  = 30              ← same across all rows, taken once
+device["cve_count"]   = 22             ← count distinct CVE IDs
+device["critical"]    = 7              ← rows where Severity == "Critical"
+device["high"]        = 8              ← rows where Severity == "High"
+device["medium"]      = 7              ← rows where Severity == "Medium"
+device["max_cvss"]    = 9.8            ← max(CVSS) across all rows
+device["ics_cert"]    = True           ← any row with ICS-Cert == "YES"
+device["apt_groups"]  = []             ← no APT Names in any row → empty list
+```
+
+**Step 2 — Score calculation:**
+
+```python
+danger_score = (
+    30                  # Risk Score
+  + 7  * 15            # 7 Critical CVEs  → 105
+  + 8  *  8            # 8 High CVEs      →  64
+  + 7  *  3            # 7 Medium CVEs    →  21
+  + 0  *  5            # 0 APT groups     →   0
+  + 1  * 10            # ICS-CERT present →  10
+  + int(9.8 * 2)       # Max CVSS 9.8     →  19
+)
+# = 30 + 105 + 64 + 21 + 0 + 10 + 19 = 249
+```
+
+**Step 3 — Name resolution** (Device Name field = MAC address → profile-based name):
+
+```
+"b8:27:eb:c7:e9:c9"  →  is_mac_like() = True
+Profile = "Raspberry Pi Device"
+name_counters["Raspberry Pi Device"] = 3  (third device with this profile)
+→ final name: "Raspberry Pi Device #3"
+```
+
+**Step 4 — Behavior assignment** (Auto mode):
+
+```
+ICS-CERT = True      →  port_scan
+Critical/High > 0    →  pan_test_domains
+APT groups = []      →  (no beacon)
+```
+
+> This is exactly what you see on the card: `PORT SCAN` and `PAN TEST DOMAINS` badges, no `BEACON`.
+
 #### 🔢 Reading a real Danger Score — example: Score 249
 
 The device card below shows a **Raspberry Pi Device #3** with `SCORE 249`. Here is how that number is computed step by step from the raw CSV data:
