@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.12] - 2026-05-19
+### Fixed
+- **IoT Daemon**: Detect duplicate MAC addresses when starting devices — auto-generate a fresh locally-administered MAC (LAA) if a collision is found, preventing `_sniff_dhcp()` race conditions that caused Vulnerability Report imported devices to never receive a DHCP OFFER when the same MACs were already active from a Device Security Asset import running concurrently.
+- **IoT Daemon**: Reduce per-device stagger delay from 2 s/slot to 1 s/slot — 30 devices now boot in ~30 s instead of ~60 s.
+
 ## [v1.4.0-patch.0-docs] - 2026-05-12
 ### Documentation
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).

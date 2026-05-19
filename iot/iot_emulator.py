@@ -1485,10 +1485,35 @@ def daemon_loop(interface: str, dhcp_mode: str = "auto"):
                 emit_json("daemon_error", device_id=device_id, error="Device already running")
                 continue
             try:
-                # ── Stagger: spread DHCP Discovers to avoid hitting the router simultaneously ──
-                # Each new device waits (running_count × 2s + 0–1s jitter) before starting.
+                # ── Duplicate MAC guard ────────────────────────────────────────────────────
+                # Two devices with the same MAC on the same interface will race on _sniff_dhcp
+                # and neither will reliably receive its DHCP OFFER. Auto-generate a fresh
+                # locally-administered MAC (LAA bit set) when a conflict is detected so the
+                # new device can still get an IP — original MAC is logged for traceability.
+                incoming_mac = (cfg.get("mac") or "").lower().strip()
+                active_macs = {d.mac.lower() for d in devices.values()}
+                if incoming_mac and incoming_mac in active_macs:
+                    # Generate locally-administered unicast MAC (LAA: second-lowest bit of
+                    # first octet = 1, lowest bit = 0 → e.g. x2:xx:xx:xx:xx:xx)
+                    new_mac = ":".join(
+                        f"{(random.randint(0, 255) | 0x02) & 0xFE:02x}" if i == 0
+                        else f"{random.randint(0, 255):02x}"
+                        for i in range(6)
+                    )
+                    logger.warning(
+                        f"⚠️ MAC collision detected for {device_id}: "
+                        f"{incoming_mac} already in use — reassigned to {new_mac}"
+                    )
+                    emit_json("daemon_warning", device_id=device_id,
+                              warning=f"MAC collision: {incoming_mac} → reassigned {new_mac}")
+                    cfg = dict(cfg)  # shallow copy so we don't mutate the original cmd
+                    cfg["mac"] = new_mac
+
+                # ── Stagger: spread DHCP Discovers to avoid simultaneous router hits ───────
+                # Each new device waits (running_count × 1s + 0–1s jitter) before starting.
+                # 1s/slot lets 30 devices boot in ~30s instead of ~60s.
                 startup_index = len(devices)
-                stagger_delay = startup_index * 2.0 + random.uniform(0, 1.0)
+                stagger_delay = startup_index * 1.0 + random.uniform(0, 1.0)
 
                 dev = IoTDevice(cfg, interface=interface, dhcp_mode=dhcp_mode)
                 devices[device_id] = dev
