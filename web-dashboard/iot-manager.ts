@@ -62,6 +62,7 @@ export class IoTManager extends EventEmitter {
     private cumulativeStats: Map<string, any> = new Map();
     private cumulativeTime: Map<string, { active: number; idle: number; queued: number }> = new Map();
     private stateEnteredAt: Map<string, number> = new Map();
+    private deviceQueue: string[] = [];
 
     // ── Concurrency throttle ─────────────────────────────────────────────────
     private maxConcurrentDevices: number = DEFAULT_MAX_CONCURRENT;
@@ -138,6 +139,13 @@ export class IoTManager extends EventEmitter {
             this.deviceStates.set(id, newState);
             this.stateEnteredAt.set(id, now);
         }
+
+        if (newState === 'QUEUED') {
+            if (!this.deviceQueue.includes(id)) this.deviceQueue.push(id);
+        } else {
+            const qIdx = this.deviceQueue.indexOf(id);
+            if (qIdx !== -1) this.deviceQueue.splice(qIdx, 1);
+        }
     }
 
     // ── Throttle helpers ─────────────────────────────────────────────────────
@@ -180,20 +188,15 @@ export class IoTManager extends EventEmitter {
     }
 
     private promoteNextQueued(): void {
-        if (this.getActiveCount() >= this.maxConcurrentDevices) return;
-        for (const [id, state] of this.deviceStates.entries()) {
-            if (state === 'QUEUED') {
-                const cfg = this.managedDevices.get(id);
-                if (cfg) {
-                    // MUST set ACTIVE synchronously before the async call — same as startDevice().
-                    // Otherwise getActiveCount() under-counts and multiple promotions race.
-                    this.changeDeviceState(id, 'ACTIVE');
-                    this.activateDevice(cfg).catch(e => {
-                        log('IOT', `Promote failed ${id}: ${e}`, 'error');
-                        this.changeDeviceState(id, 'QUEUED'); // rollback
-                    });
-                    return;
-                }
+        while (this.deviceQueue.length > 0 && this.getActiveCount() < this.maxConcurrentDevices) {
+            const id = this.deviceQueue.shift()!;
+            const cfg = this.managedDevices.get(id);
+            if (cfg && this.deviceStates.get(id) === 'QUEUED') {
+                this.changeDeviceState(id, 'ACTIVE');
+                this.activateDevice(cfg).catch(e => {
+                    log('IOT', `Promote failed ${id}: ${e}`, 'error');
+                    this.changeDeviceState(id, 'QUEUED'); // rollback (puts it at the end of the queue)
+                });
             }
         }
     }

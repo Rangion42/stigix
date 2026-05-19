@@ -763,9 +763,12 @@ export default function Iot({ token }: IotProps) {
                                     )}>
                                         {getDeviceIcon(device.type, isCompact ? 16 : 24)}
                                     </div>
-                                    <div className="truncate">
-                                        <h3 className={cn("font-bold text-text-primary transition-colors tracking-tight truncate", isCompact ? "text-sm" : "text-base group-hover:text-blue-500")}>{device.name}</h3>
-                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                    <div className="truncate flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[11px] font-mono font-bold text-text-muted/60">#{devices.findIndex(d => d.id === device.id) + 1}</span>
+                                            <h3 className={cn("font-bold text-text-primary transition-colors tracking-tight truncate", isCompact ? "text-sm" : "text-base group-hover:text-blue-500")}>{device.name}</h3>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                                             <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest truncate">{device.vendor} • {device.type}</p>
                                             {(device as any).deviceState && getStateBadge((device as any).deviceState)}
                                         </div>

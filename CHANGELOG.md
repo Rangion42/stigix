@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.4.0-patch.4] - 2026-05-19
+### Fixed
+- **IoT Simulation** 🐛 Fixed a critical concurrency starvation bug where devices at the end of the list would never leave the QUEUED state. A proper FIFO queue replaces the map iteration for fairer rotation.
+### Added
+- **IoT Simulation** 🏷️ Added a persistent absolute device number (e.g., #12) next to each device's name in the UI to easily track devices across filters and states.
+
 ## [v1.4.0-patch.3] - 2026-05-19
 ### Added
 - **IoT Simulation** ⏱️ Added cumulative tracking for IoT traffic and state time (Active/Queued/Idle). A beautiful segmented progress bar at the bottom of device cards replaces the old running indicator.
