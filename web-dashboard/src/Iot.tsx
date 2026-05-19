@@ -1152,8 +1152,8 @@ export default function Iot({ token }: IotProps) {
             {/* Prisma IoT Security CSV Import Modal */}
             {showPrismaModal && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-                    <div className="bg-card border border-border rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
-                        <div className="p-6 border-b border-border flex items-center justify-between bg-card-secondary">
+                    <div className="bg-card border border-border rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                        <div className="p-6 border-b border-border flex items-center justify-between bg-card-secondary shrink-0">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-purple-500/20 rounded-xl">
                                     <FileSpreadsheet size={20} className="text-purple-400" />
@@ -1163,12 +1163,12 @@ export default function Iot({ token }: IotProps) {
                                     <p className="text-xs text-text-muted">Import from Palo Alto IoT Security</p>
                                 </div>
                             </div>
-                            <button onClick={() => { setShowPrismaModal(false); setPrismaResult(null); }} className="text-text-muted hover:text-foreground transition-colors">
+                            <button onClick={() => { setShowPrismaModal(false); setPrismaResult(null); }} className="text-text-muted hover:text-foreground transition-colors shrink-0">
                                 <X size={22} />
                             </button>
                         </div>
 
-                        <div className="p-6 space-y-5">
+                        <div className="p-6 space-y-5 overflow-y-auto">
                             {/* File picker */}
                             <label className={cn(
                                 "flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-all",
@@ -1176,8 +1176,8 @@ export default function Iot({ token }: IotProps) {
                             )}>
                                 <FileSpreadsheet size={28} className={prismaFile ? "text-purple-400" : "text-text-muted"} />
                                 {prismaFile ? (
-                                    <div className="text-center">
-                                        <p className="text-sm font-bold text-purple-400">{prismaFile.name}</p>
+                                    <div className="text-center w-full overflow-hidden">
+                                        <p className="text-sm font-bold text-purple-400 truncate w-full px-2" title={prismaFile.name}>{prismaFile.name}</p>
                                         <p className="text-xs text-text-muted mt-0.5">{(prismaFile.size / 1024).toFixed(1)} KB</p>
                                     </div>
                                 ) : (
@@ -1298,7 +1298,7 @@ export default function Iot({ token }: IotProps) {
                             )}
                         </div>
 
-                        <div className="px-6 pb-6 flex gap-3">
+                        <div className="px-6 pb-6 pt-4 flex gap-3 shrink-0 border-t border-border">
                             <button
                                 onClick={() => { setShowPrismaModal(false); setPrismaResult(null); }}
                                 className="flex-1 px-4 py-3 bg-card-secondary border border-border text-text-muted font-bold rounded-xl hover:bg-card-hover transition-all tracking-widest text-xs"
@@ -1322,8 +1322,8 @@ export default function Iot({ token }: IotProps) {
             {/* ── Vulnerability CSV Import Modal ── */}
             {showVulnModal && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-                    <div className="bg-card border border-border rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
-                        <div className="p-6 border-b border-border flex items-center justify-between bg-card-secondary">
+                    <div className="bg-card border border-border rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                        <div className="p-6 border-b border-border flex items-center justify-between bg-card-secondary shrink-0">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-orange-500/20 rounded-xl">
                                     <AlertTriangle size={20} className="text-orange-400" />
@@ -1333,12 +1333,12 @@ export default function Iot({ token }: IotProps) {
                                     <p className="text-xs text-text-muted">Palo Alto IoT Security — CVE export (one row per CVE)</p>
                                 </div>
                             </div>
-                            <button onClick={() => { setShowVulnModal(false); setVulnResult(null); }} className="text-text-muted hover:text-foreground transition-colors">
+                            <button onClick={() => { setShowVulnModal(false); setVulnResult(null); }} className="text-text-muted hover:text-foreground transition-colors shrink-0">
                                 <X size={22} />
                             </button>
                         </div>
 
-                        <div className="p-6 space-y-5">
+                        <div className="p-6 space-y-5 overflow-y-auto">
                             {/* File picker */}
                             <label className={cn(
                                 "flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-all",
@@ -1346,8 +1346,8 @@ export default function Iot({ token }: IotProps) {
                             )}>
                                 <AlertTriangle size={28} className={vulnFile ? "text-orange-400" : "text-text-muted"} />
                                 {vulnFile ? (
-                                    <div className="text-center">
-                                        <p className="text-sm font-bold text-orange-400">{vulnFile.name}</p>
+                                    <div className="text-center w-full overflow-hidden">
+                                        <p className="text-sm font-bold text-orange-400 truncate w-full px-2" title={vulnFile.name}>{vulnFile.name}</p>
                                         <p className="text-xs text-text-muted mt-0.5">{(vulnFile.size / 1024).toFixed(1)} KB</p>
                                     </div>
                                 ) : (
@@ -1479,7 +1479,7 @@ export default function Iot({ token }: IotProps) {
                             )}
                         </div>
 
-                        <div className="px-6 pb-6 flex gap-3">
+                        <div className="px-6 pb-6 pt-4 flex gap-3 shrink-0 border-t border-border">
                             <button
                                 onClick={() => { setShowVulnModal(false); setVulnResult(null); }}
                                 className="flex-1 px-4 py-3 bg-card-secondary border border-border text-text-muted font-bold rounded-xl hover:bg-card-hover transition-all tracking-widest text-xs"
