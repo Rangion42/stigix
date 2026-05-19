@@ -380,7 +380,8 @@ export default function Iot({ token }: IotProps) {
         const ds = (d as any).deviceState || 'STOPPED';
         const stateMatch = stateFilter === 'ALL' || ds === stateFilter;
         return textMatch && stateMatch;
-    }) : [];
+    // Always sort by original sequence index (#1, #2, … #N) so the order stays stable across all filters
+    }).sort((a, b) => devices.indexOf(a) - devices.indexOf(b)) : [];
 
     const getDeviceIcon = (type: string, size: number = 20) => {
         const t = (type || '').toLowerCase();
