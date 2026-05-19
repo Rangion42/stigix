@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.13] - 2026-05-19
+### Fixed
+- **IoT Import** (`server.ts`): Call `iotManager.stopAll()` before writing the new device config when importing from a Prisma CSV or Vulnerability Report CSV (non-merge mode). Previously, old devices kept running alongside new ones — when both imports used the same DHCP pool, the new devices could not obtain IP addresses. Cleanup now happens automatically at import time.
+
 ## [v1.4.0-patch.12] - 2026-05-19
 ### Fixed
 - **IoT Daemon**: Detect duplicate MAC addresses when starting devices — auto-generate a fresh locally-administered MAC (LAA) if a collision is found, preventing `_sniff_dhcp()` race conditions that caused Vulnerability Report imported devices to never receive a DHCP OFFER when the same MACs were already active from a Device Security Asset import running concurrently.

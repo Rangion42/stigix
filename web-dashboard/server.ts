@@ -9736,6 +9736,10 @@ app.post('/api/iot/import-prisma-csv', authenticateToken, async (req, res) => {
             saveIoTConfig({ ...existing, devices: merged });
             log('IOT', `Prisma CSV import merged: +${newDevices.length} devices`);
         } else {
+            // Stop all running devices before replacing the config — prevents old devices
+            // from competing with the new import for DHCP offers on the same interface.
+            await iotManager.stopAll();
+            log('IOT', 'Prisma CSV import: stopped all active devices before replacing config');
             if (fs.existsSync(IOT_DEVICES_FILE)) {
                 fs.copyFileSync(IOT_DEVICES_FILE, IOT_DEVICES_FILE + '.backup');
             }
@@ -9821,6 +9825,10 @@ app.post('/api/iot/import-vuln-csv', authenticateToken, async (req, res) => {
             saveIoTConfig({ ...existing, devices: merged });
             log('IOT', `Vulnerability CSV import merged: +${newDevices.length} devices`);
         } else {
+            // Stop all running devices before replacing the config — prevents old devices
+            // from competing with the new import for DHCP offers on the same interface.
+            await iotManager.stopAll();
+            log('IOT', 'Vulnerability CSV import: stopped all active devices before replacing config');
             if (fs.existsSync(IOT_DEVICES_FILE)) {
                 fs.copyFileSync(IOT_DEVICES_FILE, IOT_DEVICES_FILE + '.backup');
             }
