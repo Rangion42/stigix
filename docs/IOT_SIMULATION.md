@@ -207,15 +207,59 @@ When your customer has a **Palo Alto IoT Security Vulnerability Report** (export
 - ✅ **Threat-aware bad behavior**: APT groups → `beacon`, ICS-CERT → `port_scan`, Critical/High CVEs → `pan_test_domains`
 
 **Danger Score formula:**
+
 ```
 Danger Score = Risk Score (0–100)
              + Critical CVEs × 15
-             + High CVEs × 8
-             + Medium CVEs × 3
-             + Unique APT Groups × 5
-             + ICS-CERT presence × 10
-             + Max CVSS × 2
+             + High CVEs    ×  8
+             + Medium CVEs  ×  3
+             + APT Groups   ×  5
+             + ICS-CERT     × 10    (1 if present, else 0)
+             + Max CVSS     ×  2    (integer part, e.g. 9.8 → 19)
 ```
+
+#### 🔢 Reading a real Danger Score — example: Score 249
+
+The device card below shows a **Raspberry Pi Device #3** with `SCORE 249`. Here is how that number is computed step by step from the raw CSV data:
+
+<img src="screenshots/05-IOT/08-iot-vuln-device-card-full.png" width="420" alt="IoT device card — Raspberry Pi Device #3 with Danger Score 249" />
+
+<img src="screenshots/05-IOT/07-iot-vuln-threat-panel-zoom.png" width="620" alt="Threat intel panel close-up — SCORE 249, 22 CVEs, 7 Critical, 8 High, CVSS 9.8, ICS-CERT" />
+
+| Signal | Raw value | Weight | Contribution |
+|---|---|---|---|
+| **Risk Score** (Prisma field, 0–100) | 30 | ×1 | **30** |
+| **Critical CVEs** | 7 | ×15 | **105** |
+| **High CVEs** | 8 | ×8 | **64** |
+| **Medium CVEs** | 22 − 7 − 8 = 7 | ×3 | **21** |
+| **APT Groups** | 0 (none attributed) | ×5 | **0** |
+| **ICS-CERT** | ✅ present | ×10 | **10** |
+| **Max CVSS** | 9.8 → int(9.8 × 2) | ×2 | **19** |
+| | | **Total** | **249** |
+
+> **Why these weights?** Each weight reflects the *operational severity* of the signal:
+> - **Critical CVE × 15** — a single unauthenticated RCE is more dangerous than a high-scoring device with no known exploits.
+> - **ICS-CERT × 10** — ICS alerts target industrial/OT protocols; a compromised ICS device can cause physical disruption.
+> - **APT attribution × 5** — a CVE linked to a nation-state actor (e.g. Fancy Bear) signals active weaponization.
+> - **CVSS × 2** — CVSS alone is a poor ranking criterion (many high-CVSS CVEs have no public exploit), so it contributes relatively little.
+
+**What the card also tells you:**
+
+| Badge | Meaning |
+|---|---|
+| `22 CVES` | Total unique CVEs across all rows aggregated for this device |
+| `7 CRITICAL` | CVEs with Severity = Critical in the export |
+| `8 HIGH` | CVEs with Severity = High |
+| `CVSS 9.8` | Highest CVSS score among all CVEs for this device |
+| `⚠ ICS-CERT` | At least one CVE carries an ICS-CERT advisory (OT/industrial risk) |
+| `CVE-2023-38427 …` | Top 4 CVE IDs (sorted by CVSS desc), `+N` if more exist |
+| `OS: Linux Raspberry Pi Os` | OS field from the CSV |
+| `Site: Branch 5 - Florida` | Site Name field from the CSV |
+
+**Attack behaviors assigned (Auto mode):**
+- `ICS-CERT` present → `port_scan` (OT lateral movement simulation)
+- Critical/High CVEs present → `pan_test_domains` (guaranteed PAN-OS detection)
+- No APT groups → no `beacon` on this device
 
 **Expected CSV format** (columns, one row per CVE):
 ```
@@ -260,10 +304,10 @@ python iot/import_vuln_csv.py -i vulns.csv -o devices.json --merge
 
 **Rich device description** (auto-generated, visible in device card):
 ```
-OS: Windows 10 | Risk: Low (30/100) | CVEs: 9 total — 0 critical / 8 high | Max CVSS: 8.8
-Top CVEs: CVE-2021-34527 (CVSS 8.8 High), CVE-2021-1675 (CVSS 7.8 High), ...
-APT Groups (7): Cobalt Spider, Fancy Bear, Vice Society, Mustang Panda, ...
-Site: Default Site | Danger Score: 121
+OS: Linux Raspberry Pi Os | Risk: Low (30/100) | CVEs: 22 total — 7 critical / 8 high | Max CVSS: 9.8
+Top CVEs: CVE-2023-38427 (CVSS 9.8 Critical), CVE-2023-38429 (CVSS 9.8 Critical), ...
+ICS-CERT: YES | APT Groups: none
+Site: Branch 5 - Florida | Danger Score: 249
 ```
 
 ---
