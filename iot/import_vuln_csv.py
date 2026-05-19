@@ -141,6 +141,39 @@ def is_iot_vertical(vertical: str) -> bool:
     return vertical.lower().strip() in IOT_VERTICALS
 
 
+MAC_RE = re.compile(r'^([0-9a-f]{2}[:\-]){5}[0-9a-f]{2}$', re.IGNORECASE)
+
+
+def is_mac_like(s: str) -> bool:
+    """Return True if the string looks like a MAC address (xx:xx:xx:xx:xx:xx)."""
+    return bool(MAC_RE.match(s.strip())) if s else False
+
+
+def resolve_device_name(raw_name: str, profile: str, vendor: str, model: str,
+                        name_counters: dict) -> str:
+    """
+    If raw_name is a MAC address (or empty), generate a human-readable name
+    from the device Profile, falling back to Vendor/Model or a generic label.
+    Multiple devices sharing the same base name get an incrementing suffix:
+      Raspberry Pi Device → Raspberry Pi Device #1, #2 ...
+    """
+    if raw_name and not is_mac_like(raw_name):
+        return raw_name  # Name is already human-readable — keep it
+
+    # Derive base name from profile / vendor / model
+    if profile and profile.strip():
+        base = profile.strip()
+    elif vendor and model and model.lower() not in ("unknown model", ""):
+        base = f"{vendor} {model}".strip()
+    elif vendor and vendor not in ("Unknown", ""):
+        base = f"{vendor} Device"
+    else:
+        base = "IoT Device"
+
+    # Increment counter for this base name
+    name_counters[base] = name_counters.get(base, 0) + 1
+    return f"{base} #{name_counters[base]}"
+
 def parse_apt_names(apt_str: str) -> list[str]:
     """Parse comma-separated APT names, ignoring empty/quoted empty strings."""
     if not apt_str or apt_str.strip() in ('', '""', "''"):
@@ -261,15 +294,19 @@ def aggregate_devices(rows: list[dict]) -> list[dict]:
 # ─── Device builder (Stigix JSON format) ──────────────────────────────────────
 
 def build_stigix_device(d: dict, counter: int, enable_security: bool,
-                        security_percentage: int | None) -> dict:
+                        security_percentage: int | None,
+                        name_counters: dict) -> dict:
     """Convert an aggregated device entry into a Stigix IoT device JSON object."""
 
-    name    = d["name"] or d["ip"] or f"device-{counter}"
-    vendor  = d["vendor"] or "Unknown"
-    model   = d["model"] or ""
-    os_str  = d["os"]
-    profile = d["profile"]
-    mac     = d["mac"]
+    raw_name = d["name"]
+    vendor   = d["vendor"] or "Unknown"
+    model    = d["model"] or ""
+    os_str   = d["os"]
+    profile  = d["profile"]
+    mac      = d["mac"]
+
+    # Resolve human-readable name (replace MAC-like names)
+    name = resolve_device_name(raw_name, profile, vendor, model, name_counters)
 
     # Ensure a valid MAC
     if not mac or mac == "00:00:00:00:00:00":
@@ -414,9 +451,11 @@ def convert(
 
     # Build Stigix devices
     devices = []
+    name_counters: dict[str, int] = {}  # base_name → count, for MAC-name dedup
     for i, d in enumerate(aggregated, 1):
-        device = build_stigix_device(d, i, enable_security, security_percentage)
+        device = build_stigix_device(d, i, enable_security, security_percentage, name_counters)
         devices.append(device)
+
 
     # Handle merge vs replace
     if merge and Path(output_path).exists():

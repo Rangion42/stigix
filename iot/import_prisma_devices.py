@@ -336,23 +336,47 @@ def make_device_id(vendor, category, counter):
     return f"{v}_{c}_{counter:03d}"
 
 
-def make_name(vendor, model, hostname, device_id):
+MAC_RE = re.compile(r'^([0-9a-f]{2}[:\-]){5}[0-9a-f]{2}$', re.IGNORECASE)
+
+
+def is_mac_like(s: str) -> bool:
+    """Return True if the string looks like a MAC address."""
+    return bool(MAC_RE.match(s.strip())) if s else False
+
+
+def make_name(vendor, model, hostname, device_id, profile="", name_counters=None):
     """
-    Build a human-readable device name without vendor duplication.
-    e.g. vendor='Atlas', model='Atlas Copco Torque Controller'
-         → 'Atlas Copco Torque Controller'  (not 'Atlas Atlas Copco...')
-    e.g. vendor='HP', model='HP Computer'  → 'HP Computer'
-    e.g. vendor='Cisco', model='ISR4431'   → 'Cisco ISR4431'
+    Build a human-readable device name.
+    If hostname looks like a MAC address (or is empty), fall back to:
+      1. Profile (e.g. 'Raspberry Pi Device')
+      2. Vendor + Model
+      3. Vendor + 'Device'
+    Duplicate base names get '#1', '#2', ... suffixes.
     """
-    if not model or model == "Unknown Model":
-        return hostname or device_id
-    # Normalise: strip trailing punctuation/comma from vendor (e.g. "VMware, Inc." → "vmware")
-    v_norm = re.sub(r'[^a-z0-9 ]', '', vendor.lower()).split()[0] if vendor else ''
-    m_lower = model.lower()
-    # If model already starts with the vendor first-word, use model as-is
-    if v_norm and m_lower.startswith(v_norm):
-        return model
-    return f"{vendor} {model}"
+    # If hostname is a real name (not a MAC and not empty), try to use vendor+model
+    if hostname and not is_mac_like(hostname):
+        if not model or model == "Unknown Model":
+            return hostname
+        v_norm = re.sub(r'[^a-z0-9 ]', '', vendor.lower()).split()[0] if vendor else ''
+        m_lower = model.lower()
+        if v_norm and m_lower.startswith(v_norm):
+            return model
+        return f"{vendor} {model}"
+
+    # Hostname is a MAC or empty — derive a human-readable name
+    if profile and profile.strip():
+        base = profile.strip()
+    elif model and model not in ("Unknown Model", ""):
+        base = f"{vendor} {model}".strip() if vendor else model
+    elif vendor and vendor not in ("Unknown", ""):
+        base = f"{vendor} Device"
+    else:
+        base = "IoT Device"
+
+    if name_counters is not None:
+        name_counters[base] = name_counters.get(base, 0) + 1
+        return f"{base} #{name_counters[base]}"
+    return base
 
 
 # ─── Main conversion ──────────────────────────────────────────────────────────
@@ -367,7 +391,8 @@ def convert(
     max_devices=None,
 ):
     devices = []
-    counters = {}  # vendor -> count (for unique IDs)
+    counters = {}      # vendor -> count (for unique IDs)
+    name_counters = {} # base_name -> count (for MAC-name fallback dedup)
 
     with open(input_path, newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
@@ -443,7 +468,8 @@ def convert(
 
         device = {
             "id": device_id,
-            "name": make_name(vendor, model, hostname, device_id),
+            "name": make_name(vendor, model, hostname, device_id,
+                              profile=profile, name_counters=name_counters),
             "vendor": vendor,
             "type": category,
             "mac": mac,
