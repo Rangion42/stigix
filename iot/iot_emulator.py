@@ -254,12 +254,14 @@ class IoTDevice:
             self.behavior_types = [behavior_cfg]  # Single behavior -> list with 1 element
         
         # Stats tracking
+        prev_stats = device_config.get("previous_stats", {})
         self.stats = {
-            "packets_sent": 0,
-            "bytes_sent": 0,
-            "protocols": {p: 0 for p in self.protocols},
+            "packets_sent": prev_stats.get("packets_sent", 0),
+            "bytes_sent": prev_stats.get("bytes_sent", 0),
+            "protocols": prev_stats.get("protocols", {p: 0 for p in self.protocols}),
             "bad_behavior_active": False
         }
+        self.previous_uptime = prev_stats.get("uptime_seconds", 0)
     
     def log(self, level, message, **kwargs):
         """Unified logging that supports JSON output"""
@@ -273,6 +275,7 @@ class IoTDevice:
         """Emit current stats in JSON format"""
         if JSON_OUTPUT:
             uptime = int(time.time() - self.start_time) if self.start_time else 0
+            uptime += getattr(self, 'previous_uptime', 0)
             emit_json("stats", device_id=self.id, stats={
                 "packets_sent": self.stats["packets_sent"],
                 "bytes_sent": self.stats["bytes_sent"],

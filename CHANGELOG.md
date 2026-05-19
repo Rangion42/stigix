@@ -10,6 +10,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **IoT Simulation** 📖 Added complete documentation for `import_prisma_devices.py` in both `IOT_SIMULATION.md` (new Method 3 in device generation section) and `IOT_DEVICE_GENERATOR.md` (full dedicated section with CLI reference, bad behavior logic table, protocol mapping, DHCP fingerprint table, output format, workflow diagram, and updated 3-way comparison table).
 - **IoT Simulation** 📸 Added real-world example output (163 devices CSV → 100 by risk → 64 bad-behavior) to illustrate the importer's practical value in customer demo contexts.
 
+## [v1.4.0-patch.3] - 2026-05-19
+### Added
+- **IoT Simulation** ⏱️ Added cumulative tracking for IoT traffic and state time (Active/Queued/Idle). A beautiful segmented progress bar at the bottom of device cards replaces the old running indicator.
+
+## [v1.4.0-patch.2] - 2026-05-19
+### Changed
+- **Settings** 🔧 UX: renamed Convergence to Failover in Settings menu for consistency.
+
+## [v1.4.0-patch.1] - 2026-05-18
+### Added
+- **UI** 📈 Feat: synchronized crosshair + connecting line between Timing & Score charts.
+
+## [v1.4.0] - 2026-05-17
+### Changed
+- **Release** 🚀 Stable release 1.4.0
+
+## [v1.3.0-patch.106] - 2026-05-17
+### Changed
+- **IoT** 📱 UX: compact IoT control panel + clickable state filter pills.
+
+## [v1.3.0-patch.105] - 2026-05-17
+### Added
+- **IoT** 📊 Feat: IoT traffic rate (pps/ppm) in System Health panel.
+
+## [v1.3.0-patch.104] - 2026-05-17
+### Performance
+- **RTP** ⚡ Perf: replace Scapy with raw UDP socket in rtp.py.
+
+## [v1.3.0-patch.103] - 2026-05-17
+### Fixed
+- **RTP** 🐛 Fix: revert rtp.py audio to 30ms/33pps (was 20ms/50pps).
+
+## [v1.3.0-patch.102] - 2026-05-17
+### Added
+- **Voice** 🐶 Feat: watchdog for rtp.py processes in voice_orchestrator.
+
+## [v1.3.0-patch.101] - 2026-05-17
+### Fixed
+- **IoT** 🐛 Fix: use cached DHCP lease if server unreachable.
+
+## [v1.3.0-patch.100] - 2026-05-17
+### Documentation
+- **IoT** 📖 Docs: refresh IOT_SIMULATION.md.
+
+## [v1.3.0-patch.99] - 2026-05-17
+### Fixed
+- **IoT** 🐛 Fix: Shut and Dequeue buttons had no effect.
+
+## [v1.3.0-patch.98] - 2026-05-16
+### Fixed
+- **IoT** 🐛 Fix: CRITICAL — devices stuck in IDLE/QUEUED, 0 ACTIVE.
+
+## [v1.3.0-patch.97] - 2026-05-16
+### Added
+- **IoT** ⏱️ Feat: per-device timing info in IoT cards.
+
+## [v1.3.0-patch.96] - 2026-05-16
+### Fixed
+- **IoT** 🐛 Fix: remove confusing 'Cancel' button on IDLE devices.
+
+## [v1.3.0-patch.95] - 2026-05-16
+### Fixed
+- **IoT** 🐛 Fix: IoT QUEUED devices never rotating (cycle timers).
+
+## [v1.3.0-patch.94] - 2026-05-16
+### Fixed
+- **IoT** 🐛 Fix: 3 bugs — MAC normalization, bad behavior none, Clean Mode.
+
+## [v1.3.0-patch.93] - 2026-05-16
+### Fixed
+- **IoT** 🐛 Fix: IoT UI — QUEUED/IDLE devices no longer show Stopped.
+
+## [v1.3.0-patch.92] - 2026-05-16
+### Fixed
+- **IoT** 🐛 Fix: IoT semaphore race condition on batch start.
+
+## [v1.3.0-patch.91] - 2026-05-16
+### Added
+- **IoT** 🚦 Feat: IoT concurrency throttle + live system health.
+
+## [v1.3.0-patch.90] - 2026-05-16
+### Added
+- **Registry** 🔄 Feat: Registry hot-reload after cloud test / Prisma config save.
+
 ## [v1.3.0-patch.89] - 2026-05-16
 ### Fixed
 - **Cloud Target Security — Master Key TEST bug** : Après navigation (ex. Settings → Targets → retour), le champ Master Key se vidait (`cloudMasterKey = ''`). Le bouton TEST envoyait alors `masterKey: ""` au backend au lieu de `undefined`, ce qui empêchait le fallback sur la clé sauvée sur disque → HTTP 401. Fix : `cloudMasterKey.trim() || undefined` pour laisser le backend utiliser `cloud-config.json` quand le champ est vide.

@@ -937,10 +937,37 @@ export default function Iot({ token }: IotProps) {
                                 </div>
                             </div>
 
-                            {/* Running indicator bar */}
-                            {device.running && (
-                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500/50 animate-pulse" />
-                            )}
+                            {/* Cumulative Timing Bar */}
+                            {(() => {
+                                const t = (device as any).timing?.cumulative;
+                                if (!t) return device.running ? <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500/50 animate-pulse" /> : null;
+                                
+                                const total = (t.active || 0) + (t.idle || 0) + (t.queued || 0);
+                                if (total === 0) return device.running ? <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500/50 animate-pulse" /> : null;
+                                
+                                const pctA = Math.round(((t.active || 0) / total) * 100);
+                                const pctQ = Math.round(((t.queued || 0) / total) * 100);
+                                const pctI = 100 - pctA - pctQ;
+                                
+                                const formatMs = (ms: number) => {
+                                    if (!ms) return '0s';
+                                    const s = Math.floor(ms / 1000);
+                                    if (s < 60) return `${s}s`;
+                                    const m = Math.floor(s / 60);
+                                    return `${m}m ${s % 60}s`;
+                                };
+
+                                return (
+                                    <div 
+                                        className="absolute bottom-0 left-0 right-0 h-1.5 flex group/timing cursor-help opacity-80 hover:opacity-100 transition-opacity"
+                                        title={`Cumulative Time:\n🟩 Active: ${formatMs(t.active)}\n🟧 Queued: ${formatMs(t.queued)}\n🟦 Idle: ${formatMs(t.idle)}`}
+                                    >
+                                        {pctA > 0 && <div style={{ width: `${pctA}%` }} className="bg-emerald-500 transition-all" />}
+                                        {pctQ > 0 && <div style={{ width: `${pctQ}%` }} className="bg-amber-500 transition-all" />}
+                                        {pctI > 0 && <div style={{ width: `${pctI}%` }} className="bg-blue-500 transition-all" />}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     ))}
 

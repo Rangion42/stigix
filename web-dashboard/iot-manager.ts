@@ -59,6 +59,9 @@ export class IoTManager extends EventEmitter {
     private lastStatsSnapshot: Map<string, { packets: number; bytes: number; ts: number }> = new Map();
     // Per-device pps/bps (refreshed on each stats message, ~every 5s)
     private deviceRates: Map<string, { pps: number; bps: number }> = new Map();
+    private cumulativeStats: Map<string, any> = new Map();
+    private cumulativeTime: Map<string, { active: number; idle: number; queued: number }> = new Map();
+    private stateEnteredAt: Map<string, number> = new Map();
 
     // ── Concurrency throttle ─────────────────────────────────────────────────
     private maxConcurrentDevices: number = DEFAULT_MAX_CONCURRENT;
@@ -114,6 +117,29 @@ export class IoTManager extends EventEmitter {
         } catch (e) { log('IOT', `Failed to save settings: ${e}`, 'warn'); }
     }
 
+    private changeDeviceState(id: string, newState: DeviceState | 'STOPPED'): void {
+        const oldState = this.deviceStates.get(id) || 'STOPPED';
+        const now = Date.now();
+        const enteredAt = this.stateEnteredAt.get(id);
+
+        if (enteredAt && oldState !== 'STOPPED') {
+            const duration = Math.max(0, now - enteredAt);
+            let ct = this.cumulativeTime.get(id);
+            if (!ct) { ct = { active: 0, idle: 0, queued: 0 }; this.cumulativeTime.set(id, ct); }
+            if (oldState === 'ACTIVE') ct.active += duration;
+            else if (oldState === 'IDLE') ct.idle += duration;
+            else if (oldState === 'QUEUED') ct.queued += duration;
+        }
+
+        if (newState === 'STOPPED') {
+            this.deviceStates.delete(id);
+            this.stateEnteredAt.delete(id);
+        } else {
+            this.deviceStates.set(id, newState);
+            this.stateEnteredAt.set(id, now);
+        }
+    }
+
     // ── Throttle helpers ─────────────────────────────────────────────────────
 
     private getActiveCount(): number {
@@ -126,7 +152,9 @@ export class IoTManager extends EventEmitter {
         this.ensureDaemon();
         await this.waitForDaemonReady(8000);
         this.runningDevices.set(config.id, config);
-        this.sendCommand({ cmd: 'start', device: config });
+        const prevStats = this.cumulativeStats.get(config.id);
+        const configWithStats = { ...config, previous_stats: prevStats || {} };
+        this.sendCommand({ cmd: 'start', device: configWithStats });
         this.activatedAt.set(config.id, Date.now());
         this.idledAt.delete(config.id);
         log('IOT', `Activated: ${config.id} [${this.getActiveCount()}/${this.maxConcurrentDevices}]`);
@@ -159,10 +187,10 @@ export class IoTManager extends EventEmitter {
                 if (cfg) {
                     // MUST set ACTIVE synchronously before the async call — same as startDevice().
                     // Otherwise getActiveCount() under-counts and multiple promotions race.
-                    this.deviceStates.set(id, 'ACTIVE');
+                    this.changeDeviceState(id, 'ACTIVE');
                     this.activateDevice(cfg).catch(e => {
                         log('IOT', `Promote failed ${id}: ${e}`, 'error');
-                        this.deviceStates.set(id, 'QUEUED'); // rollback
+                        this.changeDeviceState(id, 'QUEUED'); // rollback
                     });
                     return;
                 }
@@ -179,13 +207,13 @@ export class IoTManager extends EventEmitter {
             // MUST set ACTIVE synchronously before the async call.
             // If we don't, deviceStates stays 'IDLE'; when the daemon later emits 'stopped',
             // the handler checks currentState === 'ACTIVE' → false → no idleTimer → device stuck.
-            this.deviceStates.set(deviceId, 'ACTIVE');
+            this.changeDeviceState(deviceId, 'ACTIVE');
             this.activateDevice(cfg).catch(e => {
                 log('IOT', `Requeue activate failed ${deviceId}: ${e}`, 'error');
-                this.deviceStates.set(deviceId, 'QUEUED'); // rollback
+                this.changeDeviceState(deviceId, 'QUEUED'); // rollback
             });
         } else {
-            this.deviceStates.set(deviceId, 'QUEUED');
+            this.changeDeviceState(deviceId, 'QUEUED');
             log('IOT', `Device ${deviceId} re-queued (slots full)`);
         }
     }
@@ -202,15 +230,15 @@ export class IoTManager extends EventEmitter {
         // Reserve slot SYNCHRONOUSLY before any await — prevents race condition
         // when many devices are started in parallel (e.g. auto-restart on boot).
         if (this.getActiveCount() < this.maxConcurrentDevices) {
-            this.deviceStates.set(deviceConfig.id, 'ACTIVE'); // slot reserved immediately
+            this.changeDeviceState(deviceConfig.id, 'ACTIVE'); // slot reserved immediately
             this.activateDevice(deviceConfig).catch(e => {
                 log('IOT', `Failed to activate ${deviceConfig.id}: ${e.message}`, 'error');
                 // On failure: release the slot and queue instead
-                this.deviceStates.set(deviceConfig.id, 'QUEUED');
+                this.changeDeviceState(deviceConfig.id, 'QUEUED');
                 this.runningDevices.delete(deviceConfig.id);
             });
         } else {
-            this.deviceStates.set(deviceConfig.id, 'QUEUED');
+            this.changeDeviceState(deviceConfig.id, 'QUEUED');
             log('IOT', `Device ${deviceConfig.id} queued (${this.getActiveCount()}/${this.maxConcurrentDevices} slots used)`);
             this.emit('device:queued', { device_id: deviceConfig.id });
         }
@@ -227,7 +255,7 @@ export class IoTManager extends EventEmitter {
 
         const state = this.deviceStates.get(deviceId);
         this.managedDevices.delete(deviceId);
-        this.deviceStates.delete(deviceId);
+        this.changeDeviceState(deviceId, 'STOPPED');
 
         if (state === 'ACTIVE' && this.runningDevices.has(deviceId)) {
             this.runningDevices.delete(deviceId);
@@ -316,6 +344,19 @@ export class IoTManager extends EventEmitter {
             } else if (state === 'QUEUED') {
                 queuePos++;
                 out[id] = { queuePosition: queuePos };
+            }
+
+            const ct = this.cumulativeTime.get(id);
+            const entered = this.stateEnteredAt.get(id);
+            if (ct || entered) {
+                const currentActive = state === 'ACTIVE' ? Date.now() - (entered || Date.now()) : 0;
+                const currentIdle = state === 'IDLE' ? Date.now() - (entered || Date.now()) : 0;
+                const currentQueued = state === 'QUEUED' ? Date.now() - (entered || Date.now()) : 0;
+                out[id].cumulative = {
+                    active: (ct?.active || 0) + Math.max(0, currentActive),
+                    idle: (ct?.idle || 0) + Math.max(0, currentIdle),
+                    queued: (ct?.queued || 0) + Math.max(0, currentQueued)
+                };
             }
         }
         return out;
@@ -469,7 +510,7 @@ export class IoTManager extends EventEmitter {
                 const currentState = this.deviceStates.get(device_id);
                 if (cfg && currentState === 'ACTIVE') {
                     // Device completed its cycle → IDLE → re-queue after traffic_interval
-                    this.deviceStates.set(device_id, 'IDLE');
+                    this.changeDeviceState(device_id, 'IDLE');
                     this.idledAt.set(device_id, Date.now());
                     this.activatedAt.delete(device_id);
                     const delayMs = (cfg.traffic_interval || 60) * 1000;
@@ -485,6 +526,12 @@ export class IoTManager extends EventEmitter {
             case 'stats': {
                 const incoming = msg.stats;
                 this.statsCache.set(device_id, incoming);
+                this.cumulativeStats.set(device_id, {
+                    packets_sent: incoming.packets_sent,
+                    bytes_sent: incoming.bytes_sent,
+                    protocols: incoming.protocols || {},
+                    uptime_seconds: incoming.uptime_seconds || 0
+                });
                 // ── Rate calculation ─────────────────────────────────────────
                 const now_ms = Date.now();
                 const prev = this.lastStatsSnapshot.get(device_id);
