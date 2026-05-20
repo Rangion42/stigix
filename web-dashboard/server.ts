@@ -9382,12 +9382,73 @@ setInterval(() => {
     io.emit('iot:health', iotHealthCache);
 }, 5000);
 
+// ── IoT Advanced Debug Monitor History ───────────────────────────────────────
+const IOT_DEBUG_HISTORY_MAX = 720;
+const iotDebugHistory: any[] = [];
+
+setInterval(async () => {
+    try {
+        const active = iotHealthCache.activeDevices ?? 0;
+        const queued = iotHealthCache.queuedDevices ?? 0;
+        const idle   = iotHealthCache.idleDevices   ?? 0;
+        const maxC   = iotHealthCache.maxConcurrentDevices ?? 0;
+        const tr     = iotHealthCache.trafficRate   ?? {};
+
+        const attackMode = iotManager.getBadBehavior();
+
+        let avgMos: number | null = null;
+        try {
+            if (fs.existsSync(VOICE_STATS_FILE)) {
+                const out = execSync(`tail -n 20 ${VOICE_STATS_FILE}`, { encoding: 'utf8' });
+                const lines = out.trim().split('\n').filter(l => l.trim());
+                const stats = lines.map(l => JSON.parse(l));
+                const mosCalls = stats.filter((c: any) => (c.mos_score ?? 0) > 0);
+                if (mosCalls.length > 0) {
+                     avgMos = parseFloat((mosCalls.reduce((s, c) => s + c.mos_score, 0) / mosCalls.length).toFixed(2));
+                }
+            }
+        } catch {}
+
+        let globalScore: number | null = null;
+        try {
+            const stats = await connectivityLogger.getStats({ timeRange: '15m' });
+            globalScore = stats?.globalHealth ?? null;
+        } catch {}
+
+        const now = Date.now();
+        const label = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        const pt = {
+            ts: now, time: label,
+            active, queued, idle,
+            cpu:    iotHealthCache.containerCpuPercent    ?? 0,
+            dstate: iotHealthCache.pythonProcessesStateD  ?? 0,
+            udp:    iotHealthCache.udpReceiveErrorsDelta  ?? 0,
+            pps:    tr.pps ?? 0,
+            ppm:    tr.ppm ?? 0,
+            attackMode,
+            maxConcurrent: maxC,
+            globalScore,
+            avgMos,
+        };
+
+        iotDebugHistory.push(pt);
+        if (iotDebugHistory.length > IOT_DEBUG_HISTORY_MAX) {
+            iotDebugHistory.shift();
+        }
+    } catch (e) {
+        log('SYSTEM', `IoT debug history collection error: ${e}`, 'error');
+    }
+}, 30000);
+
+app.get('/api/system/iot-debug-history', authenticateToken, (req, res) => {
+    res.json(iotDebugHistory);
+});
+
 // GET /api/system/iot-health
 app.get('/api/system/iot-health', authenticateToken, (req, res) => {
     res.json(iotHealthCache);
 });
-
-
 app.get('/api/iot/devices', authenticateToken, (req, res) => {
     const devices = getIoTDevices();
 

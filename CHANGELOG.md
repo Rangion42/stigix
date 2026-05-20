@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.15] - 2026-05-20
+### Fixed
+- **IoT Advanced Debug Monitor** (`Settings.tsx`, `server.ts`): Moved the historical data collection (last 6 hours / 720 points) from the frontend state to the backend memory. The UI now reliably loads the actual history of system/IoT metrics as soon as you open it, instead of starting from an empty graph and only tracking data while the tab is open.
+
 ## [v1.4.0-patch.14] - 2026-05-20
 ### Fixed
 - **Security Modal** (`Security.tsx`): Add "Threat Prevention — Allowed" verdict panel for IPS/EICAR tests that passed. Displays target URL, HTTP response code with label, execution output (bytes downloaded), conclusion and recommended next step. Previously the modal was empty when a threat test was allowed.

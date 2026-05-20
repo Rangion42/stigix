@@ -153,53 +153,23 @@ function IoTDebugMonitor({ token }: { token: string }) {
 
     const collect = useCallback(async () => {
         try {
-            const [healthRes, bbRes, voiceRes, connRes] = await Promise.allSettled([
-                fetch('/api/system/iot-health', { headers: authH() }),
-                fetch('/api/iot/bad-behavior', { headers: authH() }),
-                fetch('/api/voice/stats', { headers: authH() }),
-                fetch('/api/connectivity/stats?range=15m', { headers: authH() }),
-            ]);
-
-            const health = healthRes.status === 'fulfilled' && healthRes.value.ok ? await healthRes.value.json() : {};
-            const bb = bbRes.status === 'fulfilled' && bbRes.value.ok ? await bbRes.value.json() : {};
-            const voiceData = voiceRes.status === 'fulfilled' && voiceRes.value.ok ? await voiceRes.value.json() : {};
-            const conn = connRes.status === 'fulfilled' && connRes.value.ok ? await connRes.value.json() : {};
-
-            const active = health.activeDevices ?? 0;
-            const queued = health.queuedDevices ?? 0;
-            const idle   = health.idleDevices   ?? 0;
-            const maxC   = health.maxConcurrentDevices ?? lastMaxConc.current ?? 0;
-            const tr     = health.trafficRate   ?? {};
-
-            const mosCalls: any[] = (voiceData.stats || []).slice(0, 20).filter((c: any) => (c.mos_score ?? 0) > 0);
-            const avgMos = mosCalls.length > 0
-                ? parseFloat((mosCalls.reduce((s: number, c: any) => s + c.mos_score, 0) / mosCalls.length).toFixed(2))
-                : null;
-
-            const now = Date.now();
-            const label = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-            if (lastMaxConc.current !== null && lastMaxConc.current !== maxC) {
-                setConcMarkers(prev => [...prev.slice(-20), { label, value: maxC }]);
+            const res = await fetch('/api/system/iot-debug-history', { headers: authH() });
+            if (res.ok) {
+                const data = await res.json();
+                historyRef.current = data;
+                setPoints(data);
+                
+                // Reconstruct concMarkers for the graph
+                const markers: { label: string; value: number }[] = [];
+                let lastMax = null;
+                for (const p of data) {
+                    if (lastMax !== null && lastMax !== p.maxConcurrent) {
+                        markers.push({ label: p.time, value: p.maxConcurrent });
+                    }
+                    lastMax = p.maxConcurrent;
+                }
+                setConcMarkers(markers.slice(-20));
             }
-            lastMaxConc.current = maxC;
-
-            const pt: DebugPoint = {
-                ts: now, time: label,
-                active, queued, idle,
-                cpu:    health.containerCpuPercent    ?? 0,
-                dstate: health.pythonProcessesStateD  ?? 0,
-                udp:    health.udpReceiveErrorsDelta  ?? 0,
-                pps:    tr.pps ?? 0,
-                ppm:    tr.ppm ?? 0,
-                attackMode:    bb.enabled ?? false,
-                maxConcurrent: maxC,
-                globalScore: conn.globalHealth ?? null,
-                avgMos,
-            };
-
-            historyRef.current = [...historyRef.current.slice(-(MAX_HISTORY_PTS - 1)), pt];
-            setPoints([...historyRef.current]);
         } catch { /* silently ignore */ }
     }, [authH]);
 
