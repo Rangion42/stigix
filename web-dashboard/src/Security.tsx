@@ -2753,12 +2753,74 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                                                 <pre className="text-[10px] font-mono text-text-secondary bg-black/20 dark:bg-black/40 p-3 rounded-lg overflow-x-auto border border-border/30">{selectedTest.details.command}</pre>
                                             </div>
                                         )}
-                                        {selectedTest.details.output && (
+
+                                        {/* Threat Prevention Allowed Verdict Panel */}
+                                        {selectedTest.type === 'threat' && selectedTest.status === 'allowed' && (selectedTest.details.http_code || selectedTest.details.output || selectedTest.details.url) && (() => {
+                                            const httpCode = selectedTest.details.http_code;
+                                            const targetUrl = selectedTest.details.url || selectedTest.details.endpoint;
+                                            const outputText = selectedTest.details.output;
+                                            const reasonText = selectedTest.details.reason;
+                                            return (
+                                                <div className="rounded-2xl border border-orange-500/30 overflow-hidden shadow-sm">
+                                                    {/* Header */}
+                                                    <div className="px-4 py-3 flex items-center justify-between bg-orange-500/8 border-b border-orange-500/20">
+                                                        <div className="flex items-center gap-2">
+                                                            <Activity size={14} className="text-orange-400" />
+                                                            <span className="text-[10px] font-black tracking-widest uppercase text-text-primary">Threat Prevention — Allowed (⚠️ Not blocked)</span>
+                                                        </div>
+                                                        {httpCode && (
+                                                            <span className="px-2 py-0.5 rounded-md text-[9px] font-black tracking-widest border font-mono bg-orange-500/10 border-orange-500/30 text-orange-400">
+                                                                HTTP {httpCode}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {/* Body */}
+                                                    <div className="bg-card-secondary/30 border border-t-0 border-border/50 divide-y divide-border/30">
+                                                        {targetUrl && (
+                                                            <div className="px-4 py-3 grid grid-cols-[160px_1fr] gap-3 items-start">
+                                                                <span className="text-[9px] font-black text-text-muted uppercase tracking-widest pt-0.5">Target URL</span>
+                                                                <span className="text-[11px] font-mono text-text-primary break-all">{targetUrl}</span>
+                                                            </div>
+                                                        )}
+                                                        {httpCode && (
+                                                            <div className="px-4 py-3 grid grid-cols-[160px_1fr] gap-3 items-start">
+                                                                <span className="text-[9px] font-black text-text-muted uppercase tracking-widest pt-0.5">HTTP Response</span>
+                                                                <span className="text-[11px] font-mono font-black text-orange-400">
+                                                                    {httpCode}
+                                                                    <span className="text-text-muted font-normal ml-2 text-[10px]">
+                                                                        {httpCode === 200 ? '(OK — file served)' : httpCode === 206 ? '(Partial Content)' : httpCode === 301 || httpCode === 302 ? '(Redirect)' : httpCode >= 400 ? '(Client/Server Error)' : ''}
+                                                                    </span>
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        {outputText && (
+                                                            <div className="px-4 py-3 grid grid-cols-[160px_1fr] gap-3 items-start">
+                                                                <span className="text-[9px] font-black text-text-muted uppercase tracking-widest pt-0.5">Execution Output</span>
+                                                                <pre className="text-[10px] font-mono text-orange-300 bg-black/20 p-2 rounded-lg border border-orange-500/10 whitespace-pre-wrap break-all">{outputText}</pre>
+                                                            </div>
+                                                        )}
+                                                        <div className="px-4 py-3 grid grid-cols-[160px_1fr] gap-3 items-start">
+                                                            <span className="text-[9px] font-black text-text-muted uppercase tracking-widest pt-0.5">Conclusion</span>
+                                                            <span className="text-[11px] text-orange-400 font-black">EICAR file was NOT intercepted by the firewall</span>
+                                                        </div>
+                                                        {reasonText && (
+                                                            <div className="px-4 py-3 grid grid-cols-[160px_1fr] gap-3 items-start bg-card/50">
+                                                                <span className="text-[9px] font-black text-text-muted uppercase tracking-widest pt-0.5">Next Step</span>
+                                                                <span className="text-[10px] text-text-muted leading-relaxed italic">{reasonText}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+
+                                        {selectedTest.details.output && !(selectedTest.type === 'threat' && selectedTest.status === 'allowed') && (
                                             <div className="bg-card-secondary/30 rounded-xl p-4 border border-border/50">
                                                 <span className="text-[9px] font-black text-text-muted uppercase tracking-widest block mb-2 opacity-60">System Raw Output</span>
                                                 <pre className="text-[10px] font-mono text-text-secondary bg-black/20 dark:bg-black/40 p-3 rounded-lg overflow-x-auto max-h-48 border border-border/30 custom-scrollbar">{selectedTest.details.output}</pre>
                                             </div>
                                         )}
+
                                         {selectedTest.details.error && (
                                             <div className="bg-red-500/5 rounded-xl p-4 border border-red-500/20">
                                                 <span className="text-[9px] font-semibold text-red-500 uppercase tracking-widest block mb-2">Test error signature</span>

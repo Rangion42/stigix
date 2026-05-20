@@ -6089,13 +6089,36 @@ const runScheduledThreatTests = async () => {
 
     for (const endpoint of endpoints) {
         if (!endpoint) continue;
+        const curlCmd = `curl -fsS --connect-timeout 5 --max-time 20 -w "\\nHTTP_CODE:%{http_code} SIZE:%{size_download}" "${endpoint}" -o /tmp/eicar.com.txt && rm -f /tmp/eicar.com.txt`;
         try {
-            await execPromise(`curl -fsS --max-time 20 "${endpoint}" -o /tmp/eicar.com.txt && rm -f /tmp/eicar.com.txt`);
+            const { stdout: curlOut } = await execPromise(curlCmd);
+            // Parse -w output: last line is "HTTP_CODE:200 SIZE:68"
+            const metaLine = curlOut.split('\n').find((l: string) => l.startsWith('HTTP_CODE:')) || '';
+            const httpCode = parseInt(metaLine.match(/HTTP_CODE:(\d+)/)?.[1] || '0') || 200;
+            const sizeBytes = parseInt(metaLine.match(/SIZE:(\d+)/)?.[1] || '0') || 0;
             updateStatistics('threat_prevention', 'allowed');
-            addTestResult('threat_prevention', `EICAR Test (${endpoint})`, { success: true, status: 'allowed', endpoint }, getNextTestId(), undefined, runId);
-        } catch (e) {
+            addTestResult('threat_prevention', `EICAR Test (${endpoint})`, {
+                success: true,
+                status: 'allowed',
+                endpoint,
+                url: endpoint,
+                command: `curl -fsS --connect-timeout 5 --max-time 20 "${endpoint}" -o /tmp/eicar.com.txt`,
+                http_code: httpCode,
+                output: `HTTP ${httpCode} — ${sizeBytes} bytes downloaded (EICAR file reached the host — IPS/AV did NOT block it)`,
+                reason: `EICAR test file was downloaded successfully (HTTP ${httpCode}, ${sizeBytes} bytes). The IPS/AV profile did not intercept this request. Verify your Threat Prevention profile is applied to the correct security policy.`,
+            }, getNextTestId(), undefined, runId);
+        } catch (e: any) {
             updateStatistics('threat_prevention', 'blocked');
-            addTestResult('threat_prevention', `EICAR Test (${endpoint})`, { success: false, status: 'blocked', endpoint }, getNextTestId(), undefined, runId);
+            const errMsg: string = (e?.stderr || e?.message || '').toString();
+            addTestResult('threat_prevention', `EICAR Test (${endpoint})`, {
+                success: false,
+                status: 'blocked',
+                endpoint,
+                url: endpoint,
+                command: `curl -fsS --connect-timeout 5 --max-time 20 "${endpoint}" -o /tmp/eicar.com.txt`,
+                error: `Command failed: curl -fsS --connect-timeout 5 --max-time 20 "${endpoint}" -o /tmp/eicar.com.txt\n${errMsg}`,
+                reason: 'CURL error (IPS likely dropped connection)',
+            }, getNextTestId(), undefined, runId);
         }
     }
 
