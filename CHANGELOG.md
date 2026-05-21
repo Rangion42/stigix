@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.30] - 2026-05-21
+### Changed
+- **IoT Edit Modal**: Redesigned the "Attack Types" and "Protocols" selections in the device configuration modal to display as single-line horizontal lists. Items do not wrap or shrink, and are scrollable with a custom-styled thin scrollbar matching the dark theme. 📱
+
+## [v1.4.0-patch.29] - 2026-05-21
+### Fixed
+- **VyOS Sequence Validation**: Blocked saving a VyOS sequence in the UI if it contains a block action with an FQDN and the targeted router is running VyOS 1.4. 🛡️
+
+## [v1.4.0-patch.28] - 2026-05-21
+### Documentation
+- **Changelog**: Backfilled and updated changelog entries for VyOS FQDN and description patches. 📝
+
 ## [v1.4.0-patch.27] - 2026-05-21
 ### Added
 - **VyOS Sequence FQDN Restrictions**: Added explicit validation to strictly block FQDN usage on VyOS 1.4 routers (returns an error if attempted). FQDN blocking is now officially only supported on VyOS 1.5+.

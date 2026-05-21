@@ -1608,7 +1608,7 @@ export default function Iot({ token }: IotProps) {
                                 {editingDevice?.security?.bad_behavior && (
                                     <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                                         <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Attack Types</label>
-                                        <div className="flex flex-wrap gap-2">
+                                        <div className="flex flex-nowrap overflow-x-auto gap-2 pb-2 custom-scrollbar">
                                             {[
                                                 { id: 'pan_test_domains', label: 'PAN Test Domains', guaranteed: true, tooltip: 'Official Palo Alto test domains' },
                                                 { id: 'dns_flood', label: 'DNS Flood' },
@@ -1621,7 +1621,7 @@ export default function Iot({ token }: IotProps) {
                                                     key={bt.id}
                                                     title={bt.tooltip}
                                                     className={cn(
-                                                        "px-3 py-1.5 rounded-lg text-xs font-bold border cursor-pointer transition-all uppercase flex items-center gap-1.5",
+                                                        "px-3 py-1.5 rounded-lg text-xs font-bold border cursor-pointer transition-all uppercase flex items-center gap-1.5 whitespace-nowrap shrink-0",
                                                         editingDevice?.security?.behavior_type?.includes(bt.id)
                                                             ? "bg-orange-500 border-transparent text-white shadow-lg shadow-orange-900/20"
                                                             : "bg-card-secondary border-border text-text-muted hover:border-orange-500/50 hover:text-orange-400"
@@ -1657,12 +1657,12 @@ export default function Iot({ token }: IotProps) {
 
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Protocols</label>
-                                <div className="flex flex-wrap gap-2 pt-1">
+                                <div className="flex flex-nowrap overflow-x-auto gap-2 pt-1 pb-2 custom-scrollbar">
                                     {['dhcp', 'arp', 'lldp', 'snmp', 'http', 'mqtt', 'rtsp', 'cloud', 'dns', 'ntp'].map(p => (
                                         <label
                                             key={p}
                                             className={cn(
-                                                "px-3 py-1.5 rounded-lg text-xs font-bold border cursor-pointer transition-all uppercase",
+                                                "px-3 py-1.5 rounded-lg text-xs font-bold border cursor-pointer transition-all uppercase whitespace-nowrap shrink-0",
                                                 editingDevice?.protocols?.includes(p)
                                                     ? "bg-blue-600 border-transparent text-white shadow-lg shadow-blue-900/20"
                                                     : "bg-card-secondary border-border text-text-muted hover:border-text-muted/50 hover:text-text-primary"
