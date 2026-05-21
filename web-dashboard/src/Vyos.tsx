@@ -1893,8 +1893,8 @@ export default function Vyos(props: VyosProps) {
 
             {/* Sequence Builder Modal */}
             {showSeqModal && editingSeq && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center p-4">
-                    <div className="bg-card border border-border w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center p-6">
+                    <div className="bg-card border border-border w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col h-[82vh]">
                         {/* Modal header — compact single bar */}
                         <div className="px-5 py-3 border-b border-border flex items-center gap-4 bg-card/80 backdrop-blur-md sticky top-0 z-10">
                             <Activity size={16} className="text-purple-500 shrink-0" />
@@ -1942,7 +1942,7 @@ export default function Vyos(props: VyosProps) {
                             </button>
                         </div>
 
-                        <div className="p-5 overflow-y-auto flex-1 space-y-5 custom-scrollbar">
+                        <div className="px-4 py-3 overflow-y-auto flex-1 space-y-3 custom-scrollbar">
 
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between bg-purple-600/5 p-4 rounded-2xl border border-purple-500/20 shadow-sm">
@@ -2118,11 +2118,11 @@ export default function Vyos(props: VyosProps) {
                             </div>
                         </div>
 
-                        <div className="p-6 border-t border-border bg-card/80 backdrop-blur-md rounded-b-3xl flex gap-3 sticky bottom-0 z-10">
+                        <div className="px-4 py-3 border-t border-border bg-card/80 backdrop-blur-md flex gap-2 shrink-0">
 
                             <button
                                 onClick={() => setShowSeqModal(false)}
-                                className="flex-1 px-6 py-3 rounded-2xl bg-card-secondary hover:bg-card-hover text-text-muted font-semibold transition-all text-sm border border-border/50"
+                                className="flex-1 px-4 py-2 rounded-xl bg-card-secondary hover:bg-card-hover text-text-muted font-semibold transition-all text-sm border border-border/50"
                             >
                                 Cancel
                             </button>
@@ -2134,7 +2134,7 @@ export default function Vyos(props: VyosProps) {
                                         editingSeq.actions.length === 0 ? "Add at least one action" :
                                             "Save this sequence"
                                 }
-                                className="flex-2 px-10 py-3 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-semibold transition-all shadow-xl shadow-purple-900/40 text-sm disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-purple-600 flex items-center justify-center gap-2 active:scale-95"
+                                className="flex-2 px-8 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold transition-all shadow-xl shadow-purple-900/40 text-sm disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-purple-600 flex items-center justify-center gap-2 active:scale-95"
                             >
                                 <CheckCircle size={18} /> Save sequence
                             </button>
