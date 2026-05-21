@@ -367,14 +367,12 @@ def op_simple_block(host, api_key, ip_input, verify=False):
                 }
             }
         
-        # Add blackhole route with tag 999 and description
+        # Add blackhole route with tag 999
         ops_modern = []
         for prefix in prefixes_to_add:
-            desc = f"block {original_input} {prefix}"
             ops_modern.extend([
                 {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole"]},
-                {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole", "tag", "999"]},
-                {"op": "set", "path": ["protocols", "static", "route", prefix, "description", desc]}
+                {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole", "tag", "999"]}
             ])
             
         try:
@@ -383,11 +381,9 @@ def op_simple_block(host, api_key, ip_input, verify=False):
             # Fallback to legacy syntax if modern fails
             ops_legacy = []
             for prefix in prefixes_to_add:
-                desc = f"block {original_input} {prefix}"
                 ops_legacy.extend([
                     {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole"]},
-                    {"op": "set", "path": ["protocols", "static", "route", prefix, "tag", "999"]},
-                    {"op": "set", "path": ["protocols", "static", "route", prefix, "description", desc]}
+                    {"op": "set", "path": ["protocols", "static", "route", prefix, "tag", "999"]}
                 ])
             api_call(host, api_key, ops_legacy, verify)
         
@@ -417,13 +413,14 @@ def op_simple_block(host, api_key, ip_input, verify=False):
         }
 
 def op_simple_unblock(host, api_key, ip_input, verify=False):
-    """Unblock by matching exact prefix OR by matching FQDN description"""
+    """Unblock by matching exact prefix (resolving FQDNs at runtime)"""
     try:
         try:
-            original_input, _ = resolve_input(ip_input)
+            original_input, resolved_prefixes = resolve_input(ip_input)
         except ValueError:
             # If resolution fails during unblock, fallback to string match
             original_input = ip_input
+            resolved_prefixes = [ip_input]
             
         config = api_retrieve(host, api_key, verify)
         existing_dicts = get_blackhole_routes(config)
@@ -432,20 +429,14 @@ def op_simple_unblock(host, api_key, ip_input, verify=False):
         
         for r in existing_dicts:
             p = r["prefix"]
-            d = r["description"]
             
-            # Match 1: exact prefix
-            if p == original_input:
+            # Match 1: exact prefix matches any of the resolved prefixes
+            if p in resolved_prefixes:
                 prefixes_to_remove.add(p)
                 continue
                 
             # Match 2: exact IP if user passed IP without /32
             if '/' not in original_input and p == f"{original_input}/32":
-                prefixes_to_remove.add(p)
-                continue
-                
-            # Match 3: FQDN description matching
-            if d.startswith(f"block {original_input} "):
                 prefixes_to_remove.add(p)
                 continue
         

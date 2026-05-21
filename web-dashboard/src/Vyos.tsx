@@ -185,16 +185,16 @@ export default function Vyos(props: VyosProps) {
                 break;
             case 'deny-traffic':
             case 'simple-block': {
-                // Blackhole static route with tag 999 — no interface involved
                 const ip = parameters?.ip || '<prefix>';
+                cmds.push(`# Note: FQDNs like 'google.com' will be resolved to IPs by Stigix`);
                 cmds.push(`set protocols static route ${ip} blackhole`);
                 cmds.push(`set protocols static route ${ip} blackhole tag 999`);
                 break;
             }
             case 'allow-traffic':
             case 'simple-unblock': {
-                // Remove the blackhole route entirely
                 const ip = parameters?.ip || '<prefix>';
+                cmds.push(`# Note: FQDNs will be dynamically re-resolved to remove active IPs`);
                 cmds.push(`delete protocols static route ${ip}`);
                 break;
             }
