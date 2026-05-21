@@ -1216,150 +1216,130 @@ export default function Vyos(props: VyosProps) {
                     </div>
 
 
-                    {/* Sequences Table */}
+                    {/* Sequences Table — flat, one row per sequence, click to edit */}
                     <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm animate-in slide-in-from-bottom-4 duration-300">
-                        {/* Table Header */}
-                        <div className="grid items-center gap-3 px-4 py-2.5 border-b border-border bg-card-secondary/60 text-[9px] font-black text-text-muted uppercase tracking-widest"
-                            style={{ gridTemplateColumns: '28px 1fr 90px 200px 72px 80px 130px' }}>
+                        {/* Table Header: Run | Name+badge | Command | Router | Interface | Params | Status | LastRun | Actions */}
+                        <div className="grid items-center gap-2 px-3 py-2 border-b border-border bg-card-secondary/60 text-[9px] font-black text-text-muted uppercase tracking-widest"
+                            style={{ gridTemplateColumns: '68px 1fr 100px 110px 90px 140px 44px 60px 80px' }}>
                             <div />
                             <div>Name</div>
-                            <div>Mode</div>
-                            <div>Target</div>
-                            <div>Status</div>
-                            <div>Last Run</div>
-                            <div className="text-right">Controls</div>
+                            <div>Command</div>
+                            <div>Router</div>
+                            <div>Interface</div>
+                            <div>Params</div>
+                            <div>On</div>
+                            <div>Last</div>
+                            <div className="text-right">·</div>
                         </div>
 
                         {/* Rows */}
                         <div className="divide-y divide-border/40">
                             {processedSequences.map((seq) => {
-                                const isExpanded = expandedSeqId === seq.id;
                                 const isRunning = activeExecution?.sequenceId === seq.id;
-                                const firstAction = seq.actions[0];
-                                const firstRouter = firstAction ? routers.find(r => r.id === firstAction.router_id) : null;
-                                const hasMultiRouter = seq.actions.length > 1 && seq.actions.some(a => a.router_id !== firstAction?.router_id);
-                                let targetSummary = '—';
-                                if (firstAction && firstRouter) {
-                                    if (hasMultiRouter) targetSummary = `Multi-router · ${seq.actions.length} actions`;
-                                    else if (['deny-traffic', 'allow-traffic', 'clear-all-blocks', 'show-denied'].includes(firstAction.command))
-                                        targetSummary = `${getCommandDisplayName(firstAction.command)} · ${firstRouter.name}`;
-                                    else targetSummary = firstRouter.name;
-                                }
+                                const fa = seq.actions[0]; // first action
+                                const faRouter = fa ? routers.find(r => r.id === fa.router_id) : null;
+                                const needsIface = fa && !['deny-traffic','allow-traffic','clear-all-blocks','show-denied'].includes(fa.command);
+                                const needsIp = fa && ['deny-traffic','allow-traffic'].includes(fa.command);
+                                const isQos = fa?.command === 'set-qos';
+                                const rowAccent = fa
+                                    ? ['interface-down','deny-traffic'].includes(fa.command) ? 'border-l-red-500/50'
+                                        : ['interface-up','allow-traffic'].includes(fa.command) ? 'border-l-green-500/50'
+                                            : ['set-qos','clear-qos'].includes(fa.command) ? 'border-l-indigo-500/50'
+                                                : 'border-l-border/20'
+                                    : 'border-l-border/20';
                                 return (
-                                    <div key={seq.id}>
-                                        {/* Main row */}
-                                        <div
-                                            className={cn(
-                                                'grid items-center gap-3 px-4 py-3 cursor-pointer transition-colors select-none',
-                                                isExpanded ? 'bg-purple-500/5' : 'hover:bg-card-secondary/30',
-                                                isRunning && 'bg-blue-500/5'
-                                            )}
-                                            style={{ gridTemplateColumns: '28px 1fr 90px 200px 72px 80px 130px' }}
-                                            onClick={() => setExpandedSeqId(isExpanded ? null : seq.id)}
-                                        >
-                                            <div className="flex items-center justify-center text-text-muted">
-                                                <ChevronRight size={14} className={cn('transition-transform duration-200', isExpanded && 'rotate-90 text-purple-400')} />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <span className="text-sm font-bold text-text-primary truncate block leading-tight">{seq.name}</span>
-                                                <div className="flex items-center gap-1.5 mt-0.5">
-                                                    <span className={cn(
-                                                        'text-[8px] font-black px-1.5 py-0.5 rounded border',
-                                                        seq.executionMode === 'STEP_BY_STEP' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                                                            : seq.cycle_duration > 0 ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                                                                : 'bg-card-secondary text-text-muted border-border'
-                                                    )}>
-                                                        {seq.executionMode === 'STEP_BY_STEP' ? 'STEP' : seq.cycle_duration > 0 ? `${seq.cycle_duration}M` : 'MANUAL'}
-                                                    </span>
-                                                    {isRunning && <span className="text-[8px] font-black text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded animate-pulse">RUNNING</span>}
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-1.5 text-xs text-text-secondary font-medium min-w-0">
-                                                {seq.actions.length === 1
-                                                    ? <>{getCommandIcon(seq.actions[0].command, 12)}<span className="truncate text-[11px]">{getCommandDisplayName(seq.actions[0].command)}</span></>
-                                                    : <span className="text-text-muted text-[11px]">{seq.actions.length} actions</span>}
-                                            </div>
-                                            <div className="text-[11px] text-text-muted font-mono truncate" title={targetSummary}>{targetSummary}</div>
-                                            <div onClick={e => e.stopPropagation()}>
-                                                <button
-                                                    onClick={() => toggleSequenceEnabled(seq)}
-                                                    className={cn('relative w-9 h-5 rounded-full transition-all duration-300 border-2', seq.enabled ? 'bg-green-500 border-green-600' : 'bg-gray-700 border-gray-600')}
-                                                    title={seq.enabled ? 'Disable' : 'Enable'}
-                                                >
-                                                    <div className={cn('absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform duration-300', seq.enabled ? 'translate-x-4' : 'translate-x-0.5')} />
-                                                </button>
-                                            </div>
-                                            <div className="text-[11px] text-text-muted font-mono">
-                                                {seq.lastRun ? new Date(seq.lastRun).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ready'}
-                                            </div>
-                                            <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
-                                                <button
-                                                    onClick={() => seq.executionMode === 'STEP_BY_STEP' ? setView('timeline') : runSequence(seq.id)}
-                                                    disabled={activeExecution !== null}
-                                                    className={cn(
-                                                        'flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-[10px] transition-all disabled:opacity-30 shadow-sm',
-                                                        isRunning ? 'bg-card-secondary text-text-muted'
-                                                            : seq.executionMode === 'STEP_BY_STEP' ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                                                                : 'bg-purple-600 hover:bg-purple-500 text-white'
-                                                    )}
-                                                >
-                                                    {isRunning ? <Activity size={12} className="animate-spin" /> : seq.executionMode === 'STEP_BY_STEP' ? <ChevronRight size={12} /> : <Play size={12} fill="currentColor" />}
-                                                    {seq.executionMode === 'STEP_BY_STEP' ? 'Steps' : 'Run'}
-                                                </button>
-                                                <button onClick={() => openSeqModal(seq)} className="p-1.5 text-text-muted hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all" title="Edit"><Edit2 size={13} /></button>
-                                                <button onClick={() => cloneReverseSequence(seq)} className="p-1.5 text-text-muted hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-all" title="Clone reverse"><RefreshCw size={13} /></button>
-                                                <button onClick={() => deleteSequence(seq.id)} className="p-1.5 text-text-muted hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all" title="Delete"><Trash2 size={13} /></button>
+                                    <div
+                                        key={seq.id}
+                                        className={cn(
+                                            'grid items-center gap-2 px-3 py-2 cursor-pointer transition-colors border-l-2 select-none',
+                                            rowAccent,
+                                            isRunning ? 'bg-blue-500/5' : 'hover:bg-card-secondary/25'
+                                        )}
+                                        style={{ gridTemplateColumns: '68px 1fr 100px 110px 90px 140px 44px 60px 80px' }}
+                                        onClick={() => openSeqModal(seq)}
+                                        title="Click to edit"
+                                    >
+                                        {/* Run */}
+                                        <div onClick={e => e.stopPropagation()}>
+                                            <button
+                                                onClick={() => seq.executionMode === 'STEP_BY_STEP' ? setView('timeline') : runSequence(seq.id)}
+                                                disabled={activeExecution !== null}
+                                                className={cn(
+                                                    'flex items-center gap-1 px-2 py-1.5 rounded-lg font-bold text-[10px] transition-all disabled:opacity-30 shadow-sm active:scale-95 whitespace-nowrap',
+                                                    isRunning ? 'bg-card-secondary text-text-muted'
+                                                        : seq.executionMode === 'STEP_BY_STEP' ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                                                            : 'bg-purple-600 hover:bg-purple-500 text-white'
+                                                )}
+                                            >
+                                                {isRunning ? <Activity size={11} className="animate-spin" /> : seq.executionMode === 'STEP_BY_STEP' ? <ChevronRight size={11} /> : <Play size={11} fill="currentColor" />}
+                                                {seq.executionMode === 'STEP_BY_STEP' ? 'Steps' : 'Run'}
+                                            </button>
+                                        </div>
+
+                                        {/* Name + mode badge */}
+                                        <div className="min-w-0">
+                                            <span className="text-[11px] font-semibold text-text-primary truncate block leading-tight">{seq.name}</span>
+                                            <div className="flex items-center gap-1 mt-0.5">
+                                                <span className={cn(
+                                                    'text-[8px] font-black px-1 py-0.5 rounded border leading-none',
+                                                    seq.executionMode === 'STEP_BY_STEP' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                                                        : seq.cycle_duration > 0 ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                                            : 'bg-card-secondary text-text-muted border-border'
+                                                )}>
+                                                    {seq.executionMode === 'STEP_BY_STEP' ? 'STEP' : seq.cycle_duration > 0 ? `${seq.cycle_duration}M` : 'MANUAL'}
+                                                </span>
+                                                {seq.actions.length > 1 && <span className="text-[8px] text-text-muted/60">{seq.actions.length}×</span>}
+                                                {isRunning && <span className="text-[8px] font-black text-blue-400 animate-pulse">●</span>}
                                             </div>
                                         </div>
 
-                                        {/* Accordion */}
-                                        {isExpanded && (
-                                            <div className="border-t border-border/40 bg-card-secondary/20 animate-in slide-in-from-top-1 duration-150">
-                                                <div className="grid gap-3 px-6 py-1.5 text-[8px] font-black text-text-muted uppercase tracking-widest border-b border-border/30"
-                                                    style={{ gridTemplateColumns: '44px 130px 1fr 1fr 160px' }}>
-                                                    <div>T+min</div><div>Command</div><div>Router</div><div>Interface</div><div>Params</div>
-                                                </div>
-                                                {seq.actions.length === 0 && (
-                                                    <p className="px-6 py-3 text-[11px] text-text-muted italic">No actions configured.</p>
-                                                )}
-                                                {seq.actions.map((action, idx) => {
-                                                    const router = routers.find(r => r.id === action.router_id);
-                                                    const iface = router?.interfaces?.find(i => i.name === action.interface);
-                                                    const needsIface = !['deny-traffic', 'allow-traffic', 'clear-all-blocks', 'show-denied'].includes(action.command);
-                                                    const needsIp = ['deny-traffic', 'allow-traffic'].includes(action.command);
-                                                    const isQos = action.command === 'set-qos';
-                                                    const accentClass = ['interface-down', 'deny-traffic'].includes(action.command) ? 'border-l-red-500/50'
-                                                        : ['interface-up', 'allow-traffic'].includes(action.command) ? 'border-l-green-500/50'
-                                                            : ['set-qos', 'clear-qos'].includes(action.command) ? 'border-l-indigo-500/50'
-                                                                : 'border-l-border';
-                                                    return (
-                                                        <div key={idx} className={cn('grid gap-3 px-6 py-2 items-center border-l-2 hover:bg-card-secondary/30 transition-colors', accentClass, idx > 0 && 'border-t border-border/20')}
-                                                            style={{ gridTemplateColumns: '44px 130px 1fr 1fr 160px' }}>
-                                                            <div className="font-black text-purple-400 text-sm">{action.offset_minutes}</div>
-                                                            <div className="flex items-center gap-1.5">
-                                                                {getCommandIcon(action.command, 13)}
-                                                                <span className="text-[10px] font-black uppercase tracking-tight text-text-primary">{getCommandDisplayName(action.command)}</span>
-                                                            </div>
-                                                            <div className="text-[11px] font-mono text-text-secondary truncate">{router?.name || '?'}</div>
-                                                            <div className="text-[11px] font-mono text-text-muted truncate">
-                                                                {needsIface && action.interface
-                                                                    ? <>{action.interface}{iface?.description && <span className="text-text-muted/50 ml-1">— {iface.description}</span>}</>
-                                                                    : <span className="opacity-30">—</span>}
-                                                            </div>
-                                                            <div className="flex items-center gap-1 flex-wrap">
-                                                                {needsIp && action.parameters?.ip && <span className="text-[10px] font-mono bg-red-500/10 text-red-400 border border-red-500/20 px-1.5 py-0.5 rounded">{action.parameters.ip}</span>}
-                                                                {isQos && <>
-                                                                    {action.parameters?.latency ? <span className="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 rounded">{action.parameters.latency}ms</span> : null}
-                                                                    {action.parameters?.loss ? <span className="text-[10px] font-mono bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1.5 py-0.5 rounded">{action.parameters.loss}%</span> : null}
-                                                                    {action.parameters?.rate ? <span className="text-[10px] font-mono bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 py-0.5 rounded">{action.parameters.rate}</span> : null}
-                                                                </>}
-                                                                {!needsIp && !isQos && <span className="opacity-30 text-[10px]">—</span>}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
+                                        {/* Command */}
+                                        <div className="flex items-center gap-1 min-w-0">
+                                            {fa ? <>{getCommandIcon(fa.command, 11)}<span className="text-[10px] font-semibold text-text-primary truncate">{getCommandDisplayName(fa.command)}</span></> : <span className="opacity-25 text-[10px]">—</span>}
+                                        </div>
+
+                                        {/* Router */}
+                                        <div className="text-[10px] font-mono text-text-secondary truncate">
+                                            {faRouter?.name || <span className="opacity-25">—</span>}
+                                        </div>
+
+                                        {/* Interface */}
+                                        <div className="text-[10px] font-mono text-text-muted truncate">
+                                            {needsIface && fa?.interface ? fa.interface : <span className="opacity-25">—</span>}
+                                        </div>
+
+                                        {/* Params */}
+                                        <div className="flex items-center gap-1 flex-wrap min-w-0">
+                                            {needsIp && fa?.parameters?.ip && <span className="text-[9px] font-mono bg-red-500/10 text-red-400 border border-red-500/20 px-1 py-0.5 rounded truncate max-w-[130px]">{fa.parameters.ip}</span>}
+                                            {isQos && <>
+                                                {fa?.parameters?.latency ? <span className="text-[9px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-1 py-0.5 rounded">{fa.parameters.latency}ms</span> : null}
+                                                {fa?.parameters?.loss ? <span className="text-[9px] font-mono bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1 py-0.5 rounded">{fa.parameters.loss}%</span> : null}
+                                                {fa?.parameters?.rate ? <span className="text-[9px] font-mono bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1 py-0.5 rounded">{fa.parameters.rate}</span> : null}
+                                            </>}
+                                            {!needsIp && !isQos && <span className="opacity-25 text-[9px]">—</span>}
+                                        </div>
+
+                                        {/* Enable toggle */}
+                                        <div onClick={e => e.stopPropagation()}>
+                                            <button
+                                                onClick={() => toggleSequenceEnabled(seq)}
+                                                className={cn('relative w-8 h-4 rounded-full transition-all duration-300 border', seq.enabled ? 'bg-green-500 border-green-600' : 'bg-gray-700 border-gray-600')}
+                                                title={seq.enabled ? 'Disable' : 'Enable'}
+                                            >
+                                                <div className={cn('absolute top-0.5 w-2.5 h-2.5 bg-white rounded-full transition-transform duration-300', seq.enabled ? 'translate-x-3.5' : 'translate-x-0.5')} />
+                                            </button>
+                                        </div>
+
+                                        {/* Last run */}
+                                        <div className="text-[9px] text-text-muted font-mono">
+                                            {seq.lastRun ? new Date(seq.lastRun).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ready'}
+                                        </div>
+
+                                        {/* Controls */}
+                                        <div className="flex items-center justify-end gap-0.5" onClick={e => e.stopPropagation()}>
+                                            <button onClick={() => cloneReverseSequence(seq)} className="p-1 text-text-muted hover:text-green-400 hover:bg-green-500/10 rounded transition-all" title="Clone reverse"><RefreshCw size={11} /></button>
+                                            <button onClick={() => deleteSequence(seq.id)} className="p-1 text-text-muted hover:text-red-400 hover:bg-red-500/10 rounded transition-all" title="Delete"><Trash2 size={11} /></button>
+                                        </div>
                                     </div>
                                 );
                             })}
@@ -1914,74 +1894,55 @@ export default function Vyos(props: VyosProps) {
             {/* Sequence Builder Modal */}
             {showSeqModal && editingSeq && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center p-4">
-                    <div className="bg-card border border-border w-full max-w-2xl rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-                        <div className="p-8 border-b border-border flex items-center justify-between bg-card/80 backdrop-blur-md sticky top-0 z-10">
-                            <h3 className="text-xl font-bold text-text-primary flex items-center gap-3 tracking-tight">
-                                <Activity size={22} className="text-purple-500" />
-                                {editingSeq.id ? 'Edit Sequence' : 'New Sequence'}
-                            </h3>
-                            <button onClick={() => setShowSeqModal(false)} className="text-text-muted hover:text-text-primary transition-all bg-card-secondary p-2 rounded-full border border-border/50">
-                                <XCircle size={24} />
+                    <div className="bg-card border border-border w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+                        {/* Modal header — compact single bar */}
+                        <div className="px-5 py-3 border-b border-border flex items-center gap-4 bg-card/80 backdrop-blur-md sticky top-0 z-10">
+                            <Activity size={16} className="text-purple-500 shrink-0" />
+                            <span className="text-sm font-bold text-text-primary shrink-0">{editingSeq.id ? 'Edit Sequence' : 'New Sequence'}</span>
+                            {/* Name */}
+                            <input
+                                type="text"
+                                value={editingSeq.name}
+                                onChange={(e) => setEditingSeq({ ...editingSeq, name: e.target.value })}
+                                placeholder="Sequence name…"
+                                className="flex-1 bg-card-secondary border border-border rounded-lg px-3 py-1.5 text-[12px] text-text-primary focus:outline-none focus:ring-1 focus:ring-purple-500/50 font-medium min-w-0"
+                            />
+                            {/* Execution mode */}
+                            <select
+                                value={editingSeq.executionMode}
+                                onChange={(e) => setEditingSeq({ ...editingSeq, executionMode: e.target.value as any })}
+                                className="bg-card-secondary border border-border rounded-lg px-3 py-1.5 text-[12px] text-text-primary focus:outline-none focus:ring-1 focus:ring-purple-500/50 appearance-none cursor-pointer shrink-0"
+                            >
+                                <option value="CYCLE">Timed Cycle</option>
+                                <option value="STEP_BY_STEP">Step-by-Step</option>
+                            </select>
+                            {/* Cycle duration — only for CYCLE mode */}
+                            {editingSeq.executionMode === 'CYCLE' ? (
+                                <select
+                                    value={editingSeq.cycle_duration}
+                                    onChange={(e) => {
+                                        const val = Math.max(0, parseInt(e.target.value || '0'));
+                                        const updatedActions = editingSeq.actions.map(a => ({ ...a, offset_minutes: Math.min(val, a.offset_minutes) }));
+                                        setEditingSeq({ ...editingSeq, cycle_duration: val, actions: updatedActions });
+                                    }}
+                                    className="bg-card-secondary border border-border rounded-lg px-3 py-1.5 text-[12px] text-text-primary focus:outline-none focus:ring-1 focus:ring-purple-500/50 appearance-none cursor-pointer shrink-0"
+                                >
+                                    <option value={0}>Manual trigger</option>
+                                    <option value={10}>Every 10 min</option>
+                                    <option value={30}>Every 30 min</option>
+                                    <option value={60}>Every hour</option>
+                                    <option value={120}>Every 2 h</option>
+                                    <option value={1440}>Every 24 h</option>
+                                </select>
+                            ) : (
+                                <span className="text-[10px] text-purple-400/70 italic shrink-0">Interactive mode</span>
+                            )}
+                            <button onClick={() => setShowSeqModal(false)} className="text-text-muted hover:text-text-primary transition-all p-1.5 rounded-lg hover:bg-card-secondary shrink-0">
+                                <XCircle size={18} />
                             </button>
                         </div>
 
-                        <div className="p-8 overflow-y-auto flex-1 space-y-8 custom-scrollbar">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-semibold text-text-muted tracking-widest pl-1">Sequence name</label>
-                                    <input
-                                        type="text"
-                                        value={editingSeq.name}
-                                        onChange={(e) => setEditingSeq({ ...editingSeq, name: e.target.value })}
-                                        placeholder="e.g. Branch1 WAN Degradation"
-                                        className="w-full bg-card-secondary border border-border rounded-2xl px-5 py-4 text-text-primary focus:outline-none focus:ring-2 focus:ring-purple-500/50 font-medium tracking-normal text-sm shadow-inner transition-all"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-semibold text-text-muted tracking-widest pl-1">Execution mode</label>
-                                    <select
-                                        value={editingSeq.executionMode}
-                                        onChange={(e) => setEditingSeq({ ...editingSeq, executionMode: e.target.value as any })}
-                                        className="w-full bg-card-secondary border border-border rounded-2xl px-5 py-4 text-text-primary focus:outline-none focus:ring-2 focus:ring-purple-500/50 font-medium tracking-normal text-sm appearance-none cursor-pointer shadow-inner transition-all"
-                                    >
-                                        <option value="CYCLE">Timed Cycle</option>
-                                        <option value="STEP_BY_STEP">Step-by-Step</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    {editingSeq.executionMode === 'CYCLE' ? (
-                                        <>
-                                            <label className="text-[10px] font-semibold text-text-muted tracking-widest pl-1">Cycle duration</label>
-                                            <select
-                                                value={editingSeq.cycle_duration}
-                                                onChange={(e) => {
-                                                    const val = Math.max(0, parseInt(e.target.value || '0'));
-                                                    // CLAMPING: Proactively clamp all action offsets if duration is reduced
-                                                    const updatedActions = editingSeq.actions.map(a => ({
-                                                        ...a,
-                                                        offset_minutes: Math.min(val, a.offset_minutes)
-                                                    }));
-                                                    setEditingSeq({ ...editingSeq, cycle_duration: val, actions: updatedActions });
-                                                }}
-                                                className="w-full bg-card-secondary border border-border rounded-2xl px-5 py-4 text-text-primary focus:outline-none focus:ring-2 focus:ring-purple-500/50 font-medium tracking-normal text-sm appearance-none cursor-pointer shadow-inner transition-all"
-                                            >
-                                                <option value={0}>Manual trigger only</option>
-                                                <option value={10}>Every 10 minutes</option>
-                                                <option value={30}>Every 30 minutes</option>
-                                                <option value={60}>Every hour</option>
-                                                <option value={120}>Every 2 hours</option>
-                                                <option value={1440}>Every 24 hours</option>
-                                            </select>
-                                        </>
-                                    ) : (
-                                        <div className="p-4 bg-purple-600/5 border border-purple-500/10 rounded-2xl h-full flex flex-col justify-center">
-                                            <p className="text-[10px] text-text-muted font-medium leading-tight">
-                                                Manual control: actions run only when you click Next. Ideal for live demos and walkthroughs.
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-            </div>
+                        <div className="p-5 overflow-y-auto flex-1 space-y-5 custom-scrollbar">
 
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between bg-purple-600/5 p-4 rounded-2xl border border-purple-500/20 shadow-sm">
