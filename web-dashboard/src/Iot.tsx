@@ -1608,7 +1608,7 @@ export default function Iot({ token }: IotProps) {
                                 {editingDevice?.security?.bad_behavior && (
                                     <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                                         <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Attack Types</label>
-                                        <div className="flex flex-nowrap overflow-x-auto gap-2 pb-2 custom-scrollbar">
+                                        <div className="w-full flex flex-nowrap overflow-x-auto gap-2 pb-2 custom-scrollbar">
                                             {[
                                                 { id: 'pan_test_domains', label: 'PAN Test Domains', guaranteed: true, tooltip: 'Official Palo Alto test domains' },
                                                 { id: 'dns_flood', label: 'DNS Flood' },
@@ -1657,7 +1657,7 @@ export default function Iot({ token }: IotProps) {
 
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Protocols</label>
-                                <div className="flex flex-nowrap overflow-x-auto gap-2 pt-1 pb-2 custom-scrollbar">
+                                <div className="w-full flex flex-nowrap overflow-x-auto gap-2 pt-1 pb-2 custom-scrollbar">
                                     {['dhcp', 'arp', 'lldp', 'snmp', 'http', 'mqtt', 'rtsp', 'cloud', 'dns', 'ntp'].map(p => (
                                         <label
                                             key={p}

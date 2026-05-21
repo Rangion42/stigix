@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.34] - 2026-05-21
+### Fixed
+- **IoT Edit Modal**: Applied `w-full` constraint to the horizontal scrolling containers for "Attack Types" and "Protocols" to prevent them from expanding past the form boundaries and clipping at the card border. 📱
+
 ## [v1.4.0-patch.33] - 2026-05-21
 ### Changed
 - **VyOS Sequence Edit**: Shortened the IP address/FQDN parameter input placeholder from `"e.g. 8.8.8.8/32 or google.com"` to `"8.8.8.8/32 or FQDN"` to prevent truncation and make it fully readable in the edit dialog columns. 🔧
