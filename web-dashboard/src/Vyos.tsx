@@ -1187,7 +1187,7 @@ export default function Vyos(props: VyosProps) {
             )}
 
             {view === 'sequences' && (
-                <div className="space-y-4">
+                <div className="space-y-4 max-w-6xl mx-auto">
                     {/* Sequences Toolbar */}
                     <div className="flex flex-col sm:flex-row gap-4 items-center mb-6 animate-in fade-in duration-300">
                         <div className="relative flex-1 w-full">
@@ -1894,7 +1894,7 @@ export default function Vyos(props: VyosProps) {
             {/* Sequence Builder Modal */}
             {showSeqModal && editingSeq && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center p-6">
-                    <div className="bg-card border border-border w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col h-[82vh]">
+                    <div className="bg-card border border-border w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
                         {/* Modal header — compact single bar */}
                         <div className="px-5 py-3 border-b border-border flex items-center gap-4 bg-card/80 backdrop-blur-md sticky top-0 z-10">
                             <Activity size={16} className="text-purple-500 shrink-0" />
@@ -1942,7 +1942,7 @@ export default function Vyos(props: VyosProps) {
                             </button>
                         </div>
 
-                        <div className="px-4 py-3 overflow-y-auto flex-1 space-y-3 custom-scrollbar">
+                        <div className="px-4 py-3 overflow-y-auto flex-1 min-h-0 space-y-3 custom-scrollbar">
 
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between bg-purple-600/5 p-4 rounded-2xl border border-purple-500/20 shadow-sm">

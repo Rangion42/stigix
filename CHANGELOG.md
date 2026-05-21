@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.20] - 2026-05-21
+### Fixed
+- **VyOS Sequences List** (`Vyos.tsx`): Centered the main sequences table and constrained its maximum width (`max-w-6xl mx-auto`) to prevent it from stretching uncomfortably wide on large screens.
+- **VyOS Edit Modal** (`Vyos.tsx`): Fixed the modal container height constraints. Restored `overflow-hidden` and `max-h-[85vh]` on the modal wrapper, and added `min-h-0` to the scrollable `flex-1` body. This ensures the modal shrinks appropriately when it only contains one action (avoiding unnecessary empty vertical space), while correctly enabling vertical scrolling when actions exceed the screen height.
+
 ## [v1.4.0-patch.19] - 2026-05-21
+
 ### Fixed
 - **VyOS Edit Modal** (`Vyos.tsx`): Fixed scroll in actions list when adding actions to a new or existing sequence. Root cause: modal container had `max-h-[90vh]` but no explicit height, so `flex-1` inside had no real parent height to fill — replaced with `h-[82vh]` fixed height so `overflow-y-auto` on the body div works correctly.
 - **VyOS Edit Modal** (`Vyos.tsx`): Narrowed modal to `max-w-3xl` (centered, less horizontal dead space). Reduced body padding (`p-5 → px-4 py-3`) and footer padding. Cancel/Save buttons more compact (`py-3 → py-2`).
