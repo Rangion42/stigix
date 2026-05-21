@@ -1185,11 +1185,11 @@ export default function Vyos(props: VyosProps) {
                     <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm animate-in slide-in-from-bottom-4 duration-300">
                         {/* Table Header: Run | Name+badge | Command | Router | Interface | Params | Status | LastRun | Actions */}
                         <div className="grid items-center gap-2 px-3 py-2 border-b border-border bg-card-secondary/60 text-[9px] font-black text-text-muted uppercase tracking-widest"
-                            style={{ gridTemplateColumns: '68px 1fr 100px 110px 90px 140px 44px 60px 80px' }}>
+                            style={{ gridTemplateColumns: '68px 1fr 110px 100px 90px 140px 44px 60px 80px' }}>
                             <div />
                             <div>Name</div>
-                            <div>Command</div>
                             <div>Router</div>
+                            <div>Command</div>
                             <div>Interface</div>
                             <div>Params</div>
                             <div>On</div>
@@ -1220,7 +1220,7 @@ export default function Vyos(props: VyosProps) {
                                             rowAccent,
                                             isRunning ? 'bg-blue-500/5' : 'hover:bg-card-secondary/25'
                                         )}
-                                        style={{ gridTemplateColumns: '68px 1fr 100px 110px 90px 140px 44px 60px 80px' }}
+                                        style={{ gridTemplateColumns: '68px 1fr 110px 100px 90px 140px 44px 60px 80px' }}
                                         onClick={() => openSeqModal(seq)}
                                         title="Click to edit"
                                     >
@@ -1258,14 +1258,14 @@ export default function Vyos(props: VyosProps) {
                                             </div>
                                         </div>
 
-                                        {/* Command */}
-                                        <div className="flex items-center gap-1 min-w-0">
-                                            {fa ? <>{getCommandIcon(fa.command, 11)}<span className="text-[10px] font-semibold text-text-primary truncate">{getCommandDisplayName(fa.command)}</span></> : <span className="opacity-25 text-[10px]">—</span>}
-                                        </div>
-
                                         {/* Router */}
                                         <div className="text-[10px] font-mono text-text-secondary truncate">
                                             {faRouter?.name || <span className="opacity-25">—</span>}
+                                        </div>
+
+                                        {/* Command */}
+                                        <div className="flex items-center gap-1 min-w-0">
+                                            {fa ? <>{getCommandIcon(fa.command, 11)}<span className="text-[10px] font-semibold text-text-primary truncate">{getCommandDisplayName(fa.command)}</span></> : <span className="opacity-25 text-[10px]">—</span>}
                                         </div>
 
                                         {/* Interface */}
@@ -1371,11 +1371,11 @@ export default function Vyos(props: VyosProps) {
                     <div className="bg-card border border-border rounded-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300 shadow-sm">
                         <table className="w-full text-left text-xs border-collapse table-fixed">
                             <colgroup>
-                                <col className="w-[130px]" />
-                                <col className="w-[22%]" />
-                                <col className="w-[15%]" />
-                                <col className="w-[28%]" />
-                                <col className="w-[35%]" />
+                                <col className="w-[120px]" />
+                                <col className="w-[180px]" />
+                                <col className="w-[120px]" />
+                                <col className="w-[220px]" />
+                                <col className="w-auto" />
                             </colgroup>
                             <thead className="bg-card-secondary/80 border-b border-border sticky top-0">
                                 <tr>

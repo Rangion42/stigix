@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.37] - 2026-05-21
+### Changed
+- **VyOS Sequence & History UI**: Swapped the "Router" and "Command" columns in the Sequence list so "Router" appears first, making it consistent with the History view. Compacted the column widths in the History tab to reduce empty space and improve readability. 🔄
+
 ## [v1.4.0-patch.36] - 2026-05-21
 ### Changed
 - **IoT Edit Modal**: Further widened the Edit Device modal from `max-w-2xl` to `max-w-3xl` (768px) to guarantee that all Attack Types and Protocols fit comfortably on a single line without any visual truncation or scrolling, even with the longest badge labels. 📱
