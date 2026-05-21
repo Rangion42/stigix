@@ -203,6 +203,163 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
     // System health
     const [systemHealth, setSystemHealth] = useState<any>(null);
 
+    // Global autocomplete search states
+    const [globalSearchQuery, setGlobalSearchQuery] = useState('');
+    const [isGlobalSearchFocused, setIsGlobalSearchFocused] = useState(false);
+    const searchRef = React.useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+                setIsGlobalSearchFocused(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    const getSuggestions = () => {
+        if (!globalSearchQuery.trim()) return [];
+        const query = globalSearchQuery.toLowerCase();
+        const results: Array<{
+            type: 'url' | 'dns' | 'c2' | 'ai';
+            id: string;
+            name: string;
+            detail: string;
+            isActive: boolean;
+            rawItem: any;
+        }> = [];
+
+        if (securityProfile?.url_filtering?.items) {
+            securityProfile.url_filtering.items.forEach(cat => {
+                if (cat.name.toLowerCase().includes(query) || cat.id.toLowerCase().includes(query)) {
+                    results.push({
+                        type: 'url',
+                        id: cat.id,
+                        name: cat.name,
+                        detail: cat.url.replace('http://', ''),
+                        isActive: config?.url_filtering?.enabled_categories?.includes(cat.id) || false,
+                        rawItem: cat
+                    });
+                }
+            });
+        }
+
+        if (securityProfile?.dns_security?.items) {
+            securityProfile.dns_security.items.forEach(test => {
+                if (test.name.toLowerCase().includes(query) || test.id.toLowerCase().includes(query) || test.domain.toLowerCase().includes(query)) {
+                    results.push({
+                        type: 'dns',
+                        id: test.id,
+                        name: test.name,
+                        detail: test.domain,
+                        isActive: config?.dns_security?.enabled_tests?.includes(test.id) || false,
+                        rawItem: test
+                    });
+                }
+            });
+        }
+
+        if (securityProfile?.c2_scenarios) {
+            securityProfile.c2_scenarios.forEach(scen => {
+                if (scen.name.toLowerCase().includes(query) || scen.id.toLowerCase().includes(query) || scen.target.toLowerCase().includes(query)) {
+                    results.push({
+                        type: 'c2',
+                        id: scen.id,
+                        name: scen.name,
+                        detail: scen.target,
+                        isActive: c2SelectedScenarios.includes(scen.id),
+                        rawItem: scen
+                    });
+                }
+            });
+        }
+
+        if (securityProfile?.ai_security_scenarios) {
+            securityProfile.ai_security_scenarios.forEach(scen => {
+                if (scen.name.toLowerCase().includes(query) || scen.id.toLowerCase().includes(query) || scen.description.toLowerCase().includes(query)) {
+                    results.push({
+                        type: 'ai',
+                        id: scen.id,
+                        name: scen.name,
+                        detail: scen.description,
+                        isActive: aiSelectedScenarios.includes(scen.id),
+                        rawItem: scen
+                    });
+                }
+            });
+        }
+
+        return results.slice(0, 8);
+    };
+
+    const suggestions = getSuggestions();
+
+    const handleSelectSuggestion = (suggestion: any) => {
+        setGlobalSearchQuery('');
+        setIsGlobalSearchFocused(false);
+
+        let elementId = '';
+        if (suggestion.type === 'url') {
+            elementId = `url-item-${suggestion.id}`;
+            setUrlExpanded(true);
+            if (config && !config.url_filtering.enabled_categories.includes(suggestion.id)) {
+                const newEnabled = [...config.url_filtering.enabled_categories, suggestion.id];
+                saveConfig({
+                    url_filtering: { ...config.url_filtering, enabled_categories: newEnabled }
+                });
+            }
+        } else if (suggestion.type === 'dns') {
+            elementId = `dns-item-${suggestion.id}`;
+            setDnsExpanded(true);
+            if (config && !config.dns_security.enabled_tests.includes(suggestion.id)) {
+                const newEnabled = [...config.dns_security.enabled_tests, suggestion.id];
+                saveConfig({
+                    dns_security: { ...config.dns_security, enabled_tests: newEnabled }
+                });
+            }
+        } else if (suggestion.type === 'c2') {
+            elementId = `c2-item-${suggestion.id}`;
+            setC2Expanded(true);
+            if (!c2SelectedScenarios.includes(suggestion.id)) {
+                setC2SelectedScenarios(prev => [...prev, suggestion.id]);
+            }
+        } else if (suggestion.type === 'ai') {
+            elementId = `ai-item-${suggestion.id}`;
+            setAIExpanded(true);
+            if (!aiSelectedScenarios.includes(suggestion.id)) {
+                setAISelectedScenarios(prev => [...prev, suggestion.id]);
+            }
+        }
+
+        setTimeout(() => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.classList.add('ring-2', 'ring-blue-500', 'dark:ring-blue-400', 'scale-[1.03]', 'shadow-[0_0_20px_rgba(59,130,246,0.4)]', 'z-10');
+                setTimeout(() => {
+                    element.classList.remove('ring-2', 'ring-blue-500', 'dark:ring-blue-400', 'scale-[1.03]', 'shadow-[0_0_20px_rgba(59,130,246,0.4)]', 'z-10');
+                }, 2500);
+            }
+        }, 150);
+    };
+
+    const highlightText = (text: string, highlight: string) => {
+        if (!highlight.trim()) return text;
+        const parts = text.split(new RegExp(`(${highlight.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi'));
+        return (
+            <span>
+                {parts.map((part, index) => 
+                    part.toLowerCase() === highlight.toLowerCase() 
+                        ? <mark key={index} className="bg-blue-500/30 text-text-primary rounded-sm px-0.5">{part}</mark>
+                        : part
+                )}
+            </span>
+        );
+    };
+
 
     // EICAR targets selection
     const [cloudEicarUrl, setCloudEicarUrl] = useState('');
@@ -1170,6 +1327,87 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                 </div>
             </div>
 
+            {/* Dynamic Autocomplete Search Bar */}
+            <div ref={searchRef} className="relative w-full z-20">
+                <div className="relative">
+                    <Search className="absolute left-4 top-3.5 text-text-muted" size={18} />
+                    <input
+                        type="text"
+                        value={globalSearchQuery}
+                        onChange={(e) => {
+                            setGlobalSearchQuery(e.target.value);
+                            setIsGlobalSearchFocused(true);
+                        }}
+                        onFocus={() => setIsGlobalSearchFocused(true)}
+                        placeholder="Search security categories, domains, or attack scenarios (e.g., Phishing, Dating, SQL Injection, C2...)"
+                        className="w-full bg-card border border-border hover:border-border/80 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-text-primary text-sm rounded-2xl pl-12 pr-10 py-3.5 outline-none transition-all shadow-sm"
+                    />
+                    {globalSearchQuery && (
+                        <button
+                            onClick={() => setGlobalSearchQuery('')}
+                            className="absolute right-4 top-3.5 text-text-muted hover:text-text-primary transition-colors"
+                        >
+                            <XCircle size={18} />
+                        </button>
+                    )}
+                </div>
+
+                {isGlobalSearchFocused && suggestions.length > 0 && (
+                    <div className="absolute z-50 w-full mt-2 bg-card/95 backdrop-blur-md border border-border rounded-2xl shadow-2xl max-h-80 overflow-y-auto p-2 space-y-1 divide-y divide-border/25">
+                        {suggestions.map((suggestion) => {
+                            const badgeColors = {
+                                url: 'bg-red-500/10 border-red-500/20 text-red-500 dark:text-red-400',
+                                dns: 'bg-blue-500/10 border-blue-500/20 text-blue-500 dark:text-blue-400',
+                                c2: 'bg-purple-500/10 border-purple-500/20 text-purple-500 dark:text-purple-400',
+                                ai: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-500 dark:text-cyan-400',
+                            };
+                            const typeLabels = {
+                                url: 'URL Category',
+                                dns: 'DNS Test',
+                                c2: 'C2 Scenario',
+                                ai: 'AI Security',
+                            };
+
+                            return (
+                                <button
+                                    key={`${suggestion.type}-${suggestion.id}`}
+                                    onClick={() => handleSelectSuggestion(suggestion)}
+                                    className="w-full text-left px-4 py-3 hover:bg-card-hover/80 rounded-xl transition-colors flex items-center justify-between gap-4 group border-none outline-none"
+                                >
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${badgeColors[suggestion.type]}`}>
+                                            {typeLabels[suggestion.type]}
+                                        </span>
+                                        <div className="min-w-0">
+                                            <div className="text-xs font-black text-text-primary group-hover:text-blue-500 transition-colors">
+                                                {highlightText(suggestion.name, globalSearchQuery)}
+                                            </div>
+                                            <div className="text-[10px] text-text-muted truncate mt-0.5 font-mono opacity-80">
+                                                {highlightText(suggestion.detail, globalSearchQuery)}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                        {suggestion.isActive ? (
+                                            <span className="flex items-center gap-1 text-[10px] text-green-500 font-bold bg-green-500/10 border border-green-500/25 px-2 py-0.5 rounded-full">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                                Active
+                                            </span>
+                                        ) : (
+                                            <span className="text-[10px] text-text-muted font-bold bg-card-secondary border border-border px-2 py-0.5 rounded-full">
+                                                Inactive
+                                            </span>
+                                        )}
+                                        <ChevronRight size={14} className="text-text-muted group-hover:text-text-primary transition-colors group-hover:translate-x-0.5 transform transition-transform" />
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+
             {/* Import / Export Security Profile */}
             <div className="flex items-center justify-between bg-card-secondary border border-border rounded-xl px-4 py-3">
                 <div className="flex items-center gap-2">
@@ -1399,6 +1637,7 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                                 return (
                                     <div
                                         key={category.id}
+                                        id={`url-item-${category.id}`}
                                         className={cn(
                                             "bg-card border rounded-xl p-3 flex items-center justify-between transition-all group hover:shadow-md",
                                             isEnabled ? "border-red-500/20 shadow-sm" : "border-border opacity-60 hover:opacity-100"
@@ -1531,6 +1770,7 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                                     return (
                                         <div
                                             key={test.id}
+                                            id={`dns-item-${test.id}`}
                                             className={cn(
                                                 "bg-card border rounded-xl p-3 flex items-center justify-between transition-all group hover:shadow-md",
                                                 isEnabled ? "border-blue-500/20 shadow-sm" : "border-border opacity-60 hover:opacity-100"
@@ -1592,6 +1832,7 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                                     return (
                                         <div
                                             key={test.id}
+                                            id={`dns-item-${test.id}`}
                                             className={cn(
                                                 "bg-card border rounded-xl p-3 flex items-center justify-between transition-all group hover:shadow-md",
                                                 isEnabled ? "border-purple-500/20 shadow-sm" : "border-border opacity-60 hover:opacity-100"
@@ -1916,6 +2157,7 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                                     return (
                                         <div
                                             key={scenario.id}
+                                            id={`c2-item-${scenario.id}`}
                                             className={cn(
                                                 "bg-card border rounded-xl p-3 flex items-center justify-between transition-all group hover:shadow-md",
                                                 isEnabled ? "border-purple-500/20 shadow-sm" : "border-border opacity-60 hover:opacity-100"
@@ -2042,6 +2284,7 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                                     return (
                                         <div
                                             key={scenario.id}
+                                            id={`ai-item-${scenario.id}`}
                                             className={cn(
                                                 "relative p-4 rounded-xl border transition-all",
                                                 isEnabled
