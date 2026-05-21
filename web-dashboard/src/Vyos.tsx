@@ -100,80 +100,30 @@ interface VyosProps {
 }
 
 function ActionSelector({ value, onChange }: { value: string, onChange: (val: string) => void }) {
-    const [isOpen, setIsOpen] = useState(false);
-    const containerRef = React.useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const options = [
-        { id: 'interface-down', group: 'Interface' },
-        { id: 'interface-up', group: 'Interface' },
-        { id: 'set-qos', group: 'Interface' },
-        { id: 'clear-qos', group: 'Interface' },
-        { id: 'deny-traffic', group: 'Traffic Control' },
-        { id: 'allow-traffic', group: 'Traffic Control' },
-        { id: 'clear-all-blocks', group: 'Traffic Control' },
-        { id: 'show-denied', group: 'Traffic Control' },
-    ];
-
     return (
-        <div className="relative" ref={containerRef}>
-            <button
-                type="button"
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-card border border-border/50 hover:border-purple-500/50 transition-all text-sm font-black uppercase tracking-tight"
+        <div className="relative">
+            <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                {getCommandIcon(value, 14)}
+            </div>
+            <select
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="w-full bg-card border border-border rounded-lg pl-8 pr-8 py-1.5 text-[11px] font-black uppercase tracking-tight text-text-primary focus:outline-none focus:ring-1 focus:ring-purple-500/50 appearance-none cursor-pointer"
             >
-                {getCommandIcon(value, 16)}
-                <span>{getCommandDisplayName(value)}</span>
-                <ChevronDown size={14} className={cn("ml-2 transition-transform duration-300", isOpen ? "rotate-180" : "")} />
-            </button>
-
-            {isOpen && (
-                <div className="absolute top-full left-0 mt-2 w-72 min-w-[280px] bg-card/95 backdrop-blur-xl border border-border shadow-2xl z-[100] rounded-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    <div className="p-1 px-1.5 space-y-0.5 max-h-[400px] overflow-y-auto">
-                        {['Interface', 'Traffic Control'].map(group => (
-                            <div key={group} className="space-y-0.5 py-1">
-                                <div className="px-3 py-1.5 text-[8px] font-black text-text-muted uppercase tracking-[0.2em] opacity-40">
-                                    {group}
-                                </div>
-                                {options.filter(o => o.group === group).map(opt => (
-                                    <button
-                                        key={opt.id}
-                                        type="button"
-                                        onClick={() => {
-                                            onChange(opt.id);
-                                            setIsOpen(false);
-                                        }}
-                                        className={cn(
-                                            "w-full flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all text-left",
-                                            value === opt.id
-                                                ? "bg-purple-500/10 text-purple-500"
-                                                : "hover:bg-card-secondary text-text-secondary hover:text-text-primary"
-                                        )}
-                                    >
-                                        <div className={cn(
-                                            "p-1 rounded-lg border",
-                                            value === opt.id ? "bg-card border-purple-500/20 shadow-sm" : "bg-card-secondary border-border/50"
-                                        )}>
-                                            {getCommandIcon(opt.id, 14)}
-                                        </div>
-                                        <span className="text-[11px] font-bold uppercase tracking-tight">{getCommandDisplayName(opt.id)}</span>
-                                        {value === opt.id && <CheckCircle size={12} className="ml-auto" />}
-                                    </button>
-                                ))}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
+                <optgroup label="Interface">
+                    <option value="interface-down">Shut</option>
+                    <option value="interface-up">No Shut</option>
+                    <option value="set-qos">Latency/Loss</option>
+                    <option value="clear-qos">Clear Qos</option>
+                </optgroup>
+                <optgroup label="Traffic Control">
+                    <option value="deny-traffic">Deny Traffic</option>
+                    <option value="allow-traffic">Allow Traffic</option>
+                    <option value="clear-all-blocks">Clear All Blocks</option>
+                    <option value="show-denied">Show Denied</option>
+                </optgroup>
+            </select>
+            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted" />
         </div>
     );
 }
