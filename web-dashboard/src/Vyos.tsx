@@ -538,26 +538,33 @@ export default function Vyos(props: VyosProps) {
                     return;
                 }
 
-                // Validate CIDR format
+                // Validate CIDR format or FQDN
                 const cidrRegex = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/;
-                if (!cidrRegex.test(action.parameters.ip)) {
-                    toast.error(`Invalid IP format for ${action.command}. Use CIDR notation (e.g., 8.8.8.8/32)`);
+                const fqdnRegex = /^([a-zA-Z0-9_-]+\.)+[a-zA-Z0-9]{2,}$/;
+                
+                const isCidr = cidrRegex.test(action.parameters.ip);
+                const isFqdn = fqdnRegex.test(action.parameters.ip);
+
+                if (!isCidr && !isFqdn) {
+                    toast.error(`Invalid format for ${action.command}. Use IP (e.g., 8.8.8.8/32) or FQDN (e.g., google.com)`);
                     return;
                 }
 
-                // Validate IP octets (0-255)
-                const octets = action.parameters.ip.split('/')[0].split('.');
-                if (octets.some((o: string) => parseInt(o) > 255 || parseInt(o) < 0)) {
-                    toast.error(`Invalid IP address in ${action.command}. Each octet must be 0-255`);
-                    return;
-                }
-
-                // Validate CIDR mask (0-32)
-                if (action.parameters.ip.includes('/')) {
-                    const mask = parseInt(action.parameters.ip.split('/')[1]);
-                    if (mask < 0 || mask > 32) {
-                        toast.error(`Invalid subnet mask in ${action.command}. Must be 0-32`);
+                if (isCidr) {
+                    // Validate IP octets (0-255)
+                    const octets = action.parameters.ip.split('/')[0].split('.');
+                    if (octets.some((o: string) => parseInt(o) > 255 || parseInt(o) < 0)) {
+                        toast.error(`Invalid IP address in ${action.command}. Each octet must be 0-255`);
                         return;
+                    }
+
+                    // Validate CIDR mask (0-32)
+                    if (action.parameters.ip.includes('/')) {
+                        const mask = parseInt(action.parameters.ip.split('/')[1]);
+                        if (mask < 0 || mask > 32) {
+                            toast.error(`Invalid subnet mask in ${action.command}. Must be 0-32`);
+                            return;
+                        }
                     }
                 }
             }
