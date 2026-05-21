@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.33] - 2026-05-21
+### Changed
+- **VyOS Sequence Edit**: Shortened the IP address/FQDN parameter input placeholder from `"e.g. 8.8.8.8/32 or google.com"` to `"8.8.8.8/32 or FQDN"` to prevent truncation and make it fully readable in the edit dialog columns. 🔧
+
 ## [v1.4.0-patch.32] - 2026-05-21
 ### Added
 - **Widget Search Bars**: Integrated local search bars into the four security widgets (URL Filtering, DNS Security, C2 Scenarios, and AI Security Tests) in the `Security.tsx` header blocks. Typing in the search input automatically filters matching items, restricts the "Select All" checkbox toggle action to only visible items, displays elegant empty states when no items match, and automatically expands the accordions. Implemented harmonized focus outlines per widget type (red for URL, blue for DNS, purple for C2, cyan for AI) and stopped event propagation to prevent the inputs from collapsing or expanding the accordion panels. 🔍
