@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.27] - 2026-05-21
+### Added
+- **VyOS Sequence FQDN Restrictions**: Added explicit validation to strictly block FQDN usage on VyOS 1.4 routers (returns an error if attempted). FQDN blocking is now officially only supported on VyOS 1.5+.
+- **VyOS Sequence Descriptions**: Restored the `description` attribute tracking (e.g., `block google.com 8.8.8.8/32`) on static blackhole routes, but specifically gated it to only execute on VyOS 1.5 routers since VyOS 1.4 does not support the description attribute on static routes.
+
+## [v1.4.0-patch.26] - 2026-05-21
+### Fixed
+- **VyOS Backend**: Removed the `description` attribute from `simple-block` static routes to resolve a severe `400 BAD REQUEST` error on VyOS 1.4. VyOS 1.4 does not support descriptions on `protocols static route <prefix>`.
+
+## [v1.4.0-patch.25] - 2026-05-21
+### Fixed
+- **VyOS UI**: Updated the "VyOS CLI Equivalent" text generator in the frontend. It now explicitly adds a comment noting that FQDNs (like `google.com`) are dynamically resolved into IPs by the Stigix backend, preventing user confusion when they see the FQDN directly embedded in the UI's simulated CLI output.
+
 ## [v1.4.0-patch.24] - 2026-05-21
 ### Added
 - **VyOS Sequence FQDN Support**: The `simple-block` action now accepts FQDNs (e.g., `google.com`) in addition to IP addresses. The backend resolves the FQDN to all associated IPv4 addresses and creates blackhole routes using the route description field to store the relationship (`block google.com <IP>`). The `simple-unblock` action intelligently cleans up by matching this description rather than relying on a secondary, potentially shifted DNS resolution.
