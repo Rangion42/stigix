@@ -999,14 +999,6 @@ export default function Vyos(props: VyosProps) {
                                 <Wifi size={18} /> Discover Router
                             </button>
                         )}
-                        {view === 'sequences' && (
-                            <button
-                                onClick={() => openSeqModal()}
-                                className="flex items-center gap-2 px-6 py-2.5 bg-purple-600/10 hover:bg-purple-600/20 text-purple-500 rounded-lg font-bold transition-all border border-purple-500/20"
-                            >
-                                <Plus size={18} /> New Sequence
-                            </button>
-                        )}
                     </div>
                 </div>
             </div>
@@ -1150,18 +1142,26 @@ export default function Vyos(props: VyosProps) {
                                 className="w-full pl-10 pr-4 py-2.5 bg-card/50 border border-border/50 rounded-xl text-sm focus:outline-none focus:border-purple-500/50 transition-all text-text-primary placeholder:text-text-muted/50"
                             />
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            <label className="text-[10px] font-black tracking-widest text-text-muted uppercase opacity-70">Sort By</label>
-                            <select
-                                value={sequenceSort}
-                                onChange={(e) => setSequenceSort(e.target.value as any)}
-                                className="bg-card/50 border border-border/50 rounded-lg px-3 py-2.5 text-sm font-semibold focus:outline-none focus:border-purple-500/50 text-text-primary cursor-pointer hover:border-purple-500/30 transition-colors"
+                        <div className="flex items-center gap-4 shrink-0">
+                            <div className="flex items-center gap-2">
+                                <label className="text-[10px] font-black tracking-widest text-text-muted uppercase opacity-70">Sort By</label>
+                                <select
+                                    value={sequenceSort}
+                                    onChange={(e) => setSequenceSort(e.target.value as any)}
+                                    className="bg-card/50 border border-border/50 rounded-lg px-3 py-2.5 text-sm font-semibold focus:outline-none focus:border-purple-500/50 text-text-primary cursor-pointer hover:border-purple-500/30 transition-colors"
+                                >
+                                    <option value="name">Name (A-Z)</option>
+                                    <option value="router">Router Focus</option>
+                                    <option value="action">Action Type</option>
+                                    <option value="recent">Most Recent</option>
+                                </select>
+                            </div>
+                            <button
+                                onClick={() => openSeqModal()}
+                                className="flex items-center gap-2 px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold transition-all shadow-lg shadow-purple-900/20 active:scale-95"
                             >
-                                <option value="name">Name (A-Z)</option>
-                                <option value="router">Router Focus</option>
-                                <option value="action">Action Type</option>
-                                <option value="recent">Most Recent</option>
-                            </select>
+                                <Plus size={18} /> New Sequence
+                            </button>
                         </div>
                     </div>
 

@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.23] - 2026-05-21
+### Changed
+- **VyOS Sequences List** (`Vyos.tsx`): Moved the "+ New Sequence" button from the global header down to the Sequences toolbar (next to Search and Sort controls). This improves ergonomics significantly on ultra-wide screens, where the centered table and right-aligned header previously created a large visual disconnect.
+
 ## [v1.4.0-patch.22] - 2026-05-21
 ### Fixed
 - **VyOS Edit Modal** (`Vyos.tsx`): Completely replaced the custom `ActionSelector` dropdown (for selecting `Shut`, `Deny Traffic`, etc.) with a native HTML `<select>` element. The previous custom dropdown used absolute positioning which became trapped inside the modal's `overflow-y-auto` boundary, making it "impossible to scroll" or view all actions without scrolling the entire modal body. The native `<select>` effortlessly breaks out of CSS overflow constraints, providing a perfect OS-native experience.
