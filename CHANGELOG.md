@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.35] - 2026-05-21
+### Changed
+- **IoT Edit Modal**: Widened the Edit Device modal from `max-w-xl` to `max-w-2xl` and reduced badge sizing (`px-2 py-1`, `text-[10px]`, tighter gap) so Attack Types and Protocol chips fit on a single visible line without needing to scroll. 📱
+
 ## [v1.4.0-patch.34] - 2026-05-21
 ### Fixed
 - **IoT Edit Modal**: Applied `w-full` constraint to the horizontal scrolling containers for "Attack Types" and "Protocols" to prevent them from expanding past the form boundaries and clipping at the card border. 📱
