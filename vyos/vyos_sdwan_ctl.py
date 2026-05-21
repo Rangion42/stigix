@@ -14,7 +14,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 def resolve_input(ip_input):
     """
     Takes an IP, CIDR, or FQDN.
-    Returns a tuple (original_input, list_of_prefixes)
+    Returns a tuple (original_input, list_of_prefixes, is_fqdn)
     For IPs/CIDRs, list_of_prefixes has 1 element.
     For FQDNs, list_of_prefixes has all resolved IPv4 addresses as /32.
     """
@@ -22,12 +22,12 @@ def resolve_input(ip_input):
         # If already has a mask, it must be a valid CIDR
         if '/' in ip_input:
             network = ipaddress.ip_network(ip_input, strict=False)
-            return (ip_input, [str(network)])
+            return (ip_input, [str(network)], False)
         else:
             # Try parsing as a single IP
             try:
                 ip = ipaddress.ip_address(ip_input)
-                return (ip_input, [f"{ip}/32"])
+                return (ip_input, [f"{ip}/32"], False)
             except ValueError:
                 # Not an IP, assume FQDN
                 import socket
@@ -39,7 +39,7 @@ def resolve_input(ip_input):
                 if not ips:
                     raise ValueError(f"Could not resolve any IPv4 addresses for {ip_input}")
                 
-                return (ip_input, [f"{ip}/32" for ip in ips])
+                return (ip_input, [f"{ip}/32" for ip in ips], True)
     except Exception as e:
         raise ValueError(f"Invalid IP address, prefix, or FQDN: {ip_input} ({e})")
 
@@ -341,12 +341,15 @@ def get_blackhole_routes(config):
     routes.sort(key=lambda x: x["prefix"])
     return routes
 
-def op_simple_block(host, api_key, ip_input, verify=False):
+def op_simple_block(host, api_key, version, ip_input, verify=False):
     """Block a prefix or FQDN using blackhole route with tag 999 and description tracking"""
     try:
         # Resolve IP/prefix/FQDN
-        original_input, prefixes = resolve_input(ip_input)
+        original_input, prefixes, is_fqdn = resolve_input(ip_input)
         
+        if is_fqdn and version == "1.4":
+            raise ValueError("FQDN blocking is only supported on VyOS 1.5+")
+            
         # Check existing
         config = api_retrieve(host, api_key, verify)
         existing_dicts = get_blackhole_routes(config)
@@ -367,13 +370,16 @@ def op_simple_block(host, api_key, ip_input, verify=False):
                 }
             }
         
-        # Add blackhole route with tag 999
+        # Add blackhole route with tag 999 (and description for 1.5)
         ops_modern = []
         for prefix in prefixes_to_add:
             ops_modern.extend([
                 {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole"]},
                 {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole", "tag", "999"]}
             ])
+            if version == "1.5":
+                desc = f"block {original_input} {prefix}"
+                ops_modern.append({"op": "set", "path": ["protocols", "static", "route", prefix, "description", desc]})
             
         try:
             api_call(host, api_key, ops_modern, verify)
@@ -385,6 +391,9 @@ def op_simple_block(host, api_key, ip_input, verify=False):
                     {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole"]},
                     {"op": "set", "path": ["protocols", "static", "route", prefix, "tag", "999"]}
                 ])
+                if version == "1.5":
+                    desc = f"block {original_input} {prefix}"
+                    ops_legacy.append({"op": "set", "path": ["protocols", "static", "route", prefix, "description", desc]})
             api_call(host, api_key, ops_legacy, verify)
         
         # Fetch updated list
@@ -412,13 +421,18 @@ def op_simple_block(host, api_key, ip_input, verify=False):
             "error": str(e)
         }
 
-def op_simple_unblock(host, api_key, ip_input, verify=False):
-    """Unblock by matching exact prefix (resolving FQDNs at runtime)"""
+def op_simple_unblock(host, api_key, version, ip_input, verify=False):
+    """Unblock by matching exact prefix (and FQDN description for 1.5)"""
     try:
         try:
-            original_input, resolved_prefixes = resolve_input(ip_input)
-        except ValueError:
+            original_input, resolved_prefixes, is_fqdn = resolve_input(ip_input)
+            if is_fqdn and version == "1.4":
+                raise ValueError("FQDN blocking is only supported on VyOS 1.5+")
+        except ValueError as e:
             # If resolution fails during unblock, fallback to string match
+            # But if it's a version error, we still want to raise it
+            if "FQDN blocking is only supported" in str(e):
+                raise
             original_input = ip_input
             resolved_prefixes = [ip_input]
             
@@ -429,6 +443,7 @@ def op_simple_unblock(host, api_key, ip_input, verify=False):
         
         for r in existing_dicts:
             p = r["prefix"]
+            d = r.get("description", "")
             
             # Match 1: exact prefix matches any of the resolved prefixes
             if p in resolved_prefixes:
@@ -437,6 +452,11 @@ def op_simple_unblock(host, api_key, ip_input, verify=False):
                 
             # Match 2: exact IP if user passed IP without /32
             if '/' not in original_input and p == f"{original_input}/32":
+                prefixes_to_remove.add(p)
+                continue
+                
+            # Match 3: FQDN description matching (for 1.5)
+            if version == "1.5" and d.startswith(f"block {original_input} "):
                 prefixes_to_remove.add(p)
                 continue
         
@@ -951,14 +971,18 @@ def main():
         print(json.dumps(info, indent=2))
         sys.exit(0 if info["success"] else 1)
     
-    # NEW simple-block/simple-unblock/clear-blocks (no version needed)
+    # Handle simple-block and simple-unblock
     if args.cmd == "simple-block":
-        result = op_simple_block(args.host, args.key, args.ip, args.secure)
+        # Determine version for simple blocks if not provided, default to 1.5 if missing
+        version = args.version if args.version else "1.5"
+        result = op_simple_block(args.host, args.key, version, args.ip, verify=args.secure)
         print(json.dumps(result, indent=2))
         sys.exit(0 if result["success"] else 1)
     
     if args.cmd == "simple-unblock":
-        result = op_simple_unblock(args.host, args.key, args.ip, args.secure)
+        # Determine version for simple blocks if not provided, default to 1.5 if missing
+        version = args.version if args.version else "1.5"
+        result = op_simple_unblock(args.host, args.key, version, args.ip, verify=args.secure)
         print(json.dumps(result, indent=2))
         sys.exit(0 if result["success"] else 1)
     
