@@ -199,6 +199,7 @@ export default function Vyos(props: VyosProps) {
     const [liveEvents, setLiveEvents] = useState<{ sequenceId: string, step: string, status: string, error?: string, cliEquivalent?: string[], action?: any, ts: number }[]>([]);
     const [showingCli, setShowingCli] = useState<number | null>(null); // index of expanded CLI block
     const [expandedHistoryRow, setExpandedHistoryRow] = useState<string | null>(null); // key of expanded history row
+    const [expandedSeqId, setExpandedSeqId] = useState<string | null>(null); // accordion for sequence actions
 
     // --- generateCliEquivalent -------------------------------------------------
     // Fallback: reconstruct VyOS CLI commands from command + interface + parameters.
@@ -1214,186 +1215,169 @@ export default function Vyos(props: VyosProps) {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 animate-in slide-in-from-bottom-4 duration-300">
-                        {processedSequences.map((seq) => (
-                        <div key={seq.id} className="bg-card border border-border rounded-xl p-4 hover:border-purple-500/40 transition-all flex flex-col gap-3 shadow-sm hover:shadow-md group">
-                            {/* Header: Title and Tools */}
-                            <div className="flex justify-between items-start">
-                                <div className="flex flex-col min-w-0">
-                                    <h3 className="text-sm font-black text-text-primary tracking-tight truncate pr-2">
-                                        {seq.name}
-                                    </h3>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className={cn(
-                                            "flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md border transition-colors",
-                                            seq.executionMode === 'STEP_BY_STEP'
-                                                ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20"
-                                                : seq.cycle_duration > 0
-                                                    ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
-                                                    : "bg-card-secondary text-text-muted border-border"
-                                        )}>
-                                            {seq.executionMode === 'STEP_BY_STEP' ? <Terminal size={10} /> : <Clock size={10} />}
-                                            {seq.executionMode === 'STEP_BY_STEP' ? 'STEP-BY-STEP' : seq.cycle_duration > 0 ? `${seq.cycle_duration}M CRON` : 'MANUAL'}
-                                        </span>
-                                        <span className="text-[10px] text-text-muted font-mono opacity-50">#{seq.id.split('-').pop()?.slice(-4)}</span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    {/* Enable/Disable Toggle */}
-                                    <button
-                                        onClick={() => toggleSequenceEnabled(seq)}
-                                        className={cn(
-                                            "relative w-10 h-5 rounded-full transition-all duration-300 border-2",
-                                            seq.enabled
-                                                ? "bg-green-500 border-green-600"
-                                                : "bg-gray-700 border-gray-600"
-                                        )}
-                                        title={seq.enabled ? "Disable sequence" : "Enable sequence"}
-                                    >
-                                        <div className={cn(
-                                            "absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform duration-300",
-                                            seq.enabled ? "translate-x-5" : "translate-x-0.5"
-                                        )} />
-                                    </button>
-                                    <button onClick={() => cloneReverseSequence(seq)} className="p-1.5 text-text-muted hover:text-green-500 hover:bg-green-500/5 rounded-md transition-all" title="Clone Reverse Sequence">
-                                        <RefreshCw size={14} />
-                                    </button>
-                                    <button onClick={() => openSeqModal(seq)} className="p-1.5 text-text-muted hover:text-blue-500 hover:bg-blue-500/5 rounded-md transition-all" title="Edit Sequence">
-                                        <Edit2 size={14} />
-                                    </button>
-                                    <button onClick={() => deleteSequence(seq.id)} className="p-1.5 text-text-muted hover:text-red-500 hover:bg-red-500/5 rounded-md transition-all">
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                            </div>
 
-                            {/* Dense Stats Row */}
-                            <div className="grid grid-cols-2 gap-2 py-2 border-y border-border/50">
-                                <div className="flex flex-col">
-                                    <label className="text-[9px] font-semibold text-text-muted uppercase tracking-widest opacity-50">Operations</label>
-                                    <div className="flex items-center gap-2">
-                                        {seq.actions.length === 1 && (
-                                            <div className="p-1 bg-card rounded border border-border/50">
-                                                {getCommandIcon(seq.actions[0].command, 12)}
+                    {/* Sequences Table */}
+                    <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm animate-in slide-in-from-bottom-4 duration-300">
+                        {/* Table Header */}
+                        <div className="grid items-center gap-3 px-4 py-2.5 border-b border-border bg-card-secondary/60 text-[9px] font-black text-text-muted uppercase tracking-widest"
+                            style={{ gridTemplateColumns: '28px 1fr 90px 200px 72px 80px 130px' }}>
+                            <div />
+                            <div>Name</div>
+                            <div>Mode</div>
+                            <div>Target</div>
+                            <div>Status</div>
+                            <div>Last Run</div>
+                            <div className="text-right">Controls</div>
+                        </div>
+
+                        {/* Rows */}
+                        <div className="divide-y divide-border/40">
+                            {processedSequences.map((seq) => {
+                                const isExpanded = expandedSeqId === seq.id;
+                                const isRunning = activeExecution?.sequenceId === seq.id;
+                                const firstAction = seq.actions[0];
+                                const firstRouter = firstAction ? routers.find(r => r.id === firstAction.router_id) : null;
+                                const hasMultiRouter = seq.actions.length > 1 && seq.actions.some(a => a.router_id !== firstAction?.router_id);
+                                let targetSummary = '—';
+                                if (firstAction && firstRouter) {
+                                    if (hasMultiRouter) targetSummary = `Multi-router · ${seq.actions.length} actions`;
+                                    else if (['deny-traffic', 'allow-traffic', 'clear-all-blocks', 'show-denied'].includes(firstAction.command))
+                                        targetSummary = `${getCommandDisplayName(firstAction.command)} · ${firstRouter.name}`;
+                                    else targetSummary = firstRouter.name;
+                                }
+                                return (
+                                    <div key={seq.id}>
+                                        {/* Main row */}
+                                        <div
+                                            className={cn(
+                                                'grid items-center gap-3 px-4 py-3 cursor-pointer transition-colors select-none',
+                                                isExpanded ? 'bg-purple-500/5' : 'hover:bg-card-secondary/30',
+                                                isRunning && 'bg-blue-500/5'
+                                            )}
+                                            style={{ gridTemplateColumns: '28px 1fr 90px 200px 72px 80px 130px' }}
+                                            onClick={() => setExpandedSeqId(isExpanded ? null : seq.id)}
+                                        >
+                                            <div className="flex items-center justify-center text-text-muted">
+                                                <ChevronRight size={14} className={cn('transition-transform duration-200', isExpanded && 'rotate-90 text-purple-400')} />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <span className="text-sm font-bold text-text-primary truncate block leading-tight">{seq.name}</span>
+                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                    <span className={cn(
+                                                        'text-[8px] font-black px-1.5 py-0.5 rounded border',
+                                                        seq.executionMode === 'STEP_BY_STEP' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                                                            : seq.cycle_duration > 0 ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                                                : 'bg-card-secondary text-text-muted border-border'
+                                                    )}>
+                                                        {seq.executionMode === 'STEP_BY_STEP' ? 'STEP' : seq.cycle_duration > 0 ? `${seq.cycle_duration}M` : 'MANUAL'}
+                                                    </span>
+                                                    {isRunning && <span className="text-[8px] font-black text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded animate-pulse">RUNNING</span>}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 text-xs text-text-secondary font-medium min-w-0">
+                                                {seq.actions.length === 1
+                                                    ? <>{getCommandIcon(seq.actions[0].command, 12)}<span className="truncate text-[11px]">{getCommandDisplayName(seq.actions[0].command)}</span></>
+                                                    : <span className="text-text-muted text-[11px]">{seq.actions.length} actions</span>}
+                                            </div>
+                                            <div className="text-[11px] text-text-muted font-mono truncate" title={targetSummary}>{targetSummary}</div>
+                                            <div onClick={e => e.stopPropagation()}>
+                                                <button
+                                                    onClick={() => toggleSequenceEnabled(seq)}
+                                                    className={cn('relative w-9 h-5 rounded-full transition-all duration-300 border-2', seq.enabled ? 'bg-green-500 border-green-600' : 'bg-gray-700 border-gray-600')}
+                                                    title={seq.enabled ? 'Disable' : 'Enable'}
+                                                >
+                                                    <div className={cn('absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform duration-300', seq.enabled ? 'translate-x-4' : 'translate-x-0.5')} />
+                                                </button>
+                                            </div>
+                                            <div className="text-[11px] text-text-muted font-mono">
+                                                {seq.lastRun ? new Date(seq.lastRun).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ready'}
+                                            </div>
+                                            <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+                                                <button
+                                                    onClick={() => seq.executionMode === 'STEP_BY_STEP' ? setView('timeline') : runSequence(seq.id)}
+                                                    disabled={activeExecution !== null}
+                                                    className={cn(
+                                                        'flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-[10px] transition-all disabled:opacity-30 shadow-sm',
+                                                        isRunning ? 'bg-card-secondary text-text-muted'
+                                                            : seq.executionMode === 'STEP_BY_STEP' ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                                                                : 'bg-purple-600 hover:bg-purple-500 text-white'
+                                                    )}
+                                                >
+                                                    {isRunning ? <Activity size={12} className="animate-spin" /> : seq.executionMode === 'STEP_BY_STEP' ? <ChevronRight size={12} /> : <Play size={12} fill="currentColor" />}
+                                                    {seq.executionMode === 'STEP_BY_STEP' ? 'Steps' : 'Run'}
+                                                </button>
+                                                <button onClick={() => openSeqModal(seq)} className="p-1.5 text-text-muted hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all" title="Edit"><Edit2 size={13} /></button>
+                                                <button onClick={() => cloneReverseSequence(seq)} className="p-1.5 text-text-muted hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-all" title="Clone reverse"><RefreshCw size={13} /></button>
+                                                <button onClick={() => deleteSequence(seq.id)} className="p-1.5 text-text-muted hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all" title="Delete"><Trash2 size={13} /></button>
+                                            </div>
+                                        </div>
+
+                                        {/* Accordion */}
+                                        {isExpanded && (
+                                            <div className="border-t border-border/40 bg-card-secondary/20 animate-in slide-in-from-top-1 duration-150">
+                                                <div className="grid gap-3 px-6 py-1.5 text-[8px] font-black text-text-muted uppercase tracking-widest border-b border-border/30"
+                                                    style={{ gridTemplateColumns: '44px 130px 1fr 1fr 160px' }}>
+                                                    <div>T+min</div><div>Command</div><div>Router</div><div>Interface</div><div>Params</div>
+                                                </div>
+                                                {seq.actions.length === 0 && (
+                                                    <p className="px-6 py-3 text-[11px] text-text-muted italic">No actions configured.</p>
+                                                )}
+                                                {seq.actions.map((action, idx) => {
+                                                    const router = routers.find(r => r.id === action.router_id);
+                                                    const iface = router?.interfaces?.find(i => i.name === action.interface);
+                                                    const needsIface = !['deny-traffic', 'allow-traffic', 'clear-all-blocks', 'show-denied'].includes(action.command);
+                                                    const needsIp = ['deny-traffic', 'allow-traffic'].includes(action.command);
+                                                    const isQos = action.command === 'set-qos';
+                                                    const accentClass = ['interface-down', 'deny-traffic'].includes(action.command) ? 'border-l-red-500/50'
+                                                        : ['interface-up', 'allow-traffic'].includes(action.command) ? 'border-l-green-500/50'
+                                                            : ['set-qos', 'clear-qos'].includes(action.command) ? 'border-l-indigo-500/50'
+                                                                : 'border-l-border';
+                                                    return (
+                                                        <div key={idx} className={cn('grid gap-3 px-6 py-2 items-center border-l-2 hover:bg-card-secondary/30 transition-colors', accentClass, idx > 0 && 'border-t border-border/20')}
+                                                            style={{ gridTemplateColumns: '44px 130px 1fr 1fr 160px' }}>
+                                                            <div className="font-black text-purple-400 text-sm">{action.offset_minutes}</div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                {getCommandIcon(action.command, 13)}
+                                                                <span className="text-[10px] font-black uppercase tracking-tight text-text-primary">{getCommandDisplayName(action.command)}</span>
+                                                            </div>
+                                                            <div className="text-[11px] font-mono text-text-secondary truncate">{router?.name || '?'}</div>
+                                                            <div className="text-[11px] font-mono text-text-muted truncate">
+                                                                {needsIface && action.interface
+                                                                    ? <>{action.interface}{iface?.description && <span className="text-text-muted/50 ml-1">— {iface.description}</span>}</>
+                                                                    : <span className="opacity-30">—</span>}
+                                                            </div>
+                                                            <div className="flex items-center gap-1 flex-wrap">
+                                                                {needsIp && action.parameters?.ip && <span className="text-[10px] font-mono bg-red-500/10 text-red-400 border border-red-500/20 px-1.5 py-0.5 rounded">{action.parameters.ip}</span>}
+                                                                {isQos && <>
+                                                                    {action.parameters?.latency ? <span className="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 rounded">{action.parameters.latency}ms</span> : null}
+                                                                    {action.parameters?.loss ? <span className="text-[10px] font-mono bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1.5 py-0.5 rounded">{action.parameters.loss}%</span> : null}
+                                                                    {action.parameters?.rate ? <span className="text-[10px] font-mono bg-purple-500/10 text-purple-400 border border-purple-500/20 px-1.5 py-0.5 rounded">{action.parameters.rate}</span> : null}
+                                                                </>}
+                                                                {!needsIp && !isQos && <span className="opacity-30 text-[10px]">—</span>}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         )}
-                                        <span className="text-xs font-semibold text-text-primary tracking-normal">
-                                            {seq.actions.length === 1
-                                                ? getCommandDisplayName(seq.actions[0].command)
-                                                : `${seq.actions.length} actions`
-                                            }
-                                        </span>
                                     </div>
-                                </div>
-                                <div className="flex flex-col">
-                                    <label className="text-[9px] font-semibold text-text-muted uppercase tracking-widest opacity-50">Status</label>
-                                    <span className="text-xs font-semibold text-text-primary">{seq.enabled ? 'Enabled' : 'Staged'}</span>
-                                </div>
-                            </div>
-
-                            {/* Target Preview */}
-                            <div className="flex items-start gap-2 overflow-hidden">
-                                <Server size={12} className="text-text-muted flex-shrink-0 opacity-50 mt-1" />
-                                <div className="flex flex-wrap gap-1.5">
-                                    {seq.actions.slice(0, 2).map((a, i) => {
-                                        const router = routers.find(r => r.id === a.router_id);
-                                        const paramDisplay = formatActionParameters(a.command, a.parameters);
-                                        const hasIface = !['deny-traffic', 'allow-traffic', 'clear-all-blocks', 'show-denied'].includes(a.command);
-                                        const ifaceMeta = hasIface && a.interface
-                                            ? router?.interfaces.find(ifc => ifc.name === a.interface)
-                                            : undefined;
-                                        return (
-                                            <span key={i} className="text-[11px] bg-card-secondary/80 text-text-secondary px-2.5 py-1 rounded-lg border border-border/50 font-mono tracking-tight">
-                                                {paramDisplay ? (
-                                                    <>
-                                                        <span className="text-text-primary">{paramDisplay}</span>
-                                                        {' on '}
-                                                        <span className="text-purple-400 font-semibold">{router?.name || '?'}{hasIface && a.interface ? `:${a.interface}` : ''}</span>
-                                                        {ifaceMeta?.description && (
-                                                            <span className="text-text-muted ml-1">({ifaceMeta.description})</span>
-                                                        )}
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <span className="text-purple-400 font-semibold text-[12px]">
-                                                            {router?.name || '?'}{hasIface && a.interface ? `:${a.interface}` : ''}
-                                                        </span>
-                                                        {ifaceMeta?.description && (
-                                                            <span className="text-text-muted ml-1 text-[10px]">({ifaceMeta.description})</span>
-                                                        )}
-                                                    </>
-                                                )}
-                                            </span>
-                                        );
-                                    })}
-                                    {seq.actions.length > 2 && (
-                                        <span className="text-[9px] text-text-muted font-semibold self-center">+{seq.actions.length - 2} more</span>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Footer: Status & Execution */}
-                            <div className="flex items-center justify-between mt-auto pt-2">
-                                <div className="flex items-center gap-2.5">
-                                    <div className={cn(
-                                        "w-2 h-2 rounded-full ring-2 ring-offset-2 ring-offset-card transition-all duration-500",
-                                        activeExecution?.sequenceId === seq.id
-                                            ? "bg-green-500 ring-green-500/30 animate-pulse"
-                                            : seq.enabled ? "bg-blue-500 ring-blue-500/20" : "bg-zinc-700 ring-transparent"
-                                    )} />
-                                <div className="flex flex-col">
-                                    <span className="text-[11px] font-bold text-text-primary leading-none">
-                                        {seq.cycle_duration > 0
-                                            ? (seq.lastRun ? new Date(seq.lastRun).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Scheduled')
-                                            : (seq.lastRun ? new Date(seq.lastRun).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ready')
-                                        }
-                                    </span>
-                                    <span className="text-[8px] text-text-muted font-medium mt-0.5 opacity-60">
-                                        {seq.executionMode === 'STEP_BY_STEP' ? 'Interactive mode' : seq.cycle_duration > 0 ? 'Last run' : 'Manual trigger'}
-                                    </span>
-                                </div>
-                                </div>
-
-                                <button
-                                    onClick={() => {
-                                        if (seq.executionMode === 'STEP_BY_STEP') {
-                                            setView('timeline');
-                                        } else {
-                                            runSequence(seq.id);
-                                        }
-                                    }}
-                                    disabled={activeExecution !== null}
-                                    className={cn(
-                                        "flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-[11px] tracking-wide transition-all shadow-sm active:scale-95 disabled:opacity-30 disabled:grayscale",
-                                        activeExecution?.sequenceId === seq.id
-                                            ? "bg-card-secondary text-text-muted cursor-not-allowed"
-                                            : seq.executionMode === 'STEP_BY_STEP'
-                                                ? "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/30"
-                                                : "bg-purple-600 hover:bg-purple-500 text-white shadow-purple-900/30"
-                                    )}
-                                >
-                                    {activeExecution?.sequenceId === seq.id ? (
-                                        <Activity size={14} className="animate-spin text-purple-400" />
-                                    ) : (
-                                        seq.executionMode === 'STEP_BY_STEP' ? <ChevronRight size={14} /> : <Play size={14} fill="currentColor" />
-                                    )}
-                                    {seq.executionMode === 'STEP_BY_STEP' ? 'Open Steps' : 'Run'}
-                                </button>
-                            </div>
+                                );
+                            })}
                         </div>
-                    ))}
-                    {processedSequences.length === 0 && (
-                        <div className="col-span-full py-16 flex flex-col items-center justify-center bg-card/30 border border-dashed border-border/50 rounded-2xl">
-                            <Activity size={48} className="text-text-muted opacity-20 mb-4" />
-                            <h3 className="text-sm font-bold text-text-secondary">No sequences found</h3>
-                            <p className="text-xs text-text-muted mt-1 text-center max-w-sm">
-                                {sequenceSearch ? `No results for "${sequenceSearch}"` : 'Create your first VyOS automation sequence by clicking New Sequence.'}
-                            </p>
-                        </div>
-                    )}
+
+                        {processedSequences.length === 0 && (
+                            <div className="py-16 flex flex-col items-center justify-center text-text-muted">
+                                <Activity size={40} className="opacity-20 mb-3" />
+                                <p className="text-xs font-bold text-text-secondary">No sequences found</p>
+                                <p className="text-[11px] text-text-muted mt-1">
+                                    {sequenceSearch ? `No results for "${sequenceSearch}"` : 'Create your first VyOS automation sequence.'}
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
             )}
+
 
             {view === 'history' && (
                 <div className="space-y-4">
@@ -2032,212 +2016,149 @@ export default function Vyos(props: VyosProps) {
                                     </button>
                                 </div>
 
-                                <div className="space-y-4">
-                                    {editingSeq.actions.map((action, idx) => (
-                                        <div key={idx} className="bg-card-secondary/50 border border-border rounded-2xl p-4 space-y-4 group relative animate-in slide-in-from-left-6 duration-300 shadow-sm">
-                                            <div className="absolute top-0 left-0 w-1.5 h-full bg-purple-500/20 group-hover:bg-purple-500/40 transition-all rounded-l-2xl" />
+                                <div className="space-y-0 border border-border rounded-xl overflow-hidden">
+                                    {/* Column headers */}
+                                    <div className="grid gap-2 px-3 py-2 bg-card-secondary/60 border-b border-border text-[8px] font-black text-text-muted uppercase tracking-widest"
+                                        style={{ gridTemplateColumns: '52px 150px 1fr 1fr 1fr 36px' }}>
+                                        <div>T+min</div>
+                                        <div>Command</div>
+                                        <div>Router</div>
+                                        <div>Interface</div>
+                                        <div>Params</div>
+                                        <div />
+                                    </div>
 
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="flex flex-col items-center justify-center p-3 bg-card rounded-xl border border-border shadow-sm min-w-[56px]">
-                                                        <span className="text-[8px] text-text-muted font-semibold tracking-tight mb-0.5">T+ min</span>
-                                                        <input
-                                                            type="number"
-                                                            value={action.offset_minutes}
-                                                            onChange={(e) => {
-                                                                const newActions = [...editingSeq.actions];
-                                                                newActions[idx].offset_minutes = Math.min(editingSeq.cycle_duration, Math.max(0, parseInt(e.target.value) || 0));
-                                                                setEditingSeq({ ...editingSeq, actions: newActions });
-                                                            }}
-                                                            className="bg-transparent border-none text-purple-400 font-black text-center w-10 p-0 text-sm focus:ring-0 shadow-none outline-none"
-                                                        />
-                                                    </div>
-                                                    <ActionSelector
-                                                        value={action.command}
-                                                        onChange={(val) => {
-                                                            const newActions = [...editingSeq.actions];
-                                                            newActions[idx].command = val;
-                                                            
-                                                            // Clean up incompatible parameters
-                                                            if (val !== 'set-qos') {
-                                                                delete newActions[idx].parameters.latency;
-                                                                delete newActions[idx].parameters.loss;
-                                                                delete newActions[idx].parameters.rate;
-                                                            }
-                                                            if (val !== 'deny-traffic' && val !== 'allow-traffic') {
-                                                                delete newActions[idx].parameters.ip;
-                                                            }
-                                                            
-                                                            setEditingSeq({ ...editingSeq, actions: newActions });
-                                                        }}
-                                                    />
-                                                </div>
-                                                <button
-                                                    onClick={() => {
-                                                        const newActions = editingSeq.actions.filter((_, i) => i !== idx);
+                                    {editingSeq.actions.map((action, idx) => {
+                                        const needsIface = !['deny-traffic', 'allow-traffic', 'clear-all-blocks', 'show-denied'].includes(action.command);
+                                        const needsIp = ['deny-traffic', 'allow-traffic'].includes(action.command);
+                                        const isQos = action.command === 'set-qos';
+                                        const accentClass = ['interface-down', 'deny-traffic'].includes(action.command) ? 'border-l-red-500/60'
+                                            : ['interface-up', 'allow-traffic'].includes(action.command) ? 'border-l-green-500/60'
+                                                : ['set-qos', 'clear-qos'].includes(action.command) ? 'border-l-indigo-500/60'
+                                                    : 'border-l-border/50';
+                                        return (
+                                            <div key={idx} className={cn(
+                                                'grid gap-2 px-3 py-2 items-center border-l-2 transition-colors hover:bg-card-secondary/20 animate-in slide-in-from-left-4 duration-200',
+                                                accentClass,
+                                                idx > 0 && 'border-t border-border/40'
+                                            )} style={{ gridTemplateColumns: '52px 150px 1fr 1fr 1fr 36px' }}>
+
+                                                {/* T+min */}
+                                                <input
+                                                    type="number"
+                                                    value={action.offset_minutes}
+                                                    onChange={(e) => {
+                                                        const newActions = [...editingSeq.actions];
+                                                        newActions[idx].offset_minutes = Math.min(editingSeq.cycle_duration, Math.max(0, parseInt(e.target.value) || 0));
                                                         setEditingSeq({ ...editingSeq, actions: newActions });
                                                     }}
-                                                    className="p-2.5 text-text-muted hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all border border-transparent hover:border-red-500/20"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </div>
+                                                    className="w-full bg-card border border-border rounded-lg px-2 py-1.5 text-purple-400 font-black text-center text-sm focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                                                />
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                <div className="space-y-1.5">
-                                                    <label className="text-[9px] font-semibold text-text-muted tracking-widest pl-1 flex items-center gap-1.5"><Server size={9} /> Router</label>
+                                                {/* Command */}
+                                                <ActionSelector
+                                                    value={action.command}
+                                                    onChange={(val) => {
+                                                        const newActions = [...editingSeq.actions];
+                                                        newActions[idx].command = val;
+                                                        if (val !== 'set-qos') {
+                                                            delete newActions[idx].parameters?.latency;
+                                                            delete newActions[idx].parameters?.loss;
+                                                            delete newActions[idx].parameters?.rate;
+                                                        }
+                                                        if (val !== 'deny-traffic' && val !== 'allow-traffic') {
+                                                            delete newActions[idx].parameters?.ip;
+                                                        }
+                                                        setEditingSeq({ ...editingSeq, actions: newActions });
+                                                    }}
+                                                />
+
+                                                {/* Router */}
+                                                <select
+                                                    value={action.router_id}
+                                                    onChange={(e) => {
+                                                        const newActions = [...editingSeq.actions];
+                                                        newActions[idx].router_id = e.target.value;
+                                                        const r = routers.find(router => router.id === e.target.value);
+                                                        if (r && r.interfaces.length > 0) newActions[idx].interface = r.interfaces[0].name;
+                                                        setEditingSeq({ ...editingSeq, actions: newActions });
+                                                    }}
+                                                    className="w-full bg-card border border-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-purple-500/50 appearance-none cursor-pointer"
+                                                >
+                                                    {routers.map(r => <option key={r.id} value={r.id}>{r.name} ({r.host})</option>)}
+                                                </select>
+
+                                                {/* Interface or — */}
+                                                {needsIface ? (
                                                     <select
-                                                        value={action.router_id}
+                                                        value={action.interface}
                                                         onChange={(e) => {
                                                             const newActions = [...editingSeq.actions];
-                                                            newActions[idx].router_id = e.target.value;
-                                                            const r = routers.find(router => router.id === e.target.value);
-                                                            if (r && r.interfaces.length > 0) {
-                                                                newActions[idx].interface = r.interfaces[0].name;
-                                                            }
+                                                            newActions[idx].interface = e.target.value;
                                                             setEditingSeq({ ...editingSeq, actions: newActions });
                                                         }}
-                                                        className="w-full bg-card border border-border rounded-xl px-4 py-3 text-[12px] text-text-primary focus:outline-none focus:ring-1 focus:ring-purple-500/50 font-medium appearance-none cursor-pointer transition-all"
+                                                        className="w-full bg-card border border-border rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-purple-500/50 appearance-none cursor-pointer"
                                                     >
-                                                        {routers.map(r => <option key={r.id} value={r.id}>{r.name} ({r.host})</option>)}
+                                                        {(routers.find(r => r.id === action.router_id)?.interfaces || []).map(iface => (
+                                                            <option key={iface.name} value={iface.name}>{iface.name}{iface.description ? ` — ${iface.description}` : ''}</option>
+                                                        ))}
                                                     </select>
-                                                </div>
+                                                ) : (
+                                                    <div className="flex items-center justify-center text-text-muted/30 text-xs select-none">—</div>
+                                                )}
 
-                                                {/* Interface — hidden for block/unblock/clear actions */}
-                                                {!['deny-traffic', 'allow-traffic', 'clear-all-blocks'].includes(action.command) && (
-                                                    <div className="space-y-1.5">
-                                                        <label className="text-[9px] font-semibold text-text-muted tracking-widest pl-1 flex items-center gap-1.5"><Wifi size={9} /> Interface</label>
-                                                        <select
-                                                            value={action.interface}
-                                                            onChange={(e) => {
-                                                                const newActions = [...editingSeq.actions];
-                                                                newActions[idx].interface = e.target.value;
-                                                                setEditingSeq({ ...editingSeq, actions: newActions });
-                                                            }}
-                                                            className="w-full bg-card border border-border rounded-xl px-4 py-3 text-[12px] text-text-primary focus:outline-none focus:ring-1 focus:ring-purple-500/50 font-medium appearance-none cursor-pointer transition-all"
-                                                        >
-                                                            {(routers.find(r => r.id === action.router_id)?.interfaces || []).map(iface => (
-                                                                <option key={iface.name} value={iface.name} title={iface.description || undefined}>{iface.name}{iface.description ? ` — ${iface.description}` : ''}</option>
-                                                            ))}
-                                                        </select>
+                                                {/* Params column */}
+                                                {isQos ? (
+                                                    <div className="flex items-center gap-1">
+                                                        <input type="number" placeholder="ms" title="Latency (ms)"
+                                                            value={action.parameters?.latency || ''}
+                                                            onChange={(e) => { const a = [...editingSeq.actions]; a[idx].parameters = { ...a[idx].parameters, latency: parseInt(e.target.value) || 0 }; setEditingSeq({ ...editingSeq, actions: a }); }}
+                                                            className="w-14 bg-card border border-indigo-500/30 rounded px-1.5 py-1 text-[11px] text-indigo-400 text-center focus:outline-none focus:ring-1 focus:ring-indigo-500/50" />
+                                                        <input type="number" placeholder="%" title="Loss (%)"
+                                                            value={action.parameters?.loss || ''}
+                                                            onChange={(e) => { const a = [...editingSeq.actions]; a[idx].parameters = { ...a[idx].parameters, loss: parseInt(e.target.value) || 0 }; setEditingSeq({ ...editingSeq, actions: a }); }}
+                                                            className="w-10 bg-card border border-orange-500/30 rounded px-1.5 py-1 text-[11px] text-orange-400 text-center focus:outline-none focus:ring-1 focus:ring-orange-500/50" />
+                                                        <input type="text" placeholder="rate" title="Rate (e.g. 10mbit)"
+                                                            value={action.parameters?.rate || ''}
+                                                            onChange={(e) => { const a = [...editingSeq.actions]; a[idx].parameters = { ...a[idx].parameters, rate: e.target.value }; setEditingSeq({ ...editingSeq, actions: a }); }}
+                                                            className="w-16 bg-card border border-purple-500/30 rounded px-1.5 py-1 text-[11px] text-purple-400 text-center focus:outline-none focus:ring-1 focus:ring-purple-500/50" />
                                                     </div>
-                                                )}
-
-                                                {action.command === 'set-qos' && (
-                                                    <>
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[9px] font-semibold text-text-muted tracking-widest pl-1 flex items-center gap-1.5"><Activity size={9} /> Latency (ms)</label>
-                                                            <input
-                                                                type="number"
-                                                                value={action.parameters?.latency || 0}
-                                                                onChange={(e) => {
-                                                                    const newActions = [...editingSeq.actions];
-                                                                    newActions[idx].parameters = { ...newActions[idx].parameters, latency: parseInt(e.target.value) };
-                                                                    setEditingSeq({ ...editingSeq, actions: newActions });
-                                                                }}
-                                                                className="w-full bg-card border border-border rounded-xl px-4 py-3 text-[12px] text-text-primary focus:outline-none focus:ring-1 focus:ring-purple-500/50 font-medium shadow-inner transition-all"
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[9px] font-semibold text-text-muted tracking-widest pl-1 flex items-center gap-1.5"><Activity size={9} /> Packet loss (%)</label>
-                                                            <input
-                                                                type="number"
-                                                                value={action.parameters?.loss || 0}
-                                                                onChange={(e) => {
-                                                                    const newActions = [...editingSeq.actions];
-                                                                    newActions[idx].parameters = { ...newActions[idx].parameters, loss: parseInt(e.target.value) };
-                                                                    setEditingSeq({ ...editingSeq, actions: newActions });
-                                                                }}
-                                                                className="w-full bg-card border border-border rounded-xl px-4 py-3 text-[12px] text-text-primary focus:outline-none focus:ring-1 focus:ring-purple-500/50 font-medium shadow-inner transition-all"
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-1.5">
-                                                            <label className="text-[9px] font-semibold text-text-muted tracking-widest pl-1 flex items-center gap-1.5"><Activity size={9} /> Rate limit (e.g. 10mbit)</label>
-                                                            <input
-                                                                type="text"
-                                                                value={action.parameters?.rate || ''}
-                                                                onChange={(e) => {
-                                                                    const newActions = [...editingSeq.actions];
-                                                                    newActions[idx].parameters = { ...newActions[idx].parameters, rate: e.target.value };
-                                                                    setEditingSeq({ ...editingSeq, actions: newActions });
-                                                                }}
-                                                                className="w-full bg-card border border-border rounded-xl px-4 py-3 text-[12px] text-text-primary focus:outline-none focus:ring-1 focus:ring-purple-500/50 font-medium shadow-inner transition-all"
-                                                            />
-                                                        </div>
-                                                    </>
-                                                )}
-
-                                                {/* Deny Traffic From IP/Subnet (Updated: No interface needed) */}
-                                                {action.command === 'deny-traffic' && (
-                                                    <div className="space-y-3">
-                                                        <div>
-                                                            <label className="text-[9px] font-black text-text-muted uppercase tracking-widest pl-1 flex items-center gap-1.5">
-                                                                IP Address or Subnet (CIDR) <span className="text-red-500">*</span>
-                                                            </label>
-                                                            <input
-                                                                type="text"
-                                                                placeholder="e.g., 8.8.8.8/32 or 10.0.0.0/24"
-                                                                value={action.parameters?.ip || ''}
-                                                                onChange={(e) => {
-                                                                    const newActions = [...editingSeq.actions];
-                                                                    newActions[idx].parameters = { ...newActions[idx].parameters, ip: e.target.value };
-                                                                    setEditingSeq({ ...editingSeq, actions: newActions });
-                                                                }}
-                                                                className="w-full bg-card border border-border rounded-xl px-4 py-3 text-[11px] text-text-primary focus:outline-none focus:ring-1 focus:ring-purple-500/50 font-black shadow-inner transition-all"
-                                                            />
-                                                            <p className="text-[8px] text-text-muted mt-1 uppercase font-bold">
-                                                                Uses global blackhole route (no interface needed)
-                                                            </p>
-                                                        </div>
+                                                ) : needsIp ? (
+                                                    <div className="flex items-center gap-1">
+                                                        <input type="text" placeholder="e.g. 8.8.8.8/32"
+                                                            value={action.parameters?.ip || ''}
+                                                            onChange={(e) => { const a = [...editingSeq.actions]; a[idx].parameters = { ...a[idx].parameters, ip: e.target.value }; setEditingSeq({ ...editingSeq, actions: a }); }}
+                                                            className="w-full bg-card border border-red-500/30 rounded px-2 py-1.5 text-[11px] text-text-primary font-mono focus:outline-none focus:ring-1 focus:ring-red-500/40" />
+                                                        <span className="text-red-500 text-xs shrink-0">*</span>
                                                     </div>
+                                                ) : (
+                                                    <div className="flex items-center justify-center text-text-muted/30 text-xs select-none">—</div>
                                                 )}
 
-                                                {/* NEW: Allow Traffic From IP/Subnet */}
-                                                {action.command === 'allow-traffic' && (
-                                                    <div className="space-y-3">
-                                                        <div>
-                                                            <label className="text-[9px] font-black text-text-muted uppercase tracking-widest pl-1 flex items-center gap-1.5">
-                                                                IP Address or Subnet to Allow <span className="text-red-500">*</span>
-                                                            </label>
-                                                            <input
-                                                                type="text"
-                                                                placeholder="e.g., 8.8.8.8/32"
-                                                                value={action.parameters?.ip || ''}
-                                                                onChange={(e) => {
-                                                                    const newActions = [...editingSeq.actions];
-                                                                    newActions[idx].parameters = { ...newActions[idx].parameters, ip: e.target.value };
-                                                                    setEditingSeq({ ...editingSeq, actions: newActions });
-                                                                }}
-                                                                className="w-full bg-card border border-border rounded-xl px-4 py-3 text-[11px] text-text-primary focus:outline-none focus:ring-1 focus:ring-purple-500/50 font-black shadow-inner transition-all"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* NEW: Show Denied Traffic */}
-                                                {action.command === 'show-denied' && (
-                                                    <div className="p-4 bg-blue-900/10 border border-blue-600/20 rounded-xl">
-                                                        <p className="text-[10px] text-blue-400 font-bold uppercase leading-relaxed">
-                                                            ℹ️ Lists all denied traffic rules on selected interface. No parameters required.
-                                                        </p>
-                                                    </div>
-                                                )}
+                                                {/* Delete */}
+                                                <button
+                                                    onClick={() => setEditingSeq({ ...editingSeq, actions: editingSeq.actions.filter((_, i) => i !== idx) })}
+                                                    className="p-1.5 text-text-muted hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
+
                                     {editingSeq.actions.length === 0 && (
-                                        <div className="py-20 text-center bg-card-secondary/30 border border-dashed border-border rounded-[2.5rem] flex flex-col items-center gap-4 shadow-inner">
-                                            <div className="p-4 bg-card rounded-full border border-border/50">
-                                                <Cpu size={40} className="text-text-muted/20" />
-                                            </div>
-                                            <span className="text-[11px] font-black text-text-muted uppercase tracking-[0.4em]">Engine Logic Empty</span>
+                                        <div className="py-12 text-center flex flex-col items-center gap-3">
+                                            <Cpu size={32} className="text-text-muted/20" />
+                                            <span className="text-[11px] font-black text-text-muted uppercase tracking-[0.3em]">No actions — click Add action</span>
                                         </div>
                                     )}
                                 </div>
+
                             </div>
                         </div>
 
                         <div className="p-6 border-t border-border bg-card/80 backdrop-blur-md rounded-b-3xl flex gap-3 sticky bottom-0 z-10">
+
                             <button
                                 onClick={() => setShowSeqModal(false)}
                                 className="flex-1 px-6 py-3 rounded-2xl bg-card-secondary hover:bg-card-hover text-text-muted font-semibold transition-all text-sm border border-border/50"

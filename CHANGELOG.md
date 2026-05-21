@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.17] - 2026-05-21
+### Refactored
+- **VyOS Sequences** (`Vyos.tsx`): Replaced 3-column card grid with a compact table layout (one row per sequence). Clicking a row expands an inline accordion showing all actions (T+min, command, router, interface, params) with left-border color coding by command type. Controls (Run/Edit/Clone/Delete) use `stopPropagation` so they operate independently of the accordion toggle.
+- **VyOS Sequence Edit Modal** (`Vyos.tsx`): Replaced stacked vertical action cards with a horizontal grid table (one action per row). Columns: T+min · Command · Router · Interface · Params · Delete. The Interface column is hidden (shows —) for commands that don't need it (deny-traffic, allow-traffic, clear-all-blocks, show-denied). QoS params (latency/loss/rate) display as three inline mini-inputs.
+
 ## [v1.4.0-patch.16] - 2026-05-21
+
 ### Added
 - **IoT Dashboard** (`Iot.tsx`): Enabled the pencil/edit action on IoT device items in list (compact) mode, matching the edit capability of grid cards.
 ### Changed
