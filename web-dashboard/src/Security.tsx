@@ -208,6 +208,12 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
     const [isGlobalSearchFocused, setIsGlobalSearchFocused] = useState(false);
     const searchRef = React.useRef<HTMLDivElement>(null);
 
+    // Local widget search states
+    const [urlSearchQuery, setUrlSearchQuery] = useState('');
+    const [dnsSearchQuery, setDnsSearchQuery] = useState('');
+    const [c2SearchQuery, setC2SearchQuery] = useState('');
+    const [aiSearchQuery, setAiSearchQuery] = useState('');
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -736,21 +742,43 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
 
     const toggleAllURLCategories = () => {
         if (!config) return;
-        const allIds = securityProfile.url_filtering.items.map(cat => cat.id);
-        const allEnabled = config.url_filtering.enabled_categories.length === allIds.length;
+        const visibleCats = securityProfile.url_filtering.items.filter(cat =>
+            cat.name.toLowerCase().includes(urlSearchQuery.toLowerCase()) ||
+            cat.url.toLowerCase().includes(urlSearchQuery.toLowerCase())
+        );
+        const visibleIds = visibleCats.map(cat => cat.id);
+        const allVisibleEnabled = visibleIds.every(id => config.url_filtering.enabled_categories.includes(id));
+
+        let newEnabled: string[];
+        if (allVisibleEnabled) {
+            newEnabled = config.url_filtering.enabled_categories.filter(id => !visibleIds.includes(id));
+        } else {
+            newEnabled = Array.from(new Set([...config.url_filtering.enabled_categories, ...visibleIds]));
+        }
 
         saveConfig({
-            url_filtering: { ...config.url_filtering, enabled_categories: allEnabled ? [] : allIds }
+            url_filtering: { ...config.url_filtering, enabled_categories: newEnabled }
         });
     };
 
     const toggleAllDNSTests = () => {
         if (!config) return;
-        const allIds = securityProfile.dns_security.items.map(test => test.id);
-        const allEnabled = config.dns_security.enabled_tests.length === allIds.length;
+        const visibleTests = securityProfile.dns_security.items.filter(test =>
+            test.name.toLowerCase().includes(dnsSearchQuery.toLowerCase()) ||
+            test.domain.toLowerCase().includes(dnsSearchQuery.toLowerCase())
+        );
+        const visibleIds = visibleTests.map(test => test.id);
+        const allVisibleEnabled = visibleIds.every(id => config.dns_security.enabled_tests.includes(id));
+
+        let newEnabled: string[];
+        if (allVisibleEnabled) {
+            newEnabled = config.dns_security.enabled_tests.filter(id => !visibleIds.includes(id));
+        } else {
+            newEnabled = Array.from(new Set([...config.dns_security.enabled_tests, ...visibleIds]));
+        }
 
         saveConfig({
-            dns_security: { ...config.dns_security, enabled_tests: allEnabled ? [] : allIds }
+            dns_security: { ...config.dns_security, enabled_tests: newEnabled }
         });
     };
     // Helper to notify of status changes during manual testing
@@ -927,10 +955,17 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
     };
 
     const toggleAllC2Scenarios = () => {
-        if (c2SelectedScenarios.length === securityProfile.c2_scenarios.length) {
-            setC2SelectedScenarios([]);
+        const visibleScenarios = securityProfile.c2_scenarios.filter(scenario =>
+            scenario.name.toLowerCase().includes(c2SearchQuery.toLowerCase()) ||
+            scenario.target.toLowerCase().includes(c2SearchQuery.toLowerCase())
+        );
+        const visibleIds = visibleScenarios.map(s => s.id);
+        const allVisibleSelected = visibleIds.every(id => c2SelectedScenarios.includes(id));
+
+        if (allVisibleSelected) {
+            setC2SelectedScenarios(c2SelectedScenarios.filter(id => !visibleIds.includes(id)));
         } else {
-            setC2SelectedScenarios(securityProfile.c2_scenarios.map(s => s.id));
+            setC2SelectedScenarios(Array.from(new Set([...c2SelectedScenarios, ...visibleIds])));
         }
     };
 
@@ -989,10 +1024,17 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
     };
 
     const toggleAllAIScenarios = () => {
-        if (aiSelectedScenarios.length === securityProfile.ai_security_scenarios.length) {
-            setAISelectedScenarios([]);
+        const visibleScenarios = securityProfile.ai_security_scenarios.filter(scenario =>
+            scenario.name.toLowerCase().includes(aiSearchQuery.toLowerCase()) ||
+            scenario.description.toLowerCase().includes(aiSearchQuery.toLowerCase())
+        );
+        const visibleIds = visibleScenarios.map(s => s.id);
+        const allVisibleSelected = visibleIds.every(id => aiSelectedScenarios.includes(id));
+
+        if (allVisibleSelected) {
+            setAISelectedScenarios(aiSelectedScenarios.filter(id => !visibleIds.includes(id)));
         } else {
-            setAISelectedScenarios(securityProfile.ai_security_scenarios.map(s => s.id));
+            setAISelectedScenarios(Array.from(new Set([...aiSelectedScenarios, ...visibleIds])));
         }
     };
 
@@ -1563,8 +1605,7 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                     </div>
                 </div>
             )}
-
-            {/* URL Filtering Tests */}
+            {/* URL Filtering */}
             <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                 <button
                     onClick={() => setUrlExpanded(!urlExpanded)}
@@ -1574,124 +1615,168 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                         <div className="p-2 bg-red-600/10 rounded-lg text-red-600 dark:text-red-400 border border-red-500/20">
                             <Link size={18} />
                         </div>
-                        <div>
+                        <div className="text-left">
                             <h3 className="text-sm font-black text-text-primary tracking-tight">URL Filtering</h3>
                             <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest opacity-70">
                                 {config.url_filtering.enabled_categories.length} / {securityProfile.url_filtering.items.length} Categories Active
                             </p>
                         </div>
                     </div>
-                    {urlExpanded ? <ChevronUp size={20} className="text-text-muted" /> : <ChevronDown size={20} className="text-text-muted" />}
+                    <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="relative">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" size={12} />
+                            <input
+                                type="text"
+                                placeholder="Search URL cats..."
+                                value={urlSearchQuery}
+                                onChange={(e) => {
+                                    setUrlSearchQuery(e.target.value);
+                                    if (!urlExpanded) setUrlExpanded(true);
+                                }}
+                                onFocus={() => {
+                                    if (!urlExpanded) setUrlExpanded(true);
+                                }}
+                                className="bg-card/50 border border-border/80 focus:border-red-500 focus:ring-1 focus:ring-red-500/20 text-text-primary text-xs rounded-lg pl-7 pr-7 py-1 outline-none transition-all w-32 focus:w-44"
+                            />
+                            {urlSearchQuery && (
+                                <button
+                                    onClick={() => setUrlSearchQuery('')}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
+                                >
+                                    <XCircle size={12} />
+                                </button>
+                            )}
+                        </div>
+                        <div className="cursor-pointer text-text-muted hover:text-text-primary transition-colors p-1" onClick={() => setUrlExpanded(!urlExpanded)}>
+                            {urlExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                        </div>
+                    </div>
                 </button>
 
-                {urlExpanded && (
-                    <div className="p-6 space-y-6">
-                        <div className="flex flex-wrap items-center justify-between gap-4">
-                            <div className="flex flex-wrap items-center gap-6">
-                                <label className="flex items-center gap-2 cursor-pointer group">
-                                    <div className="relative flex items-center">
-                                        <input
-                                            type="checkbox"
-                                            checked={config.url_filtering.enabled_categories.length === securityProfile.url_filtering.items.length}
-                                            onChange={toggleAllURLCategories}
-                                            className="w-4 h-4 rounded border-border bg-card-secondary text-blue-600 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
-                                        />
-                                    </div>
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-text-muted group-hover:text-text-primary transition-colors">Select All</span>
-                                </label>
+                {urlExpanded && (() => {
+                    const visibleCats = securityProfile.url_filtering.items.filter(category =>
+                        category.name.toLowerCase().includes(urlSearchQuery.toLowerCase()) ||
+                        category.url.toLowerCase().includes(urlSearchQuery.toLowerCase())
+                    );
+                    const visibleCatIds = visibleCats.map(c => c.id);
+                    const allVisibleCatsEnabled = visibleCatIds.length > 0 && visibleCatIds.every(id => config.url_filtering.enabled_categories.includes(id));
 
-                                <SchedulerSettings type="url" title="URL" config={config} onUpdate={updateSchedule} />
-                            </div>
-                            <button
-                                onClick={runURLBatchTest}
-                                disabled={loading || batchProcessingUrl || config.url_filtering.enabled_categories.length === 0 || (systemHealth && !systemHealth.ready)}
-                                className={cn(
-                                    "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2",
-                                    batchProcessingUrl || loading
-                                        ? "bg-card-secondary text-text-muted border border-border cursor-not-allowed"
-                                        : "bg-red-600 hover:bg-red-500 text-white shadow-red-900/40"
-                                )}
-                                title={systemHealth && !systemHealth.ready ? 'System not ready - missing required commands' : ''}
-                            >
-                                {batchProcessingUrl ? (
-                                    <>
-                                        <RefreshCcw size={16} className="animate-spin" />
-                                        Testing...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Play size={16} fill="currentColor" /> Run Selected Categories
-                                    </>
-                                )}
-                            </button>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-border">
-                            {securityProfile.url_filtering.items.map(category => {
-                                const isEnabled = config.url_filtering.enabled_categories.includes(category.id);
-                                const isTesting = testing[`url-${category.id}`];
-                                const lastResult = testResults.find(r =>
-                                    (r.testType === 'url_filtering' || r.testType === 'url') && r.testName === category.name
-                                );
-
-                                return (
-                                    <div
-                                        key={category.id}
-                                        id={`url-item-${category.id}`}
-                                        className={cn(
-                                            "bg-card border rounded-xl p-3 flex items-center justify-between transition-all group hover:shadow-md",
-                                            isEnabled ? "border-red-500/20 shadow-sm" : "border-border opacity-60 hover:opacity-100"
-                                        )}
-                                    >
-                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                    return (
+                        <div className="p-6 space-y-6">
+                            <div className="flex flex-wrap items-center justify-between gap-4">
+                                <div className="flex flex-wrap items-center gap-6">
+                                    <label className="flex items-center gap-2 cursor-pointer group">
+                                        <div className="relative flex items-center">
                                             <input
                                                 type="checkbox"
-                                                checked={isEnabled}
-                                                onChange={() => toggleURLCategory(category.id)}
+                                                checked={allVisibleCatsEnabled}
+                                                onChange={toggleAllURLCategories}
                                                 className="w-4 h-4 rounded border-border bg-card-secondary text-red-600 focus:ring-1 focus:ring-red-500 outline-none transition-all"
                                             />
-                                            <div className="min-w-0 pr-2">
-                                                <div className={cn("text-xs font-black tracking-tight truncate", isEnabled ? "text-text-primary" : "text-text-muted")}>
-                                                    {category.name}
-                                                </div>
-                                                <div className="text-[9px] text-text-muted font-mono truncate opacity-60 group-hover:opacity-100 transition-opacity">
-                                                    {category.url.replace('http://', '')}
-                                                </div>
-                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            {lastResult && getStatusBadge(lastResult.result)}
-                                            <div className="flex gap-1.5 ml-2 p-1 bg-card-secondary/50 rounded-lg border border-border/50">
-                                                <button
-                                                    onClick={() => copyToClipboard(`curl -fsS --max-time 10 -o /dev/null -w '%{http_code}' '${category.url}'`)}
-                                                    className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-blue-600 transition-all"
-                                                    title="Copy CLI command"
-                                                >
-                                                    <Copy size={13} />
-                                                </button>
-                                                <button
-                                                    onClick={() => runURLTest(category)}
-                                                    disabled={isTesting}
-                                                    className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-red-500 transition-all disabled:opacity-50"
-                                                    title="Run test"
-                                                >
-                                                    {isTesting ? <RefreshCcw size={13} className="animate-spin" /> : <Play size={13} fill="currentColor" />}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-text-muted group-hover:text-text-primary transition-colors">Select All</span>
+                                    </label>
 
-                        {(urlDiff || scores.find((s: any) => s.type === 'url')) && (
-                            <div className="pt-2 border-t border-border mt-6">
-                                <ScoreLatestChanges type="url" scores={scores} />
-                                <ScoreGapAnalysis diff={urlDiff} title="URL Filtering" />
+                                    <SchedulerSettings type="url" title="URL" config={config} onUpdate={updateSchedule} />
+                                </div>
+                                <button
+                                    onClick={runURLBatchTest}
+                                    disabled={loading || batchProcessingUrl || config.url_filtering.enabled_categories.length === 0 || (systemHealth && !systemHealth.ready)}
+                                    className={cn(
+                                        "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2",
+                                        batchProcessingUrl || loading
+                                            ? "bg-card-secondary text-text-muted border border-border cursor-not-allowed"
+                                            : "bg-red-600 hover:bg-red-500 text-white shadow-red-900/40"
+                                    )}
+                                    title={systemHealth && !systemHealth.ready ? 'System not ready - missing required commands' : ''}
+                                >
+                                    {batchProcessingUrl ? (
+                                        <>
+                                            <RefreshCcw size={16} className="animate-spin" />
+                                            Testing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Play size={16} fill="currentColor" /> Run Selected Categories
+                                        </>
+                                    )}
+                                </button>
                             </div>
-                        )}
-                    </div>
-                )}
+
+                            {visibleCats.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-border">
+                                    {visibleCats.map(category => {
+                                        const isEnabled = config.url_filtering.enabled_categories.includes(category.id);
+                                        const isTesting = testing[`url-${category.id}`];
+                                        const lastResult = testResults.find(r =>
+                                            (r.testType === 'url_filtering' || r.testType === 'url') && r.testName === category.name
+                                        );
+
+                                        return (
+                                            <div
+                                                key={category.id}
+                                                id={`url-item-${category.id}`}
+                                                className={cn(
+                                                    "bg-card border rounded-xl p-3 flex items-center justify-between transition-all group hover:shadow-md",
+                                                    isEnabled ? "border-red-500/20 shadow-sm" : "border-border opacity-60 hover:opacity-100"
+                                                )}
+                                            >
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isEnabled}
+                                                        onChange={() => toggleURLCategory(category.id)}
+                                                        className="w-4 h-4 rounded border-border bg-card-secondary text-red-600 focus:ring-1 focus:ring-red-500 outline-none transition-all"
+                                                    />
+                                                    <div className="min-w-0 pr-2">
+                                                        <div className={cn("text-xs font-black tracking-tight truncate", isEnabled ? "text-text-primary" : "text-text-muted")}>
+                                                            {category.name}
+                                                        </div>
+                                                        <div className="text-[9px] text-text-muted font-mono truncate opacity-60 group-hover:opacity-100 transition-opacity">
+                                                            {category.url.replace('http://', '')}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    {lastResult && getStatusBadge(lastResult.result)}
+                                                    <div className="flex gap-1.5 ml-2 p-1 bg-card-secondary/50 rounded-lg border border-border/50">
+                                                        <button
+                                                            onClick={() => copyToClipboard(`curl -fsS --max-time 10 -o /dev/null -w '%{http_code}' '${category.url}'`)}
+                                                            className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-blue-600 transition-all"
+                                                            title="Copy CLI command"
+                                                        >
+                                                            <Copy size={13} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => runURLTest(category)}
+                                                            disabled={isTesting}
+                                                            className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-red-500 transition-all disabled:opacity-50"
+                                                            title="Run test"
+                                                        >
+                                                            {isTesting ? <RefreshCcw size={13} className="animate-spin" /> : <Play size={13} fill="currentColor" />}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-10 px-4 bg-card-secondary/20 rounded-xl border border-dashed border-border/60">
+                                    <ShieldAlert className="text-text-muted opacity-40 mb-2" size={24} />
+                                    <p className="text-xs font-bold text-text-muted tracking-wide text-center">No categories found matching "{urlSearchQuery}"</p>
+                                </div>
+                            )}
+
+                            {(urlDiff || scores.find((s: any) => s.type === 'url')) && (
+                                <div className="pt-2 border-t border-border mt-6">
+                                    <ScoreLatestChanges type="url" scores={scores} />
+                                    <ScoreGapAnalysis diff={urlDiff} title="URL Filtering" />
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
             </div>
 
             {/* DNS Security Tests */}
@@ -1704,190 +1789,245 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                         <div className="p-2 bg-blue-600/10 rounded-lg text-blue-600 dark:text-blue-400 border border-blue-500/20">
                             <Shield size={18} />
                         </div>
-                        <div>
+                        <div className="text-left">
                             <h3 className="text-sm font-black text-text-primary tracking-tight">DNS Security Tests</h3>
                             <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest opacity-70">
                                 {config.dns_security.enabled_tests.length} / {securityProfile.dns_security.items.length} Domains Active
                             </p>
                         </div>
                     </div>
-                    {dnsExpanded ? <ChevronUp size={20} className="text-text-muted" /> : <ChevronDown size={20} className="text-text-muted" />}
+                    <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="relative">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" size={12} />
+                            <input
+                                type="text"
+                                placeholder="Search DNS tests..."
+                                value={dnsSearchQuery}
+                                onChange={(e) => {
+                                    setDnsSearchQuery(e.target.value);
+                                    if (!dnsExpanded) setDnsExpanded(true);
+                                }}
+                                onFocus={() => {
+                                    if (!dnsExpanded) setDnsExpanded(true);
+                                }}
+                                className="bg-card/50 border border-border/80 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-text-primary text-xs rounded-lg pl-7 pr-7 py-1 outline-none transition-all w-32 focus:w-44"
+                            />
+                            {dnsSearchQuery && (
+                                <button
+                                    onClick={() => setDnsSearchQuery('')}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
+                                >
+                                    <XCircle size={12} />
+                                </button>
+                            )}
+                        </div>
+                        <div className="cursor-pointer text-text-muted hover:text-text-primary transition-colors p-1" onClick={() => setDnsExpanded(!dnsExpanded)}>
+                            {dnsExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                        </div>
+                    </div>
                 </button>
 
-                {dnsExpanded && (
-                    <div className="p-6 space-y-8">
-                        <div className="flex flex-wrap items-center justify-between gap-4">
-                            <div className="flex flex-wrap items-center gap-6">
-                                <label className="flex items-center gap-2 cursor-pointer group">
-                                    <div className="relative flex items-center">
-                                        <input
-                                            type="checkbox"
-                                            checked={config.dns_security.enabled_tests.length === securityProfile.dns_security.items.length}
-                                            onChange={toggleAllDNSTests}
-                                            className="w-4 h-4 rounded border-border bg-card-secondary text-blue-600 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
-                                        />
-                                    </div>
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-text-muted group-hover:text-text-primary transition-colors">Select All</span>
-                                </label>
+                {dnsExpanded && (() => {
+                    const visibleBasicDNS = basicDNSTests.filter(test =>
+                        test.name.toLowerCase().includes(dnsSearchQuery.toLowerCase()) ||
+                        test.domain.toLowerCase().includes(dnsSearchQuery.toLowerCase())
+                    );
+                    const visibleAdvancedDNS = advancedDNSTests.filter(test =>
+                        test.name.toLowerCase().includes(dnsSearchQuery.toLowerCase()) ||
+                        test.domain.toLowerCase().includes(dnsSearchQuery.toLowerCase())
+                    );
+                    const visibleTests = [...visibleBasicDNS, ...visibleAdvancedDNS];
+                    const visibleIds = visibleTests.map(t => t.id);
+                    const allVisibleTestsEnabled = visibleIds.length > 0 && visibleIds.every(id => config.dns_security.enabled_tests.includes(id));
 
-                                <SchedulerSettings type="dns" title="DNS" config={config} onUpdate={updateSchedule} />
+                    return (
+                        <div className="p-6 space-y-8">
+                            <div className="flex flex-wrap items-center justify-between gap-4">
+                                <div className="flex flex-wrap items-center gap-6">
+                                    <label className="flex items-center gap-2 cursor-pointer group">
+                                        <div className="relative flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={allVisibleTestsEnabled}
+                                                onChange={toggleAllDNSTests}
+                                                className="w-4 h-4 rounded border-border bg-card-secondary text-blue-600 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                                            />
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-text-muted group-hover:text-text-primary transition-colors">Select All</span>
+                                    </label>
+
+                                    <SchedulerSettings type="dns" title="DNS" config={config} onUpdate={updateSchedule} />
+                                </div>
+                                <button
+                                    onClick={runDNSBatchTest}
+                                    disabled={loading || batchProcessingDns || config.dns_security.enabled_tests.length === 0 || (systemHealth && !systemHealth.ready)}
+                                    className={cn(
+                                        "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2",
+                                        batchProcessingDns || loading
+                                            ? "bg-card-secondary text-text-muted border border-border cursor-not-allowed"
+                                            : "bg-blue-600 hover:bg-blue-500 text-white shadow-red-900/40"
+                                    )}
+                                    title={systemHealth && !systemHealth.ready ? 'System not ready - missing required commands' : ''}
+                                >
+                                    {batchProcessingDns ? (
+                                        <>
+                                            <RefreshCcw size={16} className="animate-spin" />
+                                            Testing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Play size={16} fill="currentColor" /> Run Selected Domains
+                                        </>
+                                    )}
+                                </button>
                             </div>
-                            <button
-                                onClick={runDNSBatchTest}
-                                disabled={loading || batchProcessingDns || config.dns_security.enabled_tests.length === 0 || (systemHealth && !systemHealth.ready)}
-                                className={cn(
-                                    "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2",
-                                    batchProcessingDns || loading
-                                        ? "bg-card-secondary text-text-muted border border-border cursor-not-allowed"
-                                        : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/40"
-                                )}
-                                title={systemHealth && !systemHealth.ready ? 'System not ready - missing required commands' : ''}
-                            >
-                                {batchProcessingDns ? (
-                                    <>
-                                        <RefreshCcw size={16} className="animate-spin" />
-                                        Testing...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Play size={16} fill="currentColor" /> Run Selected Domains
-                                    </>
-                                )}
-                            </button>
-                        </div>
 
-                        {/* Basic DNS Tests */}
-                        <div>
-                            <h4 className="text-[10px] font-black text-text-muted tracking-[0.2em] mb-4 border-l-2 border-blue-600 dark:border-blue-400 pl-2">Critical DNS Threats</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-border">
-                                {basicDNSTests.map(test => {
-                                    const isEnabled = config.dns_security.enabled_tests.includes(test.id);
-                                    const isTesting = testing[`dns-${test.id}`];
-                                    const lastResult = testResults.find(r =>
-                                        (r.testType === 'dns_security' || r.testType === 'dns') && r.testName === test.name
-                                    );
+                            {visibleTests.length > 0 ? (
+                                <>
+                                    {/* Basic DNS Tests */}
+                                    {visibleBasicDNS.length > 0 && (
+                                        <div>
+                                            <h4 className="text-[10px] font-black text-text-muted tracking-[0.2em] mb-4 border-l-2 border-blue-600 dark:border-blue-400 pl-2">Critical DNS Threats</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-border">
+                                                {visibleBasicDNS.map(test => {
+                                                    const isEnabled = config.dns_security.enabled_tests.includes(test.id);
+                                                    const isTesting = testing[`dns-${test.id}`];
+                                                    const lastResult = testResults.find(r =>
+                                                        (r.testType === 'dns_security' || r.testType === 'dns') && r.testName === test.name
+                                                    );
 
-                                    return (
-                                        <div
-                                            key={test.id}
-                                            id={`dns-item-${test.id}`}
-                                            className={cn(
-                                                "bg-card border rounded-xl p-3 flex items-center justify-between transition-all group hover:shadow-md",
-                                                isEnabled ? "border-blue-500/20 shadow-sm" : "border-border opacity-60 hover:opacity-100"
-                                            )}
-                                        >
-                                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isEnabled}
-                                                    onChange={() => toggleDNSTest(test.id)}
-                                                    className="w-4 h-4 rounded border-border bg-card-secondary text-blue-600 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
-                                                />
-                                                <div className="min-w-0 pr-2">
-                                                    <div className={cn("text-xs font-black tracking-tight truncate", isEnabled ? "text-text-primary" : "text-text-muted")}>
-                                                        {test.name}
-                                                    </div>
-                                                    <div className="text-[9px] text-text-muted font-mono truncate opacity-60 group-hover:opacity-100 transition-opacity">
-                                                        {test.domain}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                {lastResult && getStatusBadge(lastResult.result)}
-                                                <div className="flex gap-1.5 ml-2 p-1 bg-card-secondary/50 rounded-lg border border-border/50">
-                                                    <button
-                                                        onClick={() => copyToClipboard(`nslookup -timeout=2 ${test.domain}`)}
-                                                        className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-blue-600 transition-all"
-                                                        title="Copy CLI command"
-                                                    >
-                                                        <Copy size={13} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => runDNSTest(test)}
-                                                        disabled={isTesting}
-                                                        className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-blue-600 transition-all disabled:opacity-50"
-                                                        title="Run test"
-                                                    >
-                                                        {isTesting ? <RefreshCcw size={13} className="animate-spin" /> : <Play size={13} fill="currentColor" />}
-                                                    </button>
-                                                </div>
+                                                    return (
+                                                        <div
+                                                            key={test.id}
+                                                            id={`dns-item-${test.id}`}
+                                                            className={cn(
+                                                                "bg-card border rounded-xl p-3 flex items-center justify-between transition-all group hover:shadow-md",
+                                                                isEnabled ? "border-blue-500/20 shadow-sm" : "border-border opacity-60 hover:opacity-100"
+                                                            )}
+                                                        >
+                                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isEnabled}
+                                                                    onChange={() => toggleDNSTest(test.id)}
+                                                                    className="w-4 h-4 rounded border-border bg-card-secondary text-blue-600 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                                                                />
+                                                                <div className="min-w-0 pr-2">
+                                                                    <div className={cn("text-xs font-black tracking-tight truncate", isEnabled ? "text-text-primary" : "text-text-muted")}>
+                                                                        {test.name}
+                                                                    </div>
+                                                                    <div className="text-[9px] text-text-muted font-mono truncate opacity-60 group-hover:opacity-100 transition-opacity">
+                                                                        {test.domain}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                {lastResult && getStatusBadge(lastResult.result)}
+                                                                <div className="flex gap-1.5 ml-2 p-1 bg-card-secondary/50 rounded-lg border border-border/50">
+                                                                    <button
+                                                                        onClick={() => copyToClipboard(`nslookup -timeout=2 ${test.domain}`)}
+                                                                        className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-blue-600 transition-all"
+                                                                        title="Copy CLI command"
+                                                                    >
+                                                                        <Copy size={13} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => runDNSTest(test)}
+                                                                        disabled={isTesting}
+                                                                        className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-blue-600 transition-all disabled:opacity-50"
+                                                                        title="Run test"
+                                                                    >
+                                                                        {isTesting ? <RefreshCcw size={13} className="animate-spin" /> : <Play size={13} fill="currentColor" />}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                                    )}
 
-                        {/* Advanced DNS Tests */}
-                        <div>
-                            <h4 className="text-[10px] font-black text-text-muted tracking-[0.2em] mb-4 border-l-2 border-purple-600 dark:border-purple-400 pl-2">Advanced DNS Security</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-border">
-                                {advancedDNSTests.map(test => {
-                                    const isEnabled = config.dns_security.enabled_tests.includes(test.id);
-                                    const isTesting = testing[`dns-${test.id}`];
-                                    const lastResult = testResults.find(r =>
-                                        (r.testType === 'dns_security' || r.testType === 'dns') && r.testName === test.name
-                                    );
+                                    {/* Advanced DNS Tests */}
+                                    {visibleAdvancedDNS.length > 0 && (
+                                        <div>
+                                            <h4 className="text-[10px] font-black text-text-muted tracking-[0.2em] mb-4 border-l-2 border-purple-600 dark:border-purple-400 pl-2">Advanced DNS Security</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-border">
+                                                {visibleAdvancedDNS.map(test => {
+                                                    const isEnabled = config.dns_security.enabled_tests.includes(test.id);
+                                                    const isTesting = testing[`dns-${test.id}`];
+                                                    const lastResult = testResults.find(r =>
+                                                        (r.testType === 'dns_security' || r.testType === 'dns') && r.testName === test.name
+                                                    );
 
-                                    return (
-                                        <div
-                                            key={test.id}
-                                            id={`dns-item-${test.id}`}
-                                            className={cn(
-                                                "bg-card border rounded-xl p-3 flex items-center justify-between transition-all group hover:shadow-md",
-                                                isEnabled ? "border-purple-500/20 shadow-sm" : "border-border opacity-60 hover:opacity-100"
-                                            )}
-                                        >
-                                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isEnabled}
-                                                    onChange={() => toggleDNSTest(test.id)}
-                                                    className="w-4 h-4 rounded border-border bg-card-secondary text-purple-600 focus:ring-1 focus:ring-purple-500 outline-none transition-all"
-                                                />
-                                                <div className="min-w-0 pr-2">
-                                                    <div className={cn("text-xs font-black tracking-tight truncate", isEnabled ? "text-text-primary" : "text-text-muted")}>
-                                                        {test.name}
-                                                    </div>
-                                                    <div className="text-[9px] text-text-muted font-mono truncate opacity-60 group-hover:opacity-100 transition-opacity">
-                                                        {test.domain}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                {lastResult && getStatusBadge(lastResult.result)}
-                                                <div className="flex gap-1.5 ml-2 p-1 bg-card-secondary/50 rounded-lg border border-border/50">
-                                                    <button
-                                                        onClick={() => copyToClipboard(`nslookup -timeout=2 ${test.domain}`)}
-                                                        className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-blue-600 transition-all"
-                                                        title="Copy CLI command"
-                                                    >
-                                                        <Copy size={13} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => runDNSTest(test)}
-                                                        disabled={isTesting}
-                                                        className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-purple-600 transition-all disabled:opacity-50"
-                                                        title="Run test"
-                                                    >
-                                                        {isTesting ? <RefreshCcw size={13} className="animate-spin" /> : <Play size={13} fill="currentColor" />}
-                                                    </button>
-                                                </div>
+                                                    return (
+                                                        <div
+                                                            key={test.id}
+                                                            id={`dns-item-${test.id}`}
+                                                            className={cn(
+                                                                "bg-card border rounded-xl p-3 flex items-center justify-between transition-all group hover:shadow-md",
+                                                                isEnabled ? "border-purple-500/20 shadow-sm" : "border-border opacity-60 hover:opacity-100"
+                                                            )}
+                                                        >
+                                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isEnabled}
+                                                                    onChange={() => toggleDNSTest(test.id)}
+                                                                    className="w-4 h-4 rounded border-border bg-card-secondary text-purple-600 focus:ring-1 focus:ring-purple-500 outline-none transition-all"
+                                                                />
+                                                                <div className="min-w-0 pr-2">
+                                                                    <div className={cn("text-xs font-black tracking-tight truncate", isEnabled ? "text-text-primary" : "text-text-muted")}>
+                                                                        {test.name}
+                                                                    </div>
+                                                                    <div className="text-[9px] text-text-muted font-mono truncate opacity-60 group-hover:opacity-100 transition-opacity">
+                                                                        {test.domain}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                {lastResult && getStatusBadge(lastResult.result)}
+                                                                <div className="flex gap-1.5 ml-2 p-1 bg-card-secondary/50 rounded-lg border border-border/50">
+                                                                    <button
+                                                                        onClick={() => copyToClipboard(`nslookup -timeout=2 ${test.domain}`)}
+                                                                        className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-blue-600 transition-all"
+                                                                        title="Copy CLI command"
+                                                                    >
+                                                                        <Copy size={13} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => runDNSTest(test)}
+                                                                        disabled={isTesting}
+                                                                        className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-purple-600 transition-all disabled:opacity-50"
+                                                                        title="Run test"
+                                                                    >
+                                                                        {isTesting ? <RefreshCcw size={13} className="animate-spin" /> : <Play size={13} fill="currentColor" />}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-10 px-4 bg-card-secondary/20 rounded-xl border border-dashed border-border/60">
+                                    <ShieldAlert className="text-text-muted opacity-40 mb-2" size={24} />
+                                    <p className="text-xs font-bold text-text-muted tracking-wide text-center">No DNS tests found matching "{dnsSearchQuery}"</p>
+                                </div>
+                            )}
 
-                        {(dnsDiff || scores.find((s: any) => s.type === 'dns')) && (
-                            <div className="pt-2 border-t border-border mt-6">
-                                <ScoreLatestChanges type="dns" scores={scores} />
-                                <ScoreGapAnalysis diff={dnsDiff} title="DNS Protect" />
-                            </div>
-                        )}
-                    </div>
-                )}
+                            {(dnsDiff || scores.find((s: any) => s.type === 'dns')) && (
+                                <div className="pt-2 border-t border-border mt-6">
+                                    <ScoreLatestChanges type="dns" scores={scores} />
+                                    <ScoreGapAnalysis diff={dnsDiff} title="DNS Protect" />
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
             </div>
 
             {/* Threat Prevention Tests */}
@@ -2102,112 +2242,156 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                             </p>
                         </div>
                     </div>
-                    {c2Expanded ? <ChevronUp size={20} className="text-text-muted" /> : <ChevronDown size={20} className="text-text-muted" />}
-                </button>
-
-                {c2Expanded && (
-                    <div className="p-6 space-y-6">
-                        {/* Controls row */}
-                        <div className="flex flex-wrap items-center justify-between gap-4">
-                            <div className="flex flex-wrap items-center gap-6">
-                                <label className="flex items-center gap-2 cursor-pointer group">
-                                    <div className="relative flex items-center">
-                                        <input
-                                            type="checkbox"
-                                            checked={c2SelectedScenarios.length === securityProfile.c2_scenarios.length}
-                                            onChange={toggleAllC2Scenarios}
-                                            className="w-4 h-4 rounded border-border bg-card-secondary text-purple-600 focus:ring-1 focus:ring-purple-500 outline-none transition-all"
-                                        />
-                                    </div>
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-text-muted group-hover:text-text-primary transition-colors">Select All</span>
-                                </label>
-
-                                {/* C2 Scheduler — same pattern as DNS/URL */}
-                                <SchedulerSettings type="c2" title="C2" config={config} onUpdate={updateSchedule} />
-                            </div>
-                            <button
-                                onClick={runC2BatchTest}
-                                disabled={batchProcessingC2 || c2SelectedScenarios.length === 0}
-                                className={cn(
-                                    "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2",
-                                    batchProcessingC2
-                                        ? "bg-card-secondary text-text-muted border border-border cursor-not-allowed"
-                                        : "bg-purple-600 hover:bg-purple-500 text-white shadow-purple-900/40"
-                                )}
-                            >
-                                {batchProcessingC2 ? (
-                                    <><RefreshCcw size={16} className="animate-spin" /> Testing...</>
-                                ) : (
-                                    <><Play size={16} fill="currentColor" /> Run Selected Scenarios</>
-                                )}
-                            </button>
+                    <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="relative">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" size={12} />
+                            <input
+                                type="text"
+                                placeholder="Search C2..."
+                                value={c2SearchQuery}
+                                onChange={(e) => {
+                                    setC2SearchQuery(e.target.value);
+                                    if (!c2Expanded) setC2Expanded(true);
+                                }}
+                                onFocus={() => {
+                                    if (!c2Expanded) setC2Expanded(true);
+                                }}
+                                className="bg-card/50 border border-border/80 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 text-text-primary text-xs rounded-lg pl-7 pr-7 py-1 outline-none transition-all w-32 focus:w-44"
+                            />
+                            {c2SearchQuery && (
+                                <button
+                                    onClick={() => setC2SearchQuery('')}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
+                                >
+                                    <XCircle size={12} />
+                                </button>
+                            )}
                         </div>
-
-                        {/* Section separator */}
-                        <div>
-                            <h4 className="text-[10px] font-black text-text-muted tracking-[0.2em] mb-4 border-l-2 border-purple-600 dark:border-purple-400 pl-2">Attack Simulation Scenarios</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {securityProfile.c2_scenarios.map(scenario => {
-                                    const isEnabled = c2SelectedScenarios.includes(scenario.id);
-                                    const isTesting = testing[`c2-${scenario.id}`];
-                                    const lastResult = testResults.find(r =>
-                                        r.testType === 'c2_scenario' && r.testName === scenario.name
-                                    );
-
-                                    return (
-                                        <div
-                                            key={scenario.id}
-                                            id={`c2-item-${scenario.id}`}
-                                            className={cn(
-                                                "bg-card border rounded-xl p-3 flex items-center justify-between transition-all group hover:shadow-md",
-                                                isEnabled ? "border-purple-500/20 shadow-sm" : "border-border opacity-60 hover:opacity-100"
-                                            )}
-                                        >
-                                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isEnabled}
-                                                    onChange={() => setC2SelectedScenarios(prev =>
-                                                        prev.includes(scenario.id) ? prev.filter(id => id !== scenario.id) : [...prev, scenario.id]
-                                                    )}
-                                                    className="w-4 h-4 rounded border-border bg-card-secondary text-purple-600 focus:ring-1 focus:ring-purple-500 outline-none transition-all"
-                                                />
-                                                <div className="min-w-0 pr-2">
-                                                    <div className={cn("text-xs font-black tracking-tight truncate", isEnabled ? "text-text-primary" : "text-text-muted")}>
-                                                        {scenario.name}
-                                                    </div>
-                                                    <div className="text-[9px] text-text-muted font-mono truncate opacity-60 group-hover:opacity-100 transition-opacity">
-                                                        {scenario.target}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                {lastResult && getStatusBadge(lastResult.result)}
-                                                <div className="flex gap-1.5 ml-2 p-1 bg-card-secondary/50 rounded-lg border border-border/50">
-                                                    <button
-                                                        onClick={() => copyToClipboard(scenario.cliHint)}
-                                                        className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-purple-600 transition-all"
-                                                        title="Copy CLI command"
-                                                    >
-                                                        <Copy size={13} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => runC2Test(scenario)}
-                                                        disabled={isTesting}
-                                                        className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-purple-600 transition-all disabled:opacity-50"
-                                                        title="Run this scenario"
-                                                    >
-                                                        {isTesting ? <RefreshCcw size={13} className="animate-spin" /> : <Play size={13} fill="currentColor" />}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                        <div className="cursor-pointer text-text-muted hover:text-text-primary transition-colors p-1" onClick={() => setC2Expanded(!c2Expanded)}>
+                            {c2Expanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                         </div>
                     </div>
-                )}
+                </button>
+
+                {c2Expanded && (() => {
+                    const visibleScenarios = securityProfile.c2_scenarios.filter(scenario =>
+                        scenario.name.toLowerCase().includes(c2SearchQuery.toLowerCase()) ||
+                        scenario.target.toLowerCase().includes(c2SearchQuery.toLowerCase())
+                    );
+                    const visibleIds = visibleScenarios.map(s => s.id);
+                    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => c2SelectedScenarios.includes(id));
+
+                    return (
+                        <div className="p-6 space-y-6">
+                            {/* Controls row */}
+                            <div className="flex flex-wrap items-center justify-between gap-4">
+                                <div className="flex flex-wrap items-center gap-6">
+                                    <label className="flex items-center gap-2 cursor-pointer group">
+                                        <div className="relative flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={allVisibleSelected}
+                                                onChange={toggleAllC2Scenarios}
+                                                className="w-4 h-4 rounded border-border bg-card-secondary text-purple-600 focus:ring-1 focus:ring-purple-500 outline-none transition-all"
+                                            />
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-text-muted group-hover:text-text-primary transition-colors">Select All</span>
+                                    </label>
+
+                                    {/* C2 Scheduler — same pattern as DNS/URL */}
+                                    <SchedulerSettings type="c2" title="C2" config={config} onUpdate={updateSchedule} />
+                                </div>
+                                <button
+                                    onClick={runC2BatchTest}
+                                    disabled={batchProcessingC2 || c2SelectedScenarios.length === 0}
+                                    className={cn(
+                                        "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2",
+                                        batchProcessingC2
+                                            ? "bg-card-secondary text-text-muted border border-border cursor-not-allowed"
+                                            : "bg-purple-600 hover:bg-purple-500 text-white shadow-purple-900/40"
+                                    )}
+                                >
+                                    {batchProcessingC2 ? (
+                                        <><RefreshCcw size={16} className="animate-spin" /> Testing...</>
+                                    ) : (
+                                        <><Play size={16} fill="currentColor" /> Run Selected Scenarios</>
+                                    )}
+                                </button>
+                            </div>
+
+                            {/* Section separator */}
+                            <div>
+                                <h4 className="text-[10px] font-black text-text-muted tracking-[0.2em] mb-4 border-l-2 border-purple-600 dark:border-purple-400 pl-2">Attack Simulation Scenarios</h4>
+                                {visibleScenarios.length > 0 ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {visibleScenarios.map(scenario => {
+                                            const isEnabled = c2SelectedScenarios.includes(scenario.id);
+                                            const isTesting = testing[`c2-${scenario.id}`];
+                                            const lastResult = testResults.find(r =>
+                                                r.testType === 'c2_scenario' && r.testName === scenario.name
+                                            );
+
+                                            return (
+                                                <div
+                                                    key={scenario.id}
+                                                    id={`c2-item-${scenario.id}`}
+                                                    className={cn(
+                                                        "bg-card border rounded-xl p-3 flex items-center justify-between transition-all group hover:shadow-md",
+                                                        isEnabled ? "border-purple-500/20 shadow-sm" : "border-border opacity-60 hover:opacity-100"
+                                                    )}
+                                                >
+                                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isEnabled}
+                                                            onChange={() => setC2SelectedScenarios(prev =>
+                                                                prev.includes(scenario.id) ? prev.filter(id => id !== scenario.id) : [...prev, scenario.id]
+                                                            )}
+                                                            className="w-4 h-4 rounded border-border bg-card-secondary text-purple-600 focus:ring-1 focus:ring-purple-500 outline-none transition-all"
+                                                        />
+                                                        <div className="min-w-0 pr-2">
+                                                            <div className={cn("text-xs font-black tracking-tight truncate", isEnabled ? "text-text-primary" : "text-text-muted")}>
+                                                                {scenario.name}
+                                                            </div>
+                                                            <div className="text-[9px] text-text-muted font-mono truncate opacity-60 group-hover:opacity-100 transition-opacity">
+                                                                {scenario.target}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        {lastResult && getStatusBadge(lastResult.result)}
+                                                        <div className="flex gap-1.5 ml-2 p-1 bg-card-secondary/50 rounded-lg border border-border/50">
+                                                            <button
+                                                                onClick={() => copyToClipboard(scenario.cliHint)}
+                                                                className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-purple-600 transition-all"
+                                                                title="Copy CLI command"
+                                                            >
+                                                                <Copy size={13} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => runC2Test(scenario)}
+                                                                disabled={isTesting}
+                                                                className="p-1.5 hover:bg-card border border-transparent hover:border-border rounded-lg text-text-muted hover:text-purple-600 transition-all disabled:opacity-50"
+                                                                title="Run this scenario"
+                                                            >
+                                                                {isTesting ? <RefreshCcw size={13} className="animate-spin" /> : <Play size={13} fill="currentColor" />}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-10 px-4 bg-card-secondary/20 rounded-xl border border-dashed border-border/60">
+                                        <ShieldAlert className="text-text-muted opacity-40 mb-2" size={24} />
+                                        <p className="text-xs font-bold text-text-muted tracking-wide text-center">No C2 scenarios found matching "{c2SearchQuery}"</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })()}
             </div>
 
             {/* AI Security Tests */}
@@ -2231,124 +2415,168 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                             </p>
                         </div>
                     </div>
-                    {aiExpanded ? <ChevronUp size={20} className="text-text-muted" /> : <ChevronDown size={20} className="text-text-muted" />}
-                </button>
-
-                {aiExpanded && (
-                    <div className="p-6 space-y-6">
-                        {/* Controls row */}
-                        <div className="flex flex-wrap items-center justify-between gap-4">
-                            <div className="flex flex-wrap items-center gap-6">
-                                <label className="flex items-center gap-2 cursor-pointer group">
-                                    <input
-                                        type="checkbox"
-                                        checked={aiSelectedScenarios.length === securityProfile.ai_security_scenarios.length}
-                                        onChange={toggleAllAIScenarios}
-                                        className="w-4 h-4 rounded border-border bg-card-secondary text-cyan-600 focus:ring-1 focus:ring-cyan-500 outline-none transition-all"
-                                    />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-text-muted group-hover:text-text-primary transition-colors">Select All</span>
-                                </label>
-
-                                {/* AI Scheduler */}
-                                <SchedulerSettings type="ai" title="AI" config={config} onUpdate={updateSchedule} />
-                            </div>
-                            <button
-                                onClick={runAIBatchTest}
-                                disabled={batchProcessingAI || aiSelectedScenarios.length === 0}
-                                className={cn(
-                                    "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2",
-                                    batchProcessingAI
-                                        ? "bg-card-secondary text-text-muted border border-border cursor-not-allowed"
-                                        : "bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-900/40"
-                                )}
-                            >
-                                {batchProcessingAI ? (
-                                    <><RefreshCcw size={16} className="animate-spin" /> Testing...</>
-                                ) : (
-                                    <><Play size={16} fill="currentColor" /> Run Selected Scenarios</>
-                                )}
-                            </button>
+                    <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="relative">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" size={12} />
+                            <input
+                                type="text"
+                                placeholder="Search AI..."
+                                value={aiSearchQuery}
+                                onChange={(e) => {
+                                    setAiSearchQuery(e.target.value);
+                                    if (!aiExpanded) setAIExpanded(true);
+                                }}
+                                onFocus={() => {
+                                    if (!aiExpanded) setAIExpanded(true);
+                                }}
+                                className="bg-card/50 border border-border/80 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20 text-text-primary text-xs rounded-lg pl-7 pr-7 py-1 outline-none transition-all w-32 focus:w-44"
+                            />
+                            {aiSearchQuery && (
+                                <button
+                                    onClick={() => setAiSearchQuery('')}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
+                                >
+                                    <XCircle size={12} />
+                                </button>
+                            )}
                         </div>
-
-                        <div>
-                            <h4 className="text-[10px] font-black text-text-muted tracking-[0.2em] mb-4 border-l-2 border-cyan-600 dark:border-cyan-400 pl-2">AI Security Attack Scenarios</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {securityProfile.ai_security_scenarios.map(scenario => {
-                                    const isEnabled = aiSelectedScenarios.includes(scenario.id);
-                                    const isTesting = testing[`ai-${scenario.id}`];
-                                    const lastResult = testResults.find(r =>
-                                        r.testType === 'ai_security' && r.testName === scenario.name
-                                    );
-                                    const isVolumeTest = scenario.attack_type === 'ai_volume_traffic';
-
-                                    return (
-                                        <div
-                                            key={scenario.id}
-                                            id={`ai-item-${scenario.id}`}
-                                            className={cn(
-                                                "relative p-4 rounded-xl border transition-all",
-                                                isEnabled
-                                                    ? "bg-card border-cyan-500/30 shadow-sm"
-                                                    : "bg-card-secondary/30 border-border opacity-60"
-                                            )}
-                                        >
-                                            {/* Header */}
-                                            <div className="flex items-start justify-between gap-2 mb-2">
-                                                <div className="flex items-start gap-2 flex-1 min-w-0">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isEnabled}
-                                                        onChange={() => {
-                                                            if (isEnabled) setAISelectedScenarios(prev => prev.filter(id => id !== scenario.id));
-                                                            else setAISelectedScenarios(prev => [...prev, scenario.id]);
-                                                        }}
-                                                        className="mt-0.5 w-3.5 h-3.5 rounded border-border bg-card-secondary text-cyan-600 focus:ring-1 focus:ring-cyan-500 outline-none flex-shrink-0"
-                                                    />
-                                                    <div className="min-w-0">
-                                                        <p className="text-[11px] font-black text-text-primary leading-tight truncate">{scenario.name}</p>
-                                                        <p className="text-[9px] text-cyan-600 dark:text-cyan-400 font-bold tracking-widest uppercase mt-0.5">{scenario.policy_engine}</p>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={() => runAITest(scenario)}
-                                                    disabled={isTesting}
-                                                    className={cn(
-                                                        "flex-shrink-0 p-1.5 rounded-lg transition-all",
-                                                        isTesting
-                                                            ? "bg-card-secondary text-text-muted"
-                                                            : "bg-cyan-600/10 hover:bg-cyan-600/20 text-cyan-600 dark:text-cyan-400"
-                                                    )}
-                                                    title="Run this scenario"
-                                                >
-                                                    {isTesting ? <RefreshCcw size={12} className="animate-spin" /> : <Play size={12} fill="currentColor" />}
-                                                </button>
-                                            </div>
-
-                                            {/* Description */}
-                                            <p className="text-[9px] text-text-muted leading-relaxed mb-2 line-clamp-2">{scenario.description}</p>
-
-                                            {/* Targets */}
-                                            <div className="text-[8px] text-text-muted font-mono mb-2 opacity-70 truncate">
-                                                {isVolumeTest
-                                                    ? `${scenario.targets.length} AI apps`
-                                                    : scenario.targets.slice(0, 2).join(', ') + (scenario.targets.length > 2 ? ` +${scenario.targets.length - 2}` : '')
-                                                }
-                                            </div>
-
-                                            {/* Last result badge */}
-                                            {lastResult && (
-                                                <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-between">
-                                                    <span className="text-[8px] text-text-muted">Last result:</span>
-                                                    <div className="scale-75 origin-right">{getStatusBadge(lastResult.result)}</div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                        <div className="cursor-pointer text-text-muted hover:text-text-primary transition-colors p-1" onClick={() => setAIExpanded(!aiExpanded)}>
+                            {aiExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                         </div>
                     </div>
-                )}
+                </button>
+
+                {aiExpanded && (() => {
+                    const visibleScenarios = securityProfile.ai_security_scenarios.filter(scenario =>
+                        scenario.name.toLowerCase().includes(aiSearchQuery.toLowerCase()) ||
+                        scenario.description.toLowerCase().includes(aiSearchQuery.toLowerCase())
+                    );
+                    const visibleIds = visibleScenarios.map(s => s.id);
+                    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => aiSelectedScenarios.includes(id));
+
+                    return (
+                        <div className="p-6 space-y-6">
+                            {/* Controls row */}
+                            <div className="flex flex-wrap items-center justify-between gap-4">
+                                <div className="flex flex-wrap items-center gap-6">
+                                    <label className="flex items-center gap-2 cursor-pointer group">
+                                        <input
+                                            type="checkbox"
+                                            checked={allVisibleSelected}
+                                            onChange={toggleAllAIScenarios}
+                                            className="w-4 h-4 rounded border-border bg-card-secondary text-cyan-600 focus:ring-1 focus:ring-cyan-500 outline-none transition-all"
+                                        />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-text-muted group-hover:text-text-primary transition-colors">Select All</span>
+                                    </label>
+
+                                    {/* AI Scheduler */}
+                                    <SchedulerSettings type="ai" title="AI" config={config} onUpdate={updateSchedule} />
+                                </div>
+                                <button
+                                    onClick={runAIBatchTest}
+                                    disabled={batchProcessingAI || aiSelectedScenarios.length === 0}
+                                    className={cn(
+                                        "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2",
+                                        batchProcessingAI
+                                            ? "bg-card-secondary text-text-muted border border-border cursor-not-allowed"
+                                            : "bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-900/40"
+                                    )}
+                                >
+                                    {batchProcessingAI ? (
+                                        <><RefreshCcw size={16} className="animate-spin" /> Testing...</>
+                                    ) : (
+                                        <><Play size={16} fill="currentColor" /> Run Selected Scenarios</>
+                                    )}
+                                </button>
+                            </div>
+
+                            <div>
+                                <h4 className="text-[10px] font-black text-text-muted tracking-[0.2em] mb-4 border-l-2 border-cyan-600 dark:border-cyan-400 pl-2">AI Security Attack Scenarios</h4>
+                                {visibleScenarios.length > 0 ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {visibleScenarios.map(scenario => {
+                                            const isEnabled = aiSelectedScenarios.includes(scenario.id);
+                                            const isTesting = testing[`ai-${scenario.id}`];
+                                            const lastResult = testResults.find(r =>
+                                                r.testType === 'ai_security' && r.testName === scenario.name
+                                            );
+                                            const isVolumeTest = scenario.attack_type === 'ai_volume_traffic';
+
+                                            return (
+                                                <div
+                                                    key={scenario.id}
+                                                    id={`ai-item-${scenario.id}`}
+                                                    className={cn(
+                                                        "relative p-4 rounded-xl border transition-all",
+                                                        isEnabled
+                                                            ? "bg-card border-cyan-500/30 shadow-sm"
+                                                            : "bg-card-secondary/30 border-border opacity-60"
+                                                    )}
+                                                >
+                                                    {/* Header */}
+                                                    <div className="flex items-start justify-between gap-2 mb-2">
+                                                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isEnabled}
+                                                                onChange={() => {
+                                                                    if (isEnabled) setAISelectedScenarios(prev => prev.filter(id => id !== scenario.id));
+                                                                    else setAISelectedScenarios(prev => [...prev, scenario.id]);
+                                                                }}
+                                                                className="mt-0.5 w-3.5 h-3.5 rounded border-border bg-card-secondary text-cyan-600 focus:ring-1 focus:ring-cyan-500 outline-none flex-shrink-0"
+                                                            />
+                                                            <div className="min-w-0">
+                                                                <p className="text-[11px] font-black text-text-primary leading-tight truncate">{scenario.name}</p>
+                                                                <p className="text-[9px] text-cyan-600 dark:text-cyan-400 font-bold tracking-widest uppercase mt-0.5">{scenario.policy_engine}</p>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => runAITest(scenario)}
+                                                            disabled={isTesting}
+                                                            className={cn(
+                                                                "flex-shrink-0 p-1.5 rounded-lg transition-all",
+                                                                isTesting
+                                                                    ? "bg-card-secondary text-text-muted"
+                                                                    : "bg-cyan-600/10 hover:bg-cyan-600/20 text-cyan-600 dark:text-cyan-400"
+                                                            )}
+                                                            title="Run this scenario"
+                                                        >
+                                                            {isTesting ? <RefreshCcw size={12} className="animate-spin" /> : <Play size={12} fill="currentColor" />}
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Description */}
+                                                    <p className="text-[9px] text-text-muted leading-relaxed mb-2 line-clamp-2">{scenario.description}</p>
+
+                                                    {/* Targets */}
+                                                    <div className="text-[8px] text-text-muted font-mono mb-2 opacity-70 truncate">
+                                                        {isVolumeTest
+                                                            ? `${scenario.targets.length} AI apps`
+                                                            : scenario.targets.slice(0, 2).join(', ') + (scenario.targets.length > 2 ? ` +${scenario.targets.length - 2}` : '')
+                                                        }
+                                                    </div>
+
+                                                    {/* Last result badge */}
+                                                    {lastResult && (
+                                                        <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-between">
+                                                            <span className="text-[8px] text-text-muted">Last result:</span>
+                                                            <div className="scale-75 origin-right">{getStatusBadge(lastResult.result)}</div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-10 px-4 bg-card-secondary/20 rounded-xl border border-dashed border-border/60">
+                                        <ShieldAlert className="text-text-muted opacity-40 mb-2" size={24} />
+                                        <p className="text-xs font-bold text-text-muted tracking-wide text-center">No AI scenarios found matching "{aiSearchQuery}"</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })()}
             </div>
 
             {/* EDL Lists (IP / URL / DNS) */}

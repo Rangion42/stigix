@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.32] - 2026-05-21
+### Added
+- **Widget Search Bars**: Integrated local search bars into the four security widgets (URL Filtering, DNS Security, C2 Scenarios, and AI Security Tests) in the `Security.tsx` header blocks. Typing in the search input automatically filters matching items, restricts the "Select All" checkbox toggle action to only visible items, displays elegant empty states when no items match, and automatically expands the accordions. Implemented harmonized focus outlines per widget type (red for URL, blue for DNS, purple for C2, cyan for AI) and stopped event propagation to prevent the inputs from collapsing or expanding the accordion panels. 🔍
+
 ## [v1.4.0-patch.31] - 2026-05-21
 ### Added
 - **Security Search Bar**: Added a dynamic autocomplete search bar at the top of the Security page (`web-dashboard/src/Security.tsx`) to search and select/enable categories and tests across URL Filtering, DNS Security, C2 Scenarios, and AI Security tests. Selecting a suggestion auto-expands the relevant accordion, enables the test, scrolls it into view, and displays a temporary glowing visual highlight. 🔍
