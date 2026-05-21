@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.16] - 2026-05-21
+### Added
+- **IoT Dashboard** (`Iot.tsx`): Enabled the pencil/edit action on IoT device items in list (compact) mode, matching the edit capability of grid cards.
+### Changed
+- **Connectivity Performance** (`ConnectivityPerformance.tsx`): Streamlined the probes list view by removing the redundant "View Details" (BarChart3) button on the right, relying entirely on row click to show the detailed modal.
+
 ## [v1.4.0-patch.15] - 2026-05-20
 ### Fixed
 - **IoT Advanced Debug Monitor** (`Settings.tsx`, `server.ts`): Moved the historical data collection (last 6 hours / 720 points) from the frontend state to the backend memory. The UI now reliably loads the actual history of system/IoT metrics as soon as you open it, instead of starting from an empty graph and only tracking data while the tab is open.

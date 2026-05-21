@@ -1069,15 +1069,16 @@ export default function Iot({ token }: IotProps) {
                                         </span>}
                                     </button>
 
-                                    {!isCompact && (
-                                        <button
-                                            onClick={() => { setEditingDevice(device); setShowAddModal(true); }}
-                                            className="p-3 bg-card-secondary hover:bg-card-hover text-text-muted hover:text-text-primary rounded-2xl transition-all border border-border"
-                                            title="Edit Device"
-                                        >
-                                            <Edit2 size={18} />
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={() => { setEditingDevice(device); setShowAddModal(true); }}
+                                        className={cn(
+                                            "bg-card-secondary hover:bg-card-hover text-text-muted hover:text-text-primary transition-all border border-border",
+                                            isCompact ? "p-2 rounded-xl" : "p-3 rounded-2xl"
+                                        )}
+                                        title="Edit Device"
+                                    >
+                                        <Edit2 size={18} />
+                                    </button>
 
                                     <button
                                         onClick={() => setActiveLogDevice(device)}

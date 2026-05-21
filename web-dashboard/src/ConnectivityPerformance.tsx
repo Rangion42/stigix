@@ -907,13 +907,6 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                                 {e.enabled ? <Pause size={18} /> : <Play size={18} />}
                                             </button>
                                         )}
-                                        <button
-                                            onClick={(ev) => { ev.stopPropagation(); setSelectedEndpoint(e); setShowDetailModal(true); }}
-                                            className="p-2 hover:bg-card-hover rounded-lg text-text-muted hover:text-blue-500 transition-all border border-transparent hover:border-border"
-                                            title="View Details"
-                                        >
-                                            <BarChart3 size={18} />
-                                        </button>
                                     </div>
                                 </td>
                             </tr>
