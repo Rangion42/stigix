@@ -549,6 +549,14 @@ export default function Vyos(props: VyosProps) {
                     toast.error(`Invalid format for ${action.command}. Use IP (e.g., 8.8.8.8/32) or FQDN (e.g., google.com)`);
                     return;
                 }
+                
+                if (isFqdn) {
+                    const targetRouter = routers.find(r => r.id === action.router_id);
+                    if (targetRouter && targetRouter.version === '1.4') {
+                        toast.error(`FQDN blocking is only supported on VyOS 1.5+ routers. Please use an IP address or upgrade ${targetRouter.name || targetRouter.host}.`);
+                        return;
+                    }
+                }
 
                 if (isCidr) {
                     // Validate IP octets (0-255)
