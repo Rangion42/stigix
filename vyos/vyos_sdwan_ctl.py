@@ -11,20 +11,37 @@ import ipaddress
 # Disable SSL warnings for self-signed certificates
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-def normalize_prefix(ip_input):
-    """Normalize IP input: add /32 if no mask, validate format"""
+def resolve_input(ip_input):
+    """
+    Takes an IP, CIDR, or FQDN.
+    Returns a tuple (original_input, list_of_prefixes)
+    For IPs/CIDRs, list_of_prefixes has 1 element.
+    For FQDNs, list_of_prefixes has all resolved IPv4 addresses as /32.
+    """
     try:
-        # If already has a mask
+        # If already has a mask, it must be a valid CIDR
         if '/' in ip_input:
-            # Validate it's a valid network
             network = ipaddress.ip_network(ip_input, strict=False)
-            return str(network)
+            return (ip_input, [str(network)])
         else:
-            # No mask: validate it's a valid IP and add /32
-            ip = ipaddress.ip_address(ip_input)
-            return f"{ip}/32"
-    except ValueError as e:
-        raise ValueError(f"Invalid IP address or prefix: {ip_input} ({e})")
+            # Try parsing as a single IP
+            try:
+                ip = ipaddress.ip_address(ip_input)
+                return (ip_input, [f"{ip}/32"])
+            except ValueError:
+                # Not an IP, assume FQDN
+                import socket
+                # AF_INET guarantees we only get IPv4 addresses
+                addr_info = socket.getaddrinfo(ip_input, None, socket.AF_INET)
+                # addr_info returns list of tuples: (family, type, proto, canonname, sockaddr)
+                # sockaddr for IPv4 is (address, port)
+                ips = list(set([item[4][0] for item in addr_info]))
+                if not ips:
+                    raise ValueError(f"Could not resolve any IPv4 addresses for {ip_input}")
+                
+                return (ip_input, [f"{ip}/32" for ip in ips])
+    except Exception as e:
+        raise ValueError(f"Invalid IP address, prefix, or FQDN: {ip_input} ({e})")
 
 def api_call(host, api_key, operations, verify=False):
     """Call VyOS HTTPS API"""
@@ -307,7 +324,7 @@ def op_set_combined_qos(iface, version, delay=None, loss=None, corruption=None, 
 
 # NEW: Blackhole route functions (simple-block/simple-unblock)
 def get_blackhole_routes(config):
-    """Parse config and return list of blackhole routes with tag 999"""
+    """Parse config and return list of dicts with tag 999: [{'prefix': '...', 'description': '...'}]"""
     routes = []
     static_routes = config.get("protocols", {}).get("static", {}).get("route", {})
     
@@ -318,47 +335,60 @@ def get_blackhole_routes(config):
                 bh_data = route_data.get("blackhole", {})
                 # Check for tag 999 (it could be a sibling of blackhole, or a child of blackhole)
                 if str(route_data.get("tag")) == "999" or (isinstance(bh_data, dict) and str(bh_data.get("tag")) == "999"):
-                    routes.append(prefix)
+                    desc = route_data.get("description", "")
+                    routes.append({"prefix": prefix, "description": desc})
     
-    routes.sort()
+    routes.sort(key=lambda x: x["prefix"])
     return routes
 
 def op_simple_block(host, api_key, ip_input, verify=False):
-    """Block a prefix using blackhole route with tag 999 (NEW simple-block)"""
+    """Block a prefix or FQDN using blackhole route with tag 999 and description tracking"""
     try:
-        # Normalize and validate IP/prefix
-        prefix = normalize_prefix(ip_input)
+        # Resolve IP/prefix/FQDN
+        original_input, prefixes = resolve_input(ip_input)
         
-        # Check if already blocked
+        # Check existing
         config = api_retrieve(host, api_key, verify)
-        existing = get_blackhole_routes(config)
+        existing_dicts = get_blackhole_routes(config)
+        existing_prefixes = [r["prefix"] for r in existing_dicts]
         
-        if prefix in existing:
+        # We need to add operations for any prefix not already blocked
+        prefixes_to_add = [p for p in prefixes if p not in existing_prefixes]
+        
+        if not prefixes_to_add:
             return {
                 "success": True,
                 "data": {
                     "action": "simple-block",
-                    "prefix": prefix,
-                    "message": "Prefix already blocked (no change)",
-                    "blocked_routes": existing
+                    "input": original_input,
+                    "prefixes": prefixes,
+                    "message": "All resolved prefixes already blocked (no change)",
+                    "blocked_routes": existing_dicts
                 }
             }
         
-        # Add blackhole route with tag 999
-        # Try modern syntax first (VyOS 1.4/1.5: 'tag' is a child of 'blackhole')
-        ops_modern = [
-            {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole"]},
-            {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole", "tag", "999"]}
-        ]
-        
+        # Add blackhole route with tag 999 and description
+        ops_modern = []
+        for prefix in prefixes_to_add:
+            desc = f"block {original_input} {prefix}"
+            ops_modern.extend([
+                {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole"]},
+                {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole", "tag", "999"]},
+                {"op": "set", "path": ["protocols", "static", "route", prefix, "description", desc]}
+            ])
+            
         try:
             api_call(host, api_key, ops_modern, verify)
         except RuntimeError as e:
-            # Fallback to legacy syntax (tag is sibling of blackhole) if modern fails
-            ops_legacy = [
-                {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole"]},
-                {"op": "set", "path": ["protocols", "static", "route", prefix, "tag", "999"]}
-            ]
+            # Fallback to legacy syntax if modern fails
+            ops_legacy = []
+            for prefix in prefixes_to_add:
+                desc = f"block {original_input} {prefix}"
+                ops_legacy.extend([
+                    {"op": "set", "path": ["protocols", "static", "route", prefix, "blackhole"]},
+                    {"op": "set", "path": ["protocols", "static", "route", prefix, "tag", "999"]},
+                    {"op": "set", "path": ["protocols", "static", "route", prefix, "description", desc]}
+                ])
             api_call(host, api_key, ops_legacy, verify)
         
         # Fetch updated list
@@ -369,7 +399,8 @@ def op_simple_block(host, api_key, ip_input, verify=False):
             "success": True,
             "data": {
                 "action": "simple-block",
-                "prefix": prefix,
+                "input": original_input,
+                "added_prefixes": prefixes_to_add,
                 "blocked_routes": updated
             }
         }
@@ -386,41 +417,49 @@ def op_simple_block(host, api_key, ip_input, verify=False):
         }
 
 def op_simple_unblock(host, api_key, ip_input, verify=False):
-    """Unblock a prefix by removing blackhole route (NEW simple-unblock)"""
+    """Unblock by matching exact prefix OR by matching FQDN description"""
     try:
-        # Normalize and validate IP/prefix
-        prefix = normalize_prefix(ip_input)
-        
-        # Check if exists
+        try:
+            original_input, _ = resolve_input(ip_input)
+        except ValueError:
+            # If resolution fails during unblock, fallback to string match
+            original_input = ip_input
+            
         config = api_retrieve(host, api_key, verify)
-        existing = get_blackhole_routes(config)
+        existing_dicts = get_blackhole_routes(config)
         
-        if prefix not in existing:
-            # Check if the requested IP is covered by any existing blocked subnet
-            try:
-                import ipaddress
-                req_net = ipaddress.ip_network(prefix, strict=False)
-                for blk in existing:
-                    blk_net = ipaddress.ip_network(blk, strict=False)
-                    if req_net.subnet_of(blk_net):
-                        return {
-                            "success": False,
-                            "error": f"Prefix {prefix} is not exactly blocked, but it is covered by the existing blocked subnet {blk}. You must unblock {blk} exactly.",
-                            "data": {"blocked_routes": existing}
-                        }
-            except Exception:
-                pass
-
+        prefixes_to_remove = set()
+        
+        for r in existing_dicts:
+            p = r["prefix"]
+            d = r["description"]
+            
+            # Match 1: exact prefix
+            if p == original_input:
+                prefixes_to_remove.add(p)
+                continue
+                
+            # Match 2: exact IP if user passed IP without /32
+            if '/' not in original_input and p == f"{original_input}/32":
+                prefixes_to_remove.add(p)
+                continue
+                
+            # Match 3: FQDN description matching
+            if d.startswith(f"block {original_input} "):
+                prefixes_to_remove.add(p)
+                continue
+        
+        if not prefixes_to_remove:
             return {
                 "success": False,
-                "error": f"Prefix {prefix} is not blocked (tag 999 not found)",
-                "data": {"blocked_routes": existing}
+                "error": f"Prefix or FQDN '{original_input}' is not blocked (no exact prefix or matching description found)",
+                "data": {"blocked_routes": existing_dicts}
             }
         
-        # Delete the entire route
-        ops = [
-            {"op": "delete", "path": ["protocols", "static", "route", prefix]}
-        ]
+        # Delete the routes
+        ops = []
+        for p in prefixes_to_remove:
+            ops.append({"op": "delete", "path": ["protocols", "static", "route", p]})
         
         api_call(host, api_key, ops, verify)
         
@@ -432,7 +471,8 @@ def op_simple_unblock(host, api_key, ip_input, verify=False):
             "success": True,
             "data": {
                 "action": "simple-unblock",
-                "prefix": prefix,
+                "input": original_input,
+                "removed_prefixes": list(prefixes_to_remove),
                 "blocked_routes": updated
             }
         }
@@ -487,8 +527,8 @@ def op_clear_blocks(host, api_key, verify=False):
         
         # Build delete operations for all routes
         ops = []
-        for prefix in blocked:
-            ops.append({"op": "delete", "path": ["protocols", "static", "route", prefix]})
+        for r in blocked:
+            ops.append({"op": "delete", "path": ["protocols", "static", "route", r["prefix"]]})
         
         # Execute all deletes in one API call
         api_call(host, api_key, ops, verify)

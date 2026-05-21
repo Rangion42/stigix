@@ -2036,7 +2036,7 @@ export default function Vyos(props: VyosProps) {
                                                     </div>
                                                 ) : needsIp ? (
                                                     <div className="flex items-center gap-1">
-                                                        <input type="text" placeholder="e.g. 8.8.8.8/32"
+                                                        <input type="text" placeholder="e.g. 8.8.8.8/32 or google.com"
                                                             value={action.parameters?.ip || ''}
                                                             onChange={(e) => { const a = [...editingSeq.actions]; a[idx].parameters = { ...a[idx].parameters, ip: e.target.value }; setEditingSeq({ ...editingSeq, actions: a }); }}
                                                             className="w-full bg-card border border-red-500/30 rounded px-2 py-1.5 text-[11px] text-text-primary font-mono focus:outline-none focus:ring-1 focus:ring-red-500/40" />

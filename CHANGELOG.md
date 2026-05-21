@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.24] - 2026-05-21
+### Added
+- **VyOS Sequence FQDN Support**: The `simple-block` action now accepts FQDNs (e.g., `google.com`) in addition to IP addresses. The backend resolves the FQDN to all associated IPv4 addresses and creates blackhole routes using the route description field to store the relationship (`block google.com <IP>`). The `simple-unblock` action intelligently cleans up by matching this description rather than relying on a secondary, potentially shifted DNS resolution.
+- **VyOS UI**: Updated the IP input placeholder for block/unblock actions to specify `e.g. 8.8.8.8/32 or google.com`.
+
 ## [v1.4.0-patch.23] - 2026-05-21
 ### Changed
 - **VyOS Sequences List** (`Vyos.tsx`): Moved the "+ New Sequence" button from the global header down to the Sequences toolbar (next to Search and Sort controls). This improves ergonomics significantly on ultra-wide screens, where the centered table and right-aligned header previously created a large visual disconnect.
