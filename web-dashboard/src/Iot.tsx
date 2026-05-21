@@ -1504,7 +1504,7 @@ export default function Iot({ token }: IotProps) {
             {/* Add/Edit Modal */}
             {showAddModal && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-                    <div className="bg-card border border-border rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl">
+                    <div className="bg-card border border-border rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl">
                         <div className="p-6 border-b border-border flex items-center justify-between bg-card-secondary">
                             <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
                                 <Plus size={24} className="text-blue-400" />
