@@ -317,7 +317,11 @@ export default function Vyos(props: VyosProps) {
         fetchData();
 
         socket.on('vyos:sequence_step', (data) => {
-            setActiveExecution(data);
+            if (data.status === 'running') {
+                setActiveExecution(data);
+            } else {
+                setActiveExecution(prev => prev && prev.sequenceId === data.sequenceId ? null : prev);
+            }
             if (data.status === 'success' || data.status === 'failed') {
                 setLiveEvents(prev => [{ ...data, ts: Date.now() }, ...prev].slice(0, 100));
             }

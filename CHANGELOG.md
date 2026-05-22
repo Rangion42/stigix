@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.38] - 2026-05-22
+### Fixed
+- **VyOS Sequences**: Fixed an issue where the sequence execution state could get permanently "stuck" in the frontend after an action finishes (especially in loop scenarios), preventing the user from running any other sequences manually without refreshing the page. 🔄
+- **VyOS Sequences**: Added an automatic 15-second retry mechanism for any sequence action that fails due to a `500 Internal Server Error` or a timeout, drastically improving reliability for intermittent connection drops. ⏳
+
 ## [v1.4.0-patch.37] - 2026-05-21
 ### Changed
 - **VyOS Sequence & History UI**: Swapped the "Router" and "Command" columns in the Sequence list so "Router" appears first, making it consistent with the History view. Compacted the column widths in the History tab to reduce empty space and improve readability. 🔄

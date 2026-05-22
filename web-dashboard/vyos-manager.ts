@@ -266,7 +266,7 @@ export class VyosManager extends EventEmitter {
     /**
      * Execute a specific action on a router
      */
-    async executeAction(routerId: string, action: VyosAction): Promise<any> {
+    async executeAction(routerId: string, action: VyosAction, retriesLeft: number = 1): Promise<any> {
         const router = this.routers.get(routerId);
         if (!router) throw new Error('Router not found');
 
@@ -395,6 +395,16 @@ export class VyosManager extends EventEmitter {
                     reject(new Error(extractedError || `Process exited with code ${code}`));
                 }
             });
+        }).catch(async (error: any) => {
+            // Retry logic for 500 Internal Server Error or timeouts
+            const msg = error.message || '';
+            const shouldRetry = msg.includes('500') || msg.toLowerCase().includes('timeout') || msg.toLowerCase().includes('internal server error');
+            if (retriesLeft > 0 && shouldRetry) {
+                log('VYOS', `Action ${action.command} failed: ${msg}. Retrying in 15 seconds... (${retriesLeft} retries left)`, 'warn');
+                await new Promise(resolve => setTimeout(resolve, 15000));
+                return this.executeAction(routerId, action, retriesLeft - 1);
+            }
+            throw error;
         });
     }
 
