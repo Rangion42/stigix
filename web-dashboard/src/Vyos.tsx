@@ -143,6 +143,16 @@ export default function Vyos(props: VyosProps) {
     // Sequence Filter State
     const [sequenceSearch, setSequenceSearch] = useState('');
     const [sequenceSort, setSequenceSort] = useState<'name' | 'router' | 'action' | 'recent'>('name');
+    const [sequenceSortDir, setSequenceSortDir] = useState<'asc' | 'desc'>('asc');
+
+    const handleSort = (column: 'name' | 'router' | 'action' | 'recent') => {
+        if (sequenceSort === column) {
+            setSequenceSortDir(sequenceSortDir === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSequenceSort(column);
+            setSequenceSortDir(column === 'recent' ? 'desc' : 'asc');
+        }
+    };
 
     // Live Monitoring State
     const [activeExecution, setActiveExecution] = useState<{ sequenceId: string, step: string, status: string, error?: string, cliEquivalent?: string[], action?: any } | null>(null);
@@ -855,19 +865,20 @@ export default function Vyos(props: VyosProps) {
             return false;
         })
         .sort((a, b) => {
-            if (sequenceSort === 'name') return a.name.localeCompare(b.name);
-            if (sequenceSort === 'recent') return (b.lastRun || 0) - (a.lastRun || 0);
-            if (sequenceSort === 'router') {
+            let res = 0;
+            if (sequenceSort === 'name') res = a.name.localeCompare(b.name);
+            else if (sequenceSort === 'recent') res = (a.lastRun || 0) - (b.lastRun || 0);
+            else if (sequenceSort === 'router') {
                 const rA = a.actions[0]?.router_id || '';
                 const rB = b.actions[0]?.router_id || '';
-                return rA.localeCompare(rB);
+                res = rA.localeCompare(rB);
             }
-            if (sequenceSort === 'action') {
+            else if (sequenceSort === 'action') {
                 const actA = a.actions[0]?.command || '';
                 const actB = b.actions[0]?.command || '';
-                return actA.localeCompare(actB);
+                res = actA.localeCompare(actB);
             }
-            return 0;
+            return sequenceSortDir === 'asc' ? res : -res;
         });
 
     return (
@@ -1162,19 +1173,6 @@ export default function Vyos(props: VyosProps) {
                             />
                         </div>
                         <div className="flex items-center gap-4 shrink-0">
-                            <div className="flex items-center gap-2">
-                                <label className="text-[10px] font-black tracking-widest text-text-muted uppercase opacity-70">Sort By</label>
-                                <select
-                                    value={sequenceSort}
-                                    onChange={(e) => setSequenceSort(e.target.value as any)}
-                                    className="bg-card/50 border border-border/50 rounded-lg px-3 py-2.5 text-sm font-semibold focus:outline-none focus:border-purple-500/50 text-text-primary cursor-pointer hover:border-purple-500/30 transition-colors"
-                                >
-                                    <option value="name">Name (A-Z)</option>
-                                    <option value="router">Router Focus</option>
-                                    <option value="action">Action Type</option>
-                                    <option value="recent">Most Recent</option>
-                                </select>
-                            </div>
                             <button
                                 onClick={() => openSeqModal()}
                                 className="flex items-center gap-2 px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold transition-all shadow-lg shadow-purple-900/20 active:scale-95"
@@ -1191,13 +1189,21 @@ export default function Vyos(props: VyosProps) {
                         <div className="grid items-center gap-2 px-3 py-2 border-b border-border bg-card-secondary/60 text-[9px] font-black text-text-muted uppercase tracking-widest"
                             style={{ gridTemplateColumns: '68px 1fr 110px 100px 90px 140px 44px 60px 80px' }}>
                             <div />
-                            <div>Name</div>
-                            <div>Router</div>
-                            <div>Command</div>
+                            <div className="cursor-pointer hover:text-text-primary flex items-center gap-1 select-none transition-colors" onClick={() => handleSort('name')}>
+                                Name {sequenceSort === 'name' && (sequenceSortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                            </div>
+                            <div className="cursor-pointer hover:text-text-primary flex items-center gap-1 select-none transition-colors" onClick={() => handleSort('router')}>
+                                Router {sequenceSort === 'router' && (sequenceSortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                            </div>
+                            <div className="cursor-pointer hover:text-text-primary flex items-center gap-1 select-none transition-colors" onClick={() => handleSort('action')}>
+                                Command {sequenceSort === 'action' && (sequenceSortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                            </div>
                             <div>Interface</div>
                             <div>Params</div>
                             <div>On</div>
-                            <div>Last</div>
+                            <div className="cursor-pointer hover:text-text-primary flex items-center gap-1 select-none transition-colors" onClick={() => handleSort('recent')}>
+                                Last {sequenceSort === 'recent' && (sequenceSortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                            </div>
                             <div className="text-right">·</div>
                         </div>
 

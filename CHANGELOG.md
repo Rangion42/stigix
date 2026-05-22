@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.39] - 2026-05-22
+### Changed
+- **VyOS Sequences**: Implemented clickable columns for sorting in the sequence list. Columns (Name, Router, Command, Last) can now be toggled between ascending and descending order.
+
 ## [v1.4.0-patch.38] - 2026-05-22
 ### Fixed
 - **VyOS Sequences**: Fixed an issue where the sequence execution state could get permanently "stuck" in the frontend after an action finishes (especially in loop scenarios), preventing the user from running any other sequences manually without refreshing the page. 🔄

@@ -1,0 +1,154 @@
+hostname,ip address,mac address,vlan,profile,OS,VLAN Description,model,vendor,last activity,Status,risk score
+Prod-SharePoint-AF7,10.10.30.13,00:50:56:9d:9e:49,300,VMware,Windows,Datacenter & Business Apps,,"VMware, Inc.",2026-05-22T14:53:08.501Z,Active,88
+Joe-Gaming-iPAD,10.54.100.117,00:e0:4c:68:07:15,922,iPad,,Corp super block,iPad,Apple Inc.,2026-05-22T14:53:08.501Z,Active,90
+Hikvision IP Camera,192.168.1.17,c4:2f:90:89:90:b9,120,Hikvision Camera,Linux,Primary LAN,HIKVISION DS-2CD753F-EZ,Hikvision,2026-05-22T14:53:08.501Z,Active,100
+Hikvision-Camera,10.10.60.67,58:03:fb:b6:a4:cf,60,Hikvision Camera,,Building Management,HIKVISION DS-2CD753F-EZ,Hikvision,2026-05-22T14:53:08.501Z,Active,20
+axis-00408cfc34ca,10.10.60.21,00:40:8c:fc:34:ca,120,Axis Communications Network Camera,Linux,Corp super block,M3057,Axis Communications,2026-05-22T14:53:08.501Z,Active,100
+OSIsoft PI Historian,10.30.10.11,00:50:56:b7:04:ff,250,OSIsoft PI Server,,OT Historian,PI Server,OSIsoft,2026-05-22T14:53:08.501Z,Active,42
+Control System Engineering Workstation,10.30.20.5,5c:88:16:ed:fd:1a,20,Control System Engineering Workstation,Windows,Manufacturing Assembly,ThinkStation P300,Lenovo,2026-05-22T14:53:08.501Z,Active,100
+Rockwell Cell 2 Safety PLC,10.30.20.21,34:c0:f9:fb:67:52,20,Rockwell Automation PLC,,Manufacturing Assembly,LOGIX5480,Rockwell Automation,2026-05-22T14:53:08.501Z,Active,100
+F5 Networks Device,10.10.60.52,00:94:a1:e5:42:86,2,F5 Networks Device,,VLAN for internal devices,Device XXX F5,F5 Networks,2026-05-22T14:53:08.501Z,Active,96
+BrightSign Signage Media Player,10.10.60.54,90:ac:3f:24:2a:59,110,BrightSign Signage Media Player,BrightSign OS,Primary LAN,XT1144,BrightSign,2026-05-22T14:53:08.501Z,Active,96
+Axis Communications Network Camera,10.10.60.23,ac:cc:8e:bf:55:d5,120,Axis Communications Network Camera,Linux,Primary LAN,M3057,Axis Communications,2026-05-22T14:53:08.501Z,Active,99
+Carefusion Infusion Pump Base Station,10.20.10.101,00:17:23:41:50:f1,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+QA-Test-Mac-29Q,10.10.40.27,33:44:55:66:77:88,40,Macintosh,MacOS,Marketing & Comms,MacBook Pro,Apple Inc.,2026-05-22T14:53:08.501Z,Active,91
+Alex-Work-iPad,10.10.70.26,00:e0:4c:68:07:16,70,iPad,iOS,Mixed Vlan,iPad,Apple Inc.,2026-05-22T14:53:08.501Z,Active,91
+Chris-Media-iPhone,172.16.96.27,00:e0:4c:68:07:17,99,iPhone,iOS,Guest & Cafeteria,iPad,Apple Inc.,2026-05-22T14:53:08.501Z,Active,91
+Sam-Travel-Tablet,172.16.96.28,00:e0:4c:68:07:18,99,Samsung Galaxy,iOS,Guest & Cafeteria,iPad,Apple Inc.,2026-05-22T14:53:08.501Z,Active,91
+Kate-Home-iPad,10.10.70.29,00:e0:4c:68:07:19,70,iPad,iOS,Mixed Vlan,iPad,Apple Inc.,2026-05-22T14:53:08.501Z,Active,91
+Ben-Work-iPhone,172.16.96.30,00:e0:4c:68:07:20,99,iPhone,iOS,Guest & Cafeteria,iPad,Apple Inc.,2026-05-22T14:53:08.501Z,Active,91
+Eva-Design-iPad,172.16.96.31,00:e0:4c:68:07:21,99,iPad,iOS,Guest & Cafeteria,iPad,Apple Inc.,2026-05-22T14:53:08.501Z,Active,91
+Leo-Personal-iPad,172.16.96.32,00:e0:4c:68:07:22,99,iPad,iOS,Guest & Cafeteria,iPad,Apple Inc.,2026-05-22T14:53:08.501Z,Active,91
+Mia-Art-Tablet,172.16.96.33,00:e0:4c:68:07:23,99,Samsung Galaxy,iOS,Guest & Cafeteria,iPad,Apple Inc.,2026-05-22T14:53:08.501Z,Active,91
+Zoe-Coding-iPad,172.16.96.34,00:e0:4c:68:07:24,99,iPad,iOS,Guest & Cafeteria,iPad,Apple Inc.,2026-05-22T14:53:08.501Z,Active,91
+Jake-Gaming-iPhone,10.10.70.35,00:e0:4c:68:07:25,70,iPhone,iOS,Mixed Vlan,iPad,Apple Inc.,2026-05-22T14:53:08.501Z,Active,91
+Lily-Reading-iPad,172.16.96.36,00:e0:4c:68:07:26,99,iPad,iOS,Guest & Cafeteria,iPad,Apple Inc.,2026-05-22T14:53:08.501Z,Active,91
+Tom-Work-Tablet,172.16.96.37,00:e0:4c:68:07:27,99,Samsung Galaxy,iOS,Guest & Cafeteria,iPad,Apple Inc.,2026-05-22T14:53:08.501Z,Active,91
+Sara-Media-iPad,10.10.70.38,00:e0:4c:68:07:28,70,iPad,iOS,Mixed Vlan,iPad,Apple Inc.,2026-05-22T14:53:08.501Z,Active,91
+John-Travel-iPhone,172.16.96.39,00:e0:4c:68:07:29,99,iPhone,iOS,Guest & Cafeteria,iPad,Apple Inc.,2026-05-22T14:53:08.501Z,Active,91
+Nina-Home-Tablet,172.16.96.40,00:e0:4c:68:07:30,99,Samsung Galaxy,iOS,Guest & Cafeteria,iPad,Apple Inc.,2026-05-22T14:53:08.501Z,Active,91
+00:05:1b:a3:6d:61,10.6.72.20,00:05:1b:a3:6d:61,,Magic Control Technology USB Connectivity Device,Windows,Corp Supernet,Elite MiniView,Magic Control Technology Corporation,2026-05-22T14:53:08.501Z,Active,30
+Carefusion Infusion Pump Base Station,10.20.10.102,00:17:23:41:50:00,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,40
+SICK AG Barcode Scanner,10.30.20.14,00:06:77:36:2c:38,2501,SICK AG Industrial Barcode Scanner,Embedded,CHB PLC,CLV69x,SICK AG,2026-05-22T14:53:08.501Z,Active,26
+GE X-Ray Machine,10.20.20.101,d4:85:64:b9:9b:81,110,GE X-Ray Machine,Windows,Clinical and IT,Definium 6000,General Electric,2026-05-22T14:53:08.501Z,Active,99
+Rockwell Cell 1 PLC - slot-2,10.30.20.11-slot-2,00:1d:9c:d7:0a:82-slot-2,,Rockwell Automation Device,,,1756-DNB/A,Rockwell Automation,2026-05-22T14:53:08.501Z,Active,30
+CustSvc-Rep-PC-25M,10.10.20.23,1b:2c:3d:4e:5f:6a,20,Dell Computer,Windows,Manufacturing & Logistics,EliteBook,HP,2026-05-22T14:53:08.501Z,Active,76
+Zlph-Jxt-Pz,10.10.70.15,28:d2:44:ae:71:0f,70,Lenovo Computer,Linux,Mixed Vlan,ThinkCenter M75q,Lenovo,2026-05-22T14:53:08.501Z,Active,92
+Shd-Tpl-Bld,172.16.96.21,5a:b2:c3:d4:e5:f6,99,Lenovo Computer,Linux,Guest & Cafeteria,ThinkCenter M75q,Lenovo,2026-05-22T14:53:08.501Z,Active,92
+64:55:63:00:54:11,10.6.72.10,64:55:63:00:54:11,,Q-Free Signal Controller,Embedded,Corp Supernet,2070 LX,Q-Free ASA,2026-05-22T14:53:08.501Z,Active,20
+IT-Server-PC-5W,10.10.30.36,7c:8d:9e:af:b0:c1,30,VMWare,Windows,Datacenter & Business Apps,-,"VMware, Inc.",2026-05-22T14:53:08.501Z,Active,99
+IT-Help-PC-14E,10.10.10.16,9c:1b:22:3a:4b:5c,10,HP Computer,Windows,Operations Planning & Support,EliteBook,HP,2026-05-22T14:53:08.501Z,Active,76
+d8:bc:38:f3:f8:3b,10.6.72.16,d8:bc:38:f3:f8:3b,,360ns Smart Locking Device,Embedded,Corp Supernet,SL-800P,360ns,2026-05-22T14:53:08.501Z,Active,20
+Siemens CT Scanner,10.20.20.103,90:1b:0e:ea:86:a8,110,Siemens CT Scanner,Windows,Clinical and IT,SOMATOM Definition AS+,Siemens AG,2026-05-22T14:53:08.501Z,Active,99
+Philips UltraSound Machine,10.20.20.102,28:b9:d9:e1:29:9e,110,Philips UltraSound Machine,Windows,Clinical and IT,CX50,Philips,2026-05-22T14:53:08.501Z,Active,100
+Gnyx-Dbl-Bld,10.10.70.18,1c:1b:83:f4:d5:e6,70,Lenovo Computer,Linux,Mixed Vlan,ThinkCenter M75q,Lenovo,2026-05-22T14:53:08.501Z,Active,92
+QA-Server-PC-4Z,10.10.30.37,2b:3f:6d:5e:6f:75,30,VMWare,Linux,Datacenter & Business Apps,-,"VMware, Inc.",2026-05-22T14:53:08.501Z,Active,99
+Ops-Support-PC-1A,10.10.10.11,00:1b:71:22:01:92,100,Dell Computer,Windows,Operations Planning & Suppport,Latitude,Dell,2026-05-22T14:53:08.501Z,Active,91
+NYC-RPM-HRC12345,10.20.10.22,847343329098594,10,HealthArc Remote Patient Monitoring Device,,Medical,HA102,HealthArc,2026-05-22T14:53:08.501Z,Active,20
+Siemens Cell 3 PLC,10.30.20.32,ac:64:17:95:4c:19,65,Siemens PLC,Embedded,Process,Simatic S7 1500 CPU1510SP-1,Siemens AG,2026-05-22T14:53:08.501Z,Active,100
+Rockwell Cell 1 PLC - slot-3,10.30.20.11-slot-3,00:1d:9c:d7:0a:82-slot-3,,Rockwell Automation Device,,,1756-OB16E/A,Rockwell Automation,2026-05-22T14:53:08.501Z,Active,30
+Rockwell Cell 1 PLC - slot-4,10.30.20.11-slot-4,00:1d:9c:d7:0a:82-slot-4,,Rockwell Automation Device,,,1756-DHRIO/D,Rockwell Automation,2026-05-22T14:53:08.501Z,Active,30
+Prod-Planner-Mac-9C,10.10.20.12,3a:7f:4c:92:ab:10,200,Macintosh,MacOS Monterey (Version 12),Manufacturing & Logistics,MacBook Pro,Apple Inc.,2026-05-22T14:53:08.501Z,Active,99
+Supply-Log-PC-16P,10.10.20.26,8e:9f:a0:b1:c2:d3,20,Lenovo Computer,Windows 10,Manufacturing & Logistics,Thinkpad,Lenovo,2026-05-22T14:53:08.501Z,Active,76
+RPM-TH-BP01456,10.20.10.23,194345032995453,10,Telli Health Cellular Blood Pressure Monitor,,Medical,BP01,Telli Health,2026-05-22T14:53:08.501Z,Active,20
+PowerFocus - SRB2,10.30.20.15,00:50:d6:0e:97:e8,64,Atlas Copco Torque Controller,Windows,Process,PF 6000,Atlas Copco,2026-05-22T14:53:08.501Z,Active,36
+Rockwell  Cell 1 HMI,10.30.20.12,00:1d:9c:e0:01:b7,270,Rockwell Automation HMI,Windows,Operation & Control,PanelView Plus 7 Perf 1200W,Rockwell Automation,2026-05-22T14:53:08.501Z,Active,36
+Siemens Cell 3 HMI,10.30.20.31,28:63:36:c0:57:27,281,Siemens HMI Panel,Windows,Operation & Control,SIMATIC HMI KTP700 Basic,Siemens AG,2026-05-22T14:53:08.501Z,Active,100
+Sec-Analyst-PC-40O,10.10.10.25,4d:5e:6f:7a:8b:9c,10,Macintosh,MacOS,Operations Planning & Support,MacBook Pro,Apple Inc.,2026-05-22T14:53:08.501Z,Active,91
+Rghs-Tph-Crp,172.16.96.16,b4:7c:6e:d3:f8:2a,99,Dell Computer,Linux,Guest & Cafeteria,ThinkCenter M75q,Lenovo,2026-05-22T14:53:08.501Z,Active,92
+Brdg-Plx-Sm,172.16.96.14,00:a0:9d:6d:1f:2c,99,HP Computer,Linux,Guest & Cafeteria,ThinkCenter M75q,Lenovo,2026-05-22T14:53:08.501Z,Active,92
+HR-Rec-Mac-3G,10.10.40.18,00:a1:b2:c3:d4:e5,40,Lenovo Computer,Windows 10,Marketing & Comms,Thinkpad,Lenovo,2026-05-22T14:53:08.501Z,Active,76
+Vrtx-Rmn-Ksh,10.10.70.24,12:34:56:78:90:ab,70,Lenovo Computer,Linux,Mixed Vlan,ThinkCenter M75q,Lenovo,2026-05-22T14:53:08.501Z,Active,92
+Bld-Sfr-Plx,10.10.70.23,3c:5e:6f:7a:8b:9c,70,HP Computer,Linux,Mixed Vlan,ThinkCenter M75q,Lenovo,2026-05-22T14:53:08.501Z,Active,92
+NYC-PACS-VIA-01,10.20.30.50,88:4b:39:33:e7:a4,30,Siemens syngo.via PACS Server,,Datacenter and Business Apps,syngo.via,Siemens AG,2026-05-22T14:53:08.501Z,Active,33
+Welding Robot 1,10.30.20.13,00:e0:e4:51:ec:e5,30,FANUC Robotics Device,Embedded,"Concord, Ontario DPNA - PLC PCN",ARC Mate 50iD/7L,FANUC,2026-05-22T14:53:08.501Z,Active,26
+Rockwell Cell 1 PLC,10.30.20.11,00:1d:9c:d7:0a:82,64,Rockwell Automation PLC,Embedded,Process,1756-L85E LOGIX5580,Rockwell Automation,2026-05-22T14:53:08.501Z,Active,99
+Data-Server-PC-1S,10.10.30.34,2b:3c:4d:5e:6f:70,30,VMWare,Windows,Datacenter & Business Apps,-,"VMware, Inc.",2026-05-22T14:53:08.501Z,Active,99
+Mktg-Analyst-PC-2B,10.10.10.14,c0:de:01:23:45:67,10,HP Computer,Windows 10,Operations Planning & Support,EliteBook,HP,2026-05-22T14:53:08.501Z,Active,76
+00:90:0b:d4:3d:25,192.168.50.10,00:90:0b:d4:3d:25,100,Lanner Electronics Equipment,,,,Lanner Electronics,2026-05-22T14:53:08.501Z,Active,20
+Fin-Cont-Mac-7D,10.10.40.15,b8:ac:e2:34:1c:78,40,Dell Computer,Windows,Marketing & Comms,Lattitude,Dell,2026-05-22T14:53:08.501Z,Active,76
+f8:e4:3b:bd:d3:a8,10.6.72.101,f8:e4:3b:bd:d3:a8,,Active Power UPS Device,Embedded,Corp Supernet,206L,Active Power,2026-05-22T14:53:08.501Z,Active,20
+R&D-Kiosk-PC-1X,10.10.50.29,d0:e1:f2:a3:b4:c5,50,HP Computer,Windows,End User Kiosks,EliteBook,HP,2026-05-22T14:53:08.501Z,Active,76
+Legal-Paralegal-PC-18H,10.10.10.19,d7:f9:e1:0c:2b:3a,10,Dell Computer,Windows,Operations Planning & Support,Lattitude,Dell,2026-05-22T14:53:08.501Z,Active,76
+Drps-Gfx-Ky,10.10.70.13,e4:7f:11:5c:a8:b9,70,Dell Computer,Linux,Mixed Vlan,ThinkCenter M75q,Lenovo,2026-05-22T14:53:08.501Z,Active,92
+Fin-Server-PC-10E,10.10.30.40,2b:3c:4d:5e:6f:7a,30,VMWare,Windows,Datacenter & Business Apps,-,"VMware, Inc.",2026-05-22T14:53:08.501Z,Active,99
+Zlph-Bld-Gft,172.16.96.25,6d:5c:4b:3a:21:10,99,Dell Computer,Linux,Guest & Cafeteria,ThinkCenter M75q,Lenovo,2026-05-22T14:53:08.501Z,Active,92
+ac:cc:8e:20:d5:8e,10.6.72.14,ac:cc:8e:20:d5:8e,,Axis Communications Video Surveillance,Embedded,Corp Supernet,Q6075‑E,Axis Communications,2026-05-22T14:53:08.501Z,Active,100
+Prx-Cst-Mph,172.16.96.20,02:4f:c2:d9:e0:f1,99,HP Computer,Linux,Guest & Cafeteria,ThinkCenter M75q,Lenovo,2026-05-22T14:53:08.501Z,Active,92
+Tkn-Prx-Stn,10.10.70.22,9a:8b:7c:6d:5e:4f,70,Dell Computer,Linux,Mixed Vlan,ThinkCenter M75q,Lenovo,2026-05-22T14:53:08.501Z,Active,92
+48:b0:2d:e9:ca:57,10.6.72.11,48:b0:2d:e9:ca:57,,Lanner Traffic Flow Sensor,Embedded,Corp Supernet,EAI-I131,Lanner Electronics,2026-05-22T14:53:08.501Z,Active,20
+PR-Kiosk-PC-12G,10.10.50.33,f3:e2:a1:c0:b5:a6,50,HP Computer,Windows,End User Kiosks,EliteBook,HP,2026-05-22T14:53:08.501Z,Active,76
+NYC-RAD-VIEW12,10.20.20.104,b0:5c:da:36:1c:72,20,PACSGEAR DICOM Workstation,Windows,Radiology,PACSGEAR,Hyland Software Inc./PACSGEAR,2026-05-22T14:53:08.501Z,Active,86
+NYC-RPM-SPO298765,10.20.10.21,948295038439565,10,Telli Health Cellular Pulse Oximeter,,Medical,BM1000,Telli Health,2026-05-22T14:53:08.501Z,Active,20
+Rockwell Cell 1 PLC - slot-1,10.30.20.11-slot-1,00:1d:9c:d7:0a:82-slot-1,,Rockwell Automation Device,,,1756-EN2T/D,Rockwell Automation,2026-05-22T14:53:08.501Z,Active,30
+OT-FNET-6000-1A,10.30.10.1,00:09:0F:00:00:00,10,Fortinet Firewall,Fortios 7 (Version 7.0.10),SCADA Control Center,FG-6000F,Fortinet,2026-05-22T14:53:08.501Z,Active,30
+ProjMgmt-Kiosk-PC-7B,10.10.50.31,01:23:45:67:89:ab,50,HP Computer,Windows,End User Kiosks,EliteBook,HP,2026-05-22T14:53:08.501Z,Active,76
+Vylt-Hph-Trl,172.16.96.17,88:9f:a1:b2:c3:d4,99,HP Computer,Linux,Guest & Cafeteria,ThinkCenter M75q,Lenovo,2026-05-22T14:53:08.501Z,Active,92
+ProjMgmt-Coord-Mac-11N,10.10.40.24,7c:8d:9e:af:01:23,40,HP Computer,Windows,Marketing & Comms,Lattitude,Dell,2026-05-22T14:53:08.501Z,Active,76
+UX-Design-PC-20R,10.10.10.28,f1:e2:d3:c4:b5:a6,10,Lenovo Computer,Windows,Operations Planning & Support,Thinkpad,Lenovo,2026-05-22T14:53:08.501Z,Active,76
+Sales-Kiosk-PC-2Y,10.10.50.30,f3:e2:d1:c0:b9:a8,50,HP Computer,Windows,End User Kiosks,EliteBook,HP,2026-05-22T14:53:08.501Z,Active,76
+Myln-Sgt-Nxt,172.16.96.19,f7:e6:d5:c4:b3:a2,99,Dell Computer,Linux,Guest & Cafeteria,ThinkCenter M75q,Lenovo,2026-05-22T14:53:08.501Z,Active,92
+Rockwell Cell 1 PLC - slot-5,10.30.20.11-slot-5,00:1d:9c:d7:0a:82-slot-5,,Rockwell Automation Device,,,1756-EN4TR,Rockwell Automation,2026-05-22T14:53:08.501Z,Active,30
+Legal-Server-PC-8C,10.10.30.39,1c:2d:3e:4f:5a:6b,30,VMWare,Linux,Datacenter & Business Apps,-,"VMware, Inc.",2026-05-22T14:53:08.501Z,Active,99
+Log-Server-PC-6A,10.10.30.38,5a:8d:9e:af:a5:c1,30,VMWare,Windows,Datacenter & Business Apps,-,"VMware, Inc.",2026-05-22T14:53:08.501Z,Active,99
+Trend-Apex-One,10.10.70.11,d8:12:6e:3b:f9:c7,200,Lenovo Computer,Linux,Manufacturing & Logistics,,Lenovo Group Ltd.,2026-05-22T14:53:08.501Z,Active,88
+R&D-Lab-PC-30I,10.10.20.0/20,f3:e2:d1:c4:b5:a6,20,HP Computer,Windows,Manufacturing & Logistics,EliteBook,HP,2026-05-22T14:53:08.501Z,Active,76
+Carefusion Infusion Pump Base Station,10.20.110.103,00:1a:c2:00:00:01,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.104,00:1a:c5:00:00:01,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.128,00:1e:c0:01:02:03,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.138,00:0a:95:9d:2c:9a,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.137,00:1a:c8:d2:f4:b7,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.108,00:1e:c0:01:a0:c8,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.141,00:1b:77:aa:bb:cc,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.105,00:1c:c0:00:00:01,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.119,00:1a:6b:00:00:01,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.131,00:1e:00:00:00:01,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.143,00:1c:89:ab:cd:ef,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.102,00:1a:2b:3c:4d:5e,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.110,00:1e:c0:00:00:01,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.113,00:1a:c8:00:00:01,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.132,00:1a:c1:2b:3c:4d,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.107,00:1c:1b:00:00:01,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.112,00:1a:c6:00:00:01,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.115,00:1e:c0:a1:b2:c3,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.117,00:1b:63:00:00:01,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.135,00:1a:c1:b2:d3:e4,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.101,00:1a:c8:ff:ee:dd,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.111,f8:c6:78:00:00:01,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.120,00:1c:c5:01:a2:4b,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.126,00:1c:18:0a:12:34,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.133,00:1a:c1:2b:3d:5f,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.125,00:04:a3:f0:00:00,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.127,00:0f:f8:a4:b3:c1,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.129,f8:c6:78:00:00:00,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.106,00:1a:2b:3c:4d:5f,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.134,f8:c6:78:00:00:04,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.140,f8:c6:78:00:00:07,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.118,00:1a:2b:3c:4d:61,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.114,00:1a:c2:00:00:02,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.116,00:1e:c0:00:00:02,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.124,f8:c6:78:00:00:03,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.130,00:1e:c0:a1:b2:c4,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.121,00:1e:c0:00:00:03,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.123,00:1a:2b:3c:4d:62,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.142,f8:c6:78:00:00:08,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.109,00:1a:2b:3c:4d:60,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.122,f8:c6:78:00:00:02,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.136,f8:c6:78:00:00:05,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Carefusion Infusion Pump Base Station,10.20.110.139,f8:c6:78:00:00:06,110,Carefusion Infusion Pump Base Station,Enea Ose 4 (Version 4.5.2),Clinical and IT,Alaris 8015,CareFusion,2026-05-22T14:53:08.501Z,Active,20
+Yokogawa Stardom RTU,10.30.9.102,00:00:64:d3:6a:91,,Yokogawa Stardom RTU,Embedded,Summary address for the HOU Industrial OT,FCN-RTU,Yokogawa,2026-05-22T14:53:08.501Z,Active,89
+Yokogawa PLC,10.30.9.104,00:00:64:05:c8:e2,,Yokogawa PLC,ProConOS,Summary address for the HOU Industrial OT,,Yokogawa,2026-05-22T14:53:08.501Z,Active,20
+PRM0780,10.30.7.80,00:15:5d:bf:e4:61,,Yokogawa PRM Server,Windows 10 (Version 1809),Summary address for the HOU Industrial OT,,Microsoft Corporation,2026-05-22T14:53:08.501Z,Active,20
+his63,192.168.2.100,00:15:5d:00:5e:8b,100,Control System Engineering Workstation,Windows,POR Guest,,Microsoft Corporation,2026-05-22T14:53:08.501Z,Active,20
+Yokogawa Centum Controller,10.30.9.112,00:00:64:78:3c:a5,,Yokogawa Centum Controller,Embedded,Summary address for the HOU Industrial OT,Centum VP 3000 CP401,Yokogawa,2026-05-22T14:53:08.501Z,Active,100
+STN0722,10.30.7.22,00:15:5d:7e:29:b4,,Yokogawa Engineering Station,,Summary address for the HOU Industrial OT,,Microsoft Corporation,2026-05-22T14:53:08.501Z,Active,20
+his63,192.168.1.100,00:15:5d:00:5e:8a,100,Control System Engineering Workstation,Windows,SJC Guest,,Microsoft Corporation,2026-05-22T14:53:08.501Z,Active,20
+HIS0770,10.30.7.70,00:15:5d:92:5d:08,,Yokogawa Human Interface Station,Windows 10 (Version 1809),Summary address for the HOU Industrial OT,,Yokogawa,2026-05-22T14:53:08.501Z,Active,20
+STN0760,10.30.7.60,00:50:56:4b:17:f3,,Yokogawa Engineering Station,Windows 10 (Version 1607),Summary address for the HOU Industrial OT,,"VMware, Inc.",2026-05-22T14:53:08.501Z,Active,20
+STN10720,10.30.7.20,00:15:5d:3a:f1:c7,,Yokogawa Engineering Station,Windows,Summary address for the HOU Industrial OT,,Microsoft Corporation,2026-05-22T14:53:08.501Z,Active,20
+his63,10.30.20.100,00:15:5d:00:5e:88,20,Control System Engineering Workstation,,Manufacturing Assembly,,,2026-05-22T14:53:08.501Z,Active,20
+5G Industrial Camera,10.30.140.25,356938035643809,,Horizon CC1005G 5G Camera,,Summary address for the HOU Industrial OT site,Horizon CC1005G,Horizon,2026-05-22T14:53:08.501Z,Active,30
+ABB Industrial PLC,10.30.152.20,70:b3:d5:c4:70:11,,ABB AC500 PLC,,HOU Industrial OT DCS Controllers,ABB AC500,ABB,2026-05-22T14:53:08.501Z,Active,20
+Emerson Rosemount Wireless Sensor,10.30.154.23,00:26:16:0c:8a:45,,Rosemount WirelessHART sensors,,HOU Industrial OT Wireless Sensors,Rosemount 3051S Wireless,Emerson Electric,2026-05-22T14:53:08.501Z,Active,25
+ABB Industrial Controller,10.30.152.14,70:b3:d5:08:12:34,,ABB AC800M Controller,,HOU Industrial OT DCS Controllers,ABB AC800M,ABB,2026-05-22T14:53:08.501Z,Active,20
+Emerson Industrial Gateway,10.30.154.10,00:26:16:6c:8b:23,,Emerson Wireless 1410S Gateway,,HOU Industrial OT Wireless Sensors,Emerson 1410S Gateway,Emerson Electric,2026-05-22T14:53:08.501Z,Active,25
