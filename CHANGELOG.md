@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.40] - 2026-05-27
+### Added
+- **stigix-cli** 🖥️ New interactive local CLI (`Scripts/stigix-cli.py`) — full-featured terminal console for Stigix instances without browser access. Features: live bottom toolbar (auth/traffic/version status), JWT session persistence (`~/.stigix-cli.json`), named instance profiles (`connect save lab1` / `connect lab1`) for quick multi-instance switching, Tab autocompletion, command history, F1/F5/Ctrl+L shortcuts, and `traffic watch` / `convergence watch` live monitoring. Also supports `--exec` (headless single command) and `--script` (batch file) modes.
+- **stigix-cli in Docker** 🐳 `stigix-cli` is now available directly inside the container — run `docker exec -it stigix stigix-cli` for zero-install local access. `prompt_toolkit` added to Python dependencies; wrapper script installed at `/usr/local/bin/stigix-cli`.
+- **install-cli.sh** 📦 Improved host-side installer: auto-detects root vs user prefix (`/usr/local/bin` or `~/.local/bin`), verifies Python 3, installs deps, checks PATH, supports `--uninstall` flag.
+
 ## [v1.4.0-patch.39] - 2026-05-22
 ### Changed
 - **VyOS Sequences**: Implemented clickable columns for sorting in the sequence list. Columns (Name, Router, Command, Last) can now be toggled between ascending and descending order.

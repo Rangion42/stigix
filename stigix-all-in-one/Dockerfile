@@ -102,8 +102,17 @@ COPY mcp-server /app/mcp-server
 COPY traffic-generator.sh ./
 COPY stigix-all-in-one ./stigix-all-in-one
 
-# Install Python dependencies
-RUN pip3 install --no-cache-dir requests scapy flask prisma-sase -r iot/requirements.txt -r mcp-server/requirements.txt --break-system-packages || true
+# Copy CLI script
+COPY Scripts/stigix-cli.py /usr/local/lib/stigix/stigix-cli.py
+
+# Install Python dependencies (requests, prompt_toolkit for stigix-cli)
+RUN pip3 install --no-cache-dir requests prompt_toolkit scapy flask prisma-sase \
+    -r iot/requirements.txt -r mcp-server/requirements.txt \
+    --break-system-packages || true
+
+# Install stigix-cli wrapper
+RUN printf '#!/bin/sh\nexport STIGIX_URL="${STIGIX_URL:-http://localhost:8080}"\nexec python3 /usr/local/lib/stigix/stigix-cli.py "$@"\n' \
+    > /usr/local/bin/stigix-cli && chmod +x /usr/local/bin/stigix-cli
 
 # Final preparations
 RUN chmod +x /app/traffic-generator.sh \
