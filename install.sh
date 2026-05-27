@@ -53,17 +53,17 @@ fi
 
 echo "✅ Docker is running."
 
-# OS Detection
+# OS Detection — Linux gets host mode, macOS/Windows get bridge mode
 OS_TYPE=$(uname)
 if [[ "$OS_TYPE" == "Linux" ]] && ! grep -qi microsoft /proc/version 2>/dev/null; then
     echo "🐧 Platform: Native Linux detected. (Using host mode for full features)"
     COMPOSE_URL="$REPO_URL/docker-compose.yml"
 elif [[ "$OS_TYPE" == "Darwin" ]]; then
-    echo "🍎 Platform: macOS detected. (Host mode has limitations on macOS, using bridge mode)"
-    COMPOSE_URL="$REPO_URL/docker-compose.yml"
+    echo "🍎 Platform: macOS detected. (Host mode not supported on macOS, using bridge mode)"
+    COMPOSE_URL="$REPO_URL/docker-compose.bridge.yml"
 else
     echo "🪟 Platform: WSL/Windows or unknown detected. (Using bridge mode)"
-    COMPOSE_URL="$REPO_URL/docker-compose.yml"
+    COMPOSE_URL="$REPO_URL/docker-compose.bridge.yml"
 fi
 
 # 2. Interactive Mode Selection if script is run without arguments and not piped

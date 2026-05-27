@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.41] - 2026-05-27
+### Fixed
+- **install.sh** 🐛 macOS and Windows installs were silently using `docker-compose.yml` (host networking) instead of bridge mode, despite the correct platform detection message being displayed. All three OS branches previously pointed to the same file. Fixed: macOS and WSL/Windows now correctly download `docker-compose.bridge.yml`.
+- **docker-compose.bridge.yml** ✨ New dedicated bridge-mode compose file for macOS/Windows with explicit port mappings for all services (8080, 8082, 9000, 5201 TCP/UDP, 6100/6101 UDP, 6200 UDP, 3100).
+
 ## [v1.4.0-patch.40] - 2026-05-27
 ### Added
 - **stigix-cli** 🖥️ New interactive local CLI (`Scripts/stigix-cli.py`) — full-featured terminal console for Stigix instances without browser access. Features: live bottom toolbar (auth/traffic/version status), JWT session persistence (`~/.stigix-cli.json`), named instance profiles (`connect save lab1` / `connect lab1`) for quick multi-instance switching, Tab autocompletion, command history, F1/F5/Ctrl+L shortcuts, and `traffic watch` / `convergence watch` live monitoring. Also supports `--exec` (headless single command) and `--script` (batch file) modes.
