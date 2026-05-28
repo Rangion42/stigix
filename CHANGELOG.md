@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.72] - 2026-05-28
+### Added
+- **stigix-cli** ⚙️ Implemented real-time upgrade log output streaming and status monitoring for the `system upgrade` command, handling connection drop and automatic recovery when containers restart.
+
 ## [v1.4.0-patch.71] - 2026-05-28
 ### Fixed
 - **web-dashboard** 📞 Improved Voice target checklist checkbox visibility and interaction by removing inherited row opacity, enhancing checkbox border/hover colors, and making the entire Site cell clickable.

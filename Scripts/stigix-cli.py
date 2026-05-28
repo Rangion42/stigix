@@ -3396,7 +3396,78 @@ def cmd_system(args):
         confirm = input("Pull latest Docker image and upgrade? [y/N]: ").strip().lower()
         if confirm == "y":
             r = api_post("/api/admin/maintenance/upgrade")
-            if r: ok("Upgrade initiated")
+            if r:
+                ok("Upgrade initiated successfully")
+                print()
+                
+                # Start polling progress
+                info("Monitoring upgrade progress...")
+                last_log_idx = 0
+                restarting_seen = False
+                max_retries = 120  # up to 6 minutes
+                retry_count = 0
+                current_stage = None
+                
+                while retry_count < max_retries:
+                    try:
+                        resp = HTTP_SESSION.get(f"{STIGIX_URL}/api/admin/maintenance/status", headers=_headers(), timeout=4)
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            stage = data.get("stage", "idle")
+                            in_progress = data.get("inProgress", False)
+                            logs = data.get("logs", [])
+                            error = data.get("error")
+                            
+                            # Print new log lines
+                            if len(logs) > last_log_idx:
+                                for line in logs[last_log_idx:]:
+                                    if line.startswith("[ERROR]"):
+                                        err(line)
+                                    elif line.startswith("[WARN]"):
+                                        warn(line)
+                                    else:
+                                        dim(f"  {line}")
+                                last_log_idx = len(logs)
+                                
+                            if stage != current_stage:
+                                current_stage = stage
+                                if stage == "pruning":
+                                    info("Stage: Pruning unused Docker layers/containers...")
+                                elif stage == "pulling":
+                                    info("Stage: Pulling latest Docker image...")
+                                elif stage == "restarting":
+                                    info("Stage: Recreating and restarting Stigix containers...")
+                                    restarting_seen = True
+                                elif stage == "complete":
+                                    ok("Upgrade completed successfully! Backend is back online.")
+                                    return
+                                elif stage == "failed":
+                                    err(f"Upgrade failed: {error or 'Unknown error'}")
+                                    return
+                                    
+                            if not in_progress and stage == "complete":
+                                ok("Upgrade completed successfully! Backend is back online.")
+                                return
+                            if not in_progress and stage == "failed":
+                                err(f"Upgrade failed: {error or 'Unknown error'}")
+                                return
+                                
+                        elif resp.status_code == 401:
+                            err("Session unauthorized. Upgrade aborted.")
+                            return
+                            
+                    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+                        if restarting_seen:
+                            print(c("33", "  ⌛ Waiting for Stigix backend to come back online..."))
+                            last_log_idx = 0
+                        else:
+                            # Connection lost momentarily before restart phase
+                            pass
+                            
+                    time.sleep(3)
+                    retry_count += 1
+                    
+                err("Monitoring timed out. Please check container status manually via 'docker ps'.")
         else:
             dim("Cancelled")
 
