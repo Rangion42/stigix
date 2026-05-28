@@ -385,27 +385,76 @@ docker compose up -d
 
 ## 📊 Verify Installation
 
+After starting Stigix, you can easily verify that the system is running and healthy by performing a few quick checks:
+
+### 1. Check Container Status
+Verify that the Stigix container is up and running and is marked as healthy:
 ```bash
-# go to directory
-cd stigix/
-
-# Check containers status
 docker compose ps
-
-# Check logs (should be clean, no [ERROR] messages)
-docker compose logs -f
-
-# Check health endpoint
-curl http://localhost:8080/api/health
-# Expected: {"status":"healthy","version":"1.1.0-patch.7"}
-
-# Check auto-generated config
-ls -la config/
-cat config/interfaces.txt  # Your auto-detected interface
-jq '.applications[]' config/applications-config.json | head -5  # 67 applications
+```
+**Expected Output:**
+```text
+NAME                IMAGE                      COMMAND                  SERVICE             CREATED             STATUS                    PORTS
+stigix              stigix-all-in-one:latest   "/app/entrypoint.sh"     stigix              2 minutes ago       Up 2 minutes (healthy)    0.0.0.0:8080->8080/tcp
 ```
 
-**Expected:** No `[ERROR]` messages in logs ✅
+### 2. Query System Health Endpoint
+Test the API health endpoint directly to make sure the backend is responding and fully initialized:
+```bash
+curl http://localhost:8080/api/health
+```
+**Expected Response:**
+```json
+{"status":"healthy","version":"1.1.0-patch.7"}
+```
+
+### 3. Check System Logs
+Monitor the startup logs. The output should be clean of any exceptions or `[ERROR]` messages:
+```bash
+docker compose logs -f
+```
+
+### 4. Verify via Interactive Console (Recommended) 🛠️
+Stigix has a built-in interactive CLI console (currently in **Beta**) to inspect and control the running state:
+
+1. **Open the interactive console:**
+   ```bash
+   docker exec -it stigix stigix-cli
+   ```
+2. **Log in to the local instance:**
+   Run the `auth login` command and enter the default admin credentials:
+   ```text
+   auth login
+   Username [admin]: admin
+   Password: admin
+   ```
+3. **Inspect the status:**
+   Verify backend connection, traffic state, and public IP detection:
+   ```text
+   status
+   ```
+   **Expected Output:**
+   ```text
+   ━━ Stigix Status ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ✓ Backend    [UP]  uptime 120s
+   → Version    1.1.0-patch.7
+   Traffic      [STOPPED]
+   → Public IP  198.51.100.42
+   ```
+   *(Type `exit` or press `Ctrl + C` to leave the CLI when done)*
+
+### 5. Check Auto-Generated Configuration
+Confirm that the initialization scripts have successfully generated default environment configurations:
+```bash
+# Check generated files
+ls -la config/
+
+# View the auto-detected primary network interface
+cat config/interfaces.txt
+
+# Inspect the loaded application definitions (67 default apps)
+jq '.applications[]' config/applications-config.json | head -5
+```
 
 ---
 

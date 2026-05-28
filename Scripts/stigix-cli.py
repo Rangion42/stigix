@@ -1303,7 +1303,7 @@ def cmd_help(args):
     """Full help screen."""
     do_clear()
     hdr("╔══════════════════════════════════════════════════════════╗")
-    hdr(f"║  stigix-cli v{VERSION:<8}  — Stigix Local Console            ║")
+    hdr(f"║  stigix-cli v{VERSION:<8} (Beta) — Stigix Local Console      ║")
     hdr("╚══════════════════════════════════════════════════════════╝")
     print(f"""
   {c('1','GENERAL')}
@@ -1601,7 +1601,7 @@ def _prompt_text():
 def run_interactive():
     do_clear()
     hdr("╔══════════════════════════════════════════════╗")
-    hdr(f"║  stigix-cli v{VERSION:<8}  local console       ║")
+    hdr(f"║  stigix-cli v{VERSION:<8} (Beta) local console   ║")
     hdr("╚══════════════════════════════════════════════╝")
     info(f"Target  : {STIGIX_URL}")
     if JWT_TOKEN:
