@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.79] - 2026-05-28
+### Fixed
+- **web-dashboard** ⚙️ Resolved Docker-in-Docker relative path resolution issues during upgrade/redeploy by auto-detecting host project directory and passing it via the `--project-directory` flag in Docker Compose commands.
+
 ## [v1.4.0-patch.78] - 2026-05-28
 ### Added
 - **install** ⚙️ Added `BETA` feature flag variable default mapping to all docker compose files and configured installers (`install.sh` and `install-latest-beta.sh`) to output `BETA=false/true` by default in `.env` to enable the System Maintenance menu visibility for beta releases.

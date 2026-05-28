@@ -8973,6 +8973,34 @@ app.get('/api/admin/maintenance/status', authenticateToken, (req, res) => {
     res.json(G_UPGRADE_STATUS);
 });
 
+async function getHostProjectDir(): Promise<string | null> {
+    try {
+        const { stdout: inspectOut } = await promisify(exec)(`docker inspect ${os.hostname()}`);
+        const inspectData = JSON.parse(inspectOut);
+        if (Array.isArray(inspectData) && inspectData.length > 0) {
+            const mounts = inspectData[0].Mounts || [];
+            const composeMount = mounts.find((m: any) => 
+                m.Destination === '/app/docker-compose.yml' || 
+                m.Destination === '/app' ||
+                m.Destination === '/app/config'
+            );
+            if (composeMount) {
+                const hostPath = composeMount.Source;
+                if (composeMount.Destination === '/app/config') {
+                    return path.dirname(hostPath);
+                } else if (composeMount.Destination === '/app/docker-compose.yml') {
+                    return path.dirname(hostPath);
+                } else {
+                    return hostPath;
+                }
+            }
+        }
+    } catch (e: any) {
+        console.warn('[MAINTENANCE] Failed to auto-detect host project directory:', e.message);
+    }
+    return null;
+}
+
 async function detectDockerComposeCmd(): Promise<string> {
     const dockerPath = '/usr/local/bin/docker';
     const dockerComposePath = '/usr/local/bin/docker-compose';
@@ -9075,6 +9103,9 @@ app.post('/api/admin/maintenance/upgrade', authenticateToken, async (req, res) =
                 G_UPGRADE_STATUS.logs.push(`[WARN] Docker compose detection failed: ${err.message}. Defaulting to 'docker compose'`);
             }
 
+            const hostDir = await getHostProjectDir();
+            const projDirFlag = hostDir ? `--project-directory ${hostDir}` : '';
+
             // 2. Prune stage (Purge)
             try {
                 // Run system prune to clean up unused layers/containers
@@ -9090,7 +9121,8 @@ app.post('/api/admin/maintenance/upgrade', authenticateToken, async (req, res) =
             const pullTarget = version || 'latest';
             let pullCmd = '';
             if (composeFile) {
-                pullCmd = version ? `TAG=${version} ${baseCmd} -f ${composeFile} pull` : `${baseCmd} -f ${composeFile} pull`;
+                const tagPrefix = version ? `TAG=${version} ` : '';
+                pullCmd = `${tagPrefix}${baseCmd} ${projDirFlag} -f ${composeFile} pull`.replace(/\s+/g, ' ').trim();
             } else {
                 pullCmd = `docker pull jsuzanne/stigix:${pullTarget}`;
             }
@@ -9107,18 +9139,15 @@ app.post('/api/admin/maintenance/upgrade', authenticateToken, async (req, res) =
             setTimeout(async () => {
                 try {
                     if (composeFile) {
+                        const tagPrefix = version ? `TAG=${version} ` : '';
                         // First try with --force-recreate
-                        const upCmd = version 
-                            ? `TAG=${version} ${baseCmd} -f ${composeFile} up -d --force-recreate` 
-                            : `${baseCmd} -f ${composeFile} up -d --force-recreate`;
+                        const upCmd = `${tagPrefix}${baseCmd} ${projDirFlag} -f ${composeFile} up -d --force-recreate`.replace(/\s+/g, ' ').trim();
                         
                         const upExit = await runCommandAndLog(upCmd, workingDir, 'restarting');
                         if (upExit !== 0) {
                             G_UPGRADE_STATUS.logs.push(`[WARN] Up with --force-recreate failed (exit ${upExit}). Falling back to simple up...`);
                             // Fallback to simple up without force-recreate
-                            const fallbackUpCmd = version 
-                                ? `TAG=${version} ${baseCmd} -f ${composeFile} up -d` 
-                                : `${baseCmd} -f ${composeFile} up -d`;
+                            const fallbackUpCmd = `${tagPrefix}${baseCmd} ${projDirFlag} -f ${composeFile} up -d`.replace(/\s+/g, ' ').trim();
                             
                             const fallbackExit = await runCommandAndLog(fallbackUpCmd, workingDir, 'restarting');
                             if (fallbackExit !== 0) {
@@ -9186,6 +9215,9 @@ app.post('/api/admin/maintenance/restart', authenticateToken, async (req, res) =
             const composeFile = hasAppCompose ? '/app/docker-compose.yml' : (hasRootCompose ? path.join(rootDir, 'docker-compose.yml') : null);
             const workingDir = hasAppCompose ? '/app' : rootDir;
 
+            const hostDir = await getHostProjectDir();
+            const projDirFlag = hostDir ? `--project-directory ${hostDir}` : '';
+
             let cmd = '';
 
             if (type === 'restart') {
@@ -9202,8 +9234,8 @@ app.post('/api/admin/maintenance/restart', authenticateToken, async (req, res) =
                     cmd = 'docker restart stigix';
                 } else {
                     cmd = type === 'redeploy'
-                        ? `${baseCmd} -f ${composeFile} up -d --force-recreate`
-                        : `${baseCmd} -f ${composeFile} restart`;
+                        ? `${baseCmd} ${projDirFlag} -f ${composeFile} up -d --force-recreate`.replace(/\s+/g, ' ').trim()
+                        : `${baseCmd} ${projDirFlag} -f ${composeFile} restart`.replace(/\s+/g, ' ').trim();
                 }
             } else {
                 cmd = 'docker restart stigix';
