@@ -2397,6 +2397,11 @@ def cmd_vyos(args):
     if not require_auth(): return
     sub = args[0] if args else "list"
 
+    # Support 'vyos sequences run/stop <id>' redirection
+    if sub == "sequences" and len(args) > 1 and args[1] in ("run", "stop"):
+        sub = args[1]
+        args = args[1:]
+
     if sub == "list":
         r = api_get("/api/vyos/routers")
         if r:
@@ -2412,7 +2417,7 @@ def cmd_vyos(args):
         if r:
             seqs = r if isinstance(r, list) else r.get("sequences", [])
             table(["ID", "Name", "Mode", "Steps"], [
-                [s.get("id","?")[:10], s.get("name","?")[:20],
+                [s.get("id","?")[:24], s.get("name","?")[:20],
                  s.get("mode","?"), len(s.get("steps",[]))]
                 for s in seqs
             ])
@@ -2420,12 +2425,40 @@ def cmd_vyos(args):
     elif sub == "run":
         sid = args[1] if len(args) > 1 else None
         if not sid: err("Usage: vyos run <sequence-id>"); return
+        
+        # Resolve truncated sequence ID to full ID
+        r_seqs = api_get("/api/vyos/sequences")
+        if r_seqs:
+            seqs = r_seqs if isinstance(r_seqs, list) else r_seqs.get("sequences", [])
+            matched = [s for s in seqs if s.get("id") == sid]
+            if not matched:
+                matched = [s for s in seqs if s.get("id", "").startswith(sid)]
+            if len(matched) == 1:
+                sid = matched[0]["id"]
+            elif len(matched) > 1:
+                err(f"Ambiguous sequence ID '{sid}'. Multiple sequences match: " + ", ".join([s["id"] for s in matched]))
+                return
+
         r = api_post(f"/api/vyos/sequences/run/{sid}")
         if r: ok(f"Sequence {sid} started")
 
     elif sub == "stop":
         sid = args[1] if len(args) > 1 else None
         if not sid: err("Usage: vyos stop <sequence-id>"); return
+        
+        # Resolve truncated sequence ID to full ID
+        r_seqs = api_get("/api/vyos/sequences")
+        if r_seqs:
+            seqs = r_seqs if isinstance(r_seqs, list) else r_seqs.get("sequences", [])
+            matched = [s for s in seqs if s.get("id") == sid]
+            if not matched:
+                matched = [s for s in seqs if s.get("id", "").startswith(sid)]
+            if len(matched) == 1:
+                sid = matched[0]["id"]
+            elif len(matched) > 1:
+                err(f"Ambiguous sequence ID '{sid}'. Multiple sequences match: " + ", ".join([s["id"] for s in matched]))
+                return
+
         r = api_post(f"/api/vyos/sequences/stop/{sid}")
         if r: ok(f"Sequence {sid} stopped")
 

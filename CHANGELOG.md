@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.69] - 2026-05-28
+### Fixed
+- **stigix-cli** ⚙️ Fixed the VyOS sequence run command execution issues by adding command redirection for `vyos sequences run/stop` and implementing client-side prefix matching to resolve truncated sequence IDs to full unique IDs before calling the backend.
+- **stigix-cli** 📊 Increased the displayed ID limit in the `vyos sequences` table to 24 characters to make sure unique suffixes are visible.
+
 ## [v1.4.0-patch.68] - 2026-05-28
 ### Added
 - **maintenance** 🐳 Improved container upgrade flow by adding automatic docker system pruning (`docker system prune -a -f`) to purge unused image layers.
