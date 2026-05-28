@@ -65,6 +65,31 @@ You can automate tasks by passing arguments directly to the docker execution com
     docker exec -it stigix stigix-cli --script test-plan.txt
     ```
 
+## 🔗 Connecting & Logging into a Remote Instance
+
+If you are running the CLI from your local machine and want to manage a remote Stigix target host (e.g. `192.168.1.120`), follow these steps:
+
+### Step 1: Connect to the Remote Host
+Launch the CLI and instruct it to target the remote instance's backend URL:
+```bash
+docker exec -it stigix stigix-cli --url http://192.168.1.120:8080
+```
+*(Alternatively, if you are already inside the interactive CLI prompt, you can type `connect 192.168.1.120:8080`)*
+
+### Step 2: Authenticate (Log In)
+Upon connecting to a new remote instance, you will see a warning: `⚠ No token for this instance — run: auth login`.
+
+To log in, type:
+```text
+auth login
+```
+The console will prompt you for credentials:
+```text
+Username [admin]: admin
+Password: <type password>
+```
+Upon success, the session token is saved automatically to your profile config. The CLI prompt will update, and you can now run any command against the remote Stigix host.
+
 ---
 
 ## 📚 Command Reference
