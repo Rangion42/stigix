@@ -824,13 +824,98 @@ def cmd_speedtest(args):
             table(["ID", "Time", "Target", "Proto", "Speed (Mbps)", "RTT", "Status"], rows)
 
     elif sub == "run":
-        if len(args) < 2:
-            err("Usage: speedtest run <target-host> [options]")
-            return
-        target_host = args[1]
-        
-        parsed = parse_flags(args[2:], ["port", "protocol", "direction", "duration", "bitrate", "streams", "psk"])
-        
+        # Parse out target host and remaining options
+        target_host = None
+        remaining_opts = []
+        if len(args) > 1:
+            first_arg = args[1]
+            if not first_arg.startswith("--"):
+                target_host = first_arg
+                remaining_opts = args[2:]
+            else:
+                remaining_opts = args[1:]
+        else:
+            remaining_opts = []
+
+        # If target host not provided, propose available XFR targets or prompt
+        if not target_host:
+            targets = api_get("/api/targets")
+            if targets is None:
+                targets = []
+            else:
+                targets = targets if isinstance(targets, list) else targets.get("targets", [])
+            
+            xfr_targets = [
+                t for t in targets 
+                if t.get("enabled", True) and t.get("capabilities", {}).get("xfr")
+            ]
+            
+            if not xfr_targets:
+                if sys.stdin.isatty():
+                    try:
+                        target_host = input("Enter speedtest target host/IP: ").strip()
+                    except (KeyboardInterrupt, EOFError):
+                        print()
+                        return
+                    if not target_host:
+                        err("Target host/IP cannot be empty. Aborting.")
+                        return
+                else:
+                    err("No speedtest target specified and non-interactive. Usage: speedtest run <target-host> [options]")
+                    return
+            else:
+                if sys.stdin.isatty():
+                    print("\nAvailable Speedtest Targets:")
+                    for idx, xt in enumerate(xfr_targets, 1):
+                        print(f"  {idx}: {xt.get('name')} ({xt.get('host')})")
+                    manual_idx = len(xfr_targets) + 1
+                    print(f"  {manual_idx}: [Manual IP/Host]")
+                    print()
+                    try:
+                        choice = input("Select target [1]: ").strip()
+                        if not choice:
+                            idx_choice = 1
+                        else:
+                            idx_choice = int(choice)
+                    except ValueError:
+                        err("Invalid choice. Aborting.")
+                        return
+                    except (KeyboardInterrupt, EOFError):
+                        print()
+                        return
+
+                    if 1 <= idx_choice <= len(xfr_targets):
+                        target_host = xfr_targets[idx_choice - 1].get("host")
+                    elif idx_choice == manual_idx:
+                        try:
+                            target_host = input("Enter speedtest target host/IP: ").strip()
+                        except (KeyboardInterrupt, EOFError):
+                            print()
+                            return
+                        if not target_host:
+                            err("Target host/IP cannot be empty. Aborting.")
+                            return
+                    else:
+                        err("Invalid index. Aborting.")
+                        return
+                else:
+                    # Non-interactive fallback
+                    target_host = xfr_targets[0].get("host")
+                    info(f"Auto-selected speedtest target: {target_host} ({xfr_targets[0].get('name')})")
+        else:
+            # Resolve target name/IP if target_host was provided
+            targets = api_get("/api/targets")
+            if targets:
+                targets_list = targets if isinstance(targets, list) else targets.get("targets", [])
+                match = None
+                for t in targets_list:
+                    if t.get("name", "").lower() == target_host.lower() or t.get("host") == target_host:
+                        match = t
+                        break
+                if match:
+                    target_host = match.get("host")
+
+        parsed = parse_flags(remaining_opts, ["port", "protocol", "direction", "duration", "bitrate", "streams", "psk"])
         has_custom = len(parsed) > 0
         
         port = int(parsed.get("port", 9000))
