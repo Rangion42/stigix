@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [v1.4.0-patch.52] - 2026-05-28
+### Fixed
+- **stigix-cli** 🔌 Wrapped script module-level imports and the main execution entrypoint in a try-except block to cleanly intercept `KeyboardInterrupt` (Ctrl+C) and exit with a message, preventing tracebacks.
+
 ## [v1.4.0-patch.51] - 2026-05-28
 ### Added
 - **stigix-cli** 🔌 Enhanced `experience add` to support guided interactive prompting, with type-specific target/timeout defaults, and displaying the equivalent CLI command.

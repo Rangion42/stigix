@@ -10,35 +10,44 @@ Usage:
   stigix-cli --script cmds.txt            # Run a list of commands
 """
 
-import os
-import sys
-import json
-import time
-import threading
-import getpass
-import argparse
-from datetime import datetime
-from pathlib import Path
-
 try:
-    import requests
-except ImportError:
-    print("Missing dependency: pip install requests prompt_toolkit")
-    sys.exit(1)
+    import os
+    import sys
+    import json
+    import time
+    import threading
+    import getpass
+    import argparse
+    from datetime import datetime
+    from pathlib import Path
 
-try:
-    from prompt_toolkit import PromptSession
-    from prompt_toolkit.completion import Completer, Completion, NestedCompleter
-    from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
-    from prompt_toolkit.styles import Style
-    from prompt_toolkit.formatted_text import HTML
-    from prompt_toolkit.key_binding import KeyBindings
-    from prompt_toolkit.document import Document
-    from prompt_toolkit.history import FileHistory
-    HAS_PROMPT_TOOLKIT = True
-except ImportError:
-    HAS_PROMPT_TOOLKIT = False
-    print("[warn] prompt_toolkit not found — pip install prompt_toolkit for best experience")
+    try:
+        import requests
+    except ImportError:
+        print("Missing dependency: pip install requests prompt_toolkit")
+        sys.exit(1)
+
+    try:
+        from prompt_toolkit import PromptSession
+        from prompt_toolkit.completion import Completer, Completion, NestedCompleter
+        from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+        from prompt_toolkit.styles import Style
+        from prompt_toolkit.formatted_text import HTML
+        from prompt_toolkit.key_binding import KeyBindings
+        from prompt_toolkit.document import Document
+        from prompt_toolkit.history import FileHistory
+        HAS_PROMPT_TOOLKIT = True
+    except ImportError:
+        HAS_PROMPT_TOOLKIT = False
+        print("[warn] prompt_toolkit not found — pip install prompt_toolkit for best experience")
+except KeyboardInterrupt:
+    print("\nInterrupted.")
+    try:
+        import sys
+        sys.exit(0)
+    except Exception:
+        import os
+        os._exit(0)
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -2730,4 +2739,8 @@ Examples:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nInterrupted.")
+        sys.exit(0)
