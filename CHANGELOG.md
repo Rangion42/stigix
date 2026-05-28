@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [v1.4.0-patch.46] - 2026-05-28
+### Added
+- **stigix-cli** 🔀 Enhanced `convergence start` command to query and present available Stigix targets with the `convergence` capability in a selection menu (similar to voice start and speedtest run), allowing manual IP/Host input or target name resolution (e.g. `DC1`).
+
 ## [v1.4.0-patch.45] - 2026-05-28
 ### Added
 - **stigix-cli** ⚙️ Implemented comprehensive parameter validation and interactive prompting for speedtest options (`port`, `protocol`, `direction`, `duration`, `bitrate`, `streams`, `psk`), proposing default choices in square brackets for each option.

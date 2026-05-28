@@ -1194,10 +1194,88 @@ def cmd_convergence(args):
 
     elif sub == "start":
         parsed = parse_flags(args[1:], ["target","pps","label"])
-        target = parsed.get("target") or input("Target IP: ").strip()
+        target_host = parsed.get("target")
         pps    = int(parsed.get("pps", 50))
         label  = parsed.get("label", f"CLI-{int(time.time())}")
-        r = api_post("/api/convergence/start", {"target": target, "pps": pps, "label": label})
+
+        # Fetch registry targets to propose/resolve
+        targets = api_get("/api/targets")
+        if targets is None:
+            targets = []
+        else:
+            targets = targets if isinstance(targets, list) else targets.get("targets", [])
+
+        # Filter targets with convergence capability
+        conv_targets = [
+            t for t in targets
+            if t.get("enabled", True) and t.get("capabilities", {}).get("convergence")
+        ]
+
+        if target_host:
+            # Resolve target name/IP if target_host was provided
+            match = None
+            for t in targets:
+                if t.get("name", "").lower() == target_host.lower() or t.get("host") == target_host:
+                    match = t
+                    break
+            if match:
+                target_host = match.get("host")
+        else:
+            # No target host provided: show selection menu or prompt
+            if not conv_targets:
+                if sys.stdin.isatty():
+                    try:
+                        target_host = input("Enter convergence target IP/Host: ").strip()
+                    except (KeyboardInterrupt, EOFError):
+                        print()
+                        return
+                    if not target_host:
+                        err("Target IP/Host cannot be empty. Aborting.")
+                        return
+                else:
+                    err("No convergence target specified. Usage: convergence start --target <host>")
+                    return
+            else:
+                if sys.stdin.isatty():
+                    print("\nAvailable Convergence Targets:")
+                    for idx, ct in enumerate(conv_targets, 1):
+                        print(f"  {idx}: {ct.get('name')} ({ct.get('host')})")
+                    manual_idx = len(conv_targets) + 1
+                    print(f"  {manual_idx}: [Manual IP/Host]")
+                    print()
+                    try:
+                        choice = input("Select target [1]: ").strip()
+                        if not choice:
+                            idx_choice = 1
+                        else:
+                            idx_choice = int(choice)
+                    except ValueError:
+                        err("Invalid choice. Aborting.")
+                        return
+                    except (KeyboardInterrupt, EOFError):
+                        print()
+                        return
+
+                    if 1 <= idx_choice <= len(conv_targets):
+                        target_host = conv_targets[idx_choice - 1].get("host")
+                    elif idx_choice == manual_idx:
+                        try:
+                            target_host = input("Enter convergence target IP/Host: ").strip()
+                        except (KeyboardInterrupt, EOFError):
+                            print()
+                            return
+                        if not target_host:
+                            err("Target IP/Host cannot be empty. Aborting.")
+                            return
+                    else:
+                        err("Invalid index. Aborting.")
+                        return
+                else:
+                    # Non-interactive fallback
+                    target_host = conv_targets[0].get("host")
+                    info(f"Auto-selected convergence target: {target_host} ({conv_targets[0].get('name')})")
+
+        r = api_post("/api/convergence/start", {"target": target_host, "pps": pps, "label": label})
         if r:
             ok(f"Convergence test started: {r.get('testId','?')}")
             STATUS.invalidate()
