@@ -9087,7 +9087,7 @@ app.post('/api/admin/maintenance/upgrade', authenticateToken, async (req, res) =
             }
 
             // 3. Pull stage
-            const pullTarget = version || 'stable';
+            const pullTarget = version || 'latest';
             let pullCmd = '';
             if (composeFile) {
                 pullCmd = version ? `TAG=${version} ${baseCmd} -f ${composeFile} pull` : `${baseCmd} -f ${composeFile} pull`;

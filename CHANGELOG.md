@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.74] - 2026-05-28
+### Added
+- **stigix-cli** ⚙️ Added interactive tag/version selector to `system upgrade` command that displays local vs remote version.
+- **stigix-cli** ⚙️ Supported direct tag argument passing in `system upgrade <tag>` to skip prompt.
+### Changed
+- **web-dashboard** ⚙️ Aligned backend upgrade fallback default pull target tag from `stable` to `latest` when version is not specified.
+
 ## [v1.4.0-patch.73] - 2026-05-28
 ### Added
 - **stigix-cli** ⚙️ Added `autocomplete <on|off|status>` (and `autocompletion` alias) command to configure tab completion preferences, which persist in the session config file.
