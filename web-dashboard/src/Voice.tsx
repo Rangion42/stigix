@@ -762,20 +762,17 @@ export default function Voice(props: VoiceProps) {
                             {targetRows.map(row => (
                                 <tr
                                     key={row.id}
-                                    className={cn(
-                                        'group transition-all',
-                                        row.enabled ? '' : 'opacity-35'
-                                    )}
+                                    className="group transition-all hover:bg-card-secondary/10"
                                 >
                                     {/* Checkbox */}
                                     <td className="py-3 px-2">
                                         <button
                                             onClick={() => toggleRow(row.id)}
                                             className={cn(
-                                                'w-5 h-5 rounded border-2 flex items-center justify-center transition-all shrink-0',
+                                                'w-5 h-5 rounded border-2 flex items-center justify-center transition-all shrink-0 cursor-pointer',
                                                 row.enabled
                                                     ? 'bg-blue-600 border-blue-600 text-white'
-                                                    : 'border-border bg-transparent hover:border-blue-500/50'
+                                                    : 'border-slate-400 dark:border-slate-600 bg-card-secondary/30 hover:border-blue-500 hover:bg-blue-500/10'
                                             )}
                                         >
                                             {row.enabled && <CheckSquare size={11} />}
@@ -783,7 +780,10 @@ export default function Voice(props: VoiceProps) {
                                     </td>
 
                                     {/* Site name */}
-                                    <td className="py-3 px-3">
+                                    <td
+                                        className={cn("py-3 px-3 transition-opacity duration-200 cursor-pointer select-none", !row.enabled && "opacity-45")}
+                                        onClick={() => toggleRow(row.id)}
+                                    >
                                         <div className="flex items-center gap-2">
                                             {reachability[row.id] === 'loading' || reachability[row.id] === undefined ? (
                                                 <div className="w-1.5 h-1.5 rounded-full bg-border animate-pulse shrink-0" title="Checking reachability..." />
@@ -797,18 +797,18 @@ export default function Voice(props: VoiceProps) {
                                             )}
                                             {row.isManual
                                                 ? <span className="text-[9px] text-orange-500 font-black uppercase tracking-wider px-1.5 py-0.5 bg-orange-500/10 border border-orange-500/20 rounded">Manual</span>
-                                                : <span className="text-xs font-black text-text-primary">{row.name}</span>
+                                                : <span className="text-xs font-black text-text-primary group-hover:text-blue-500 transition-colors">{row.name}</span>
                                             }
                                         </div>
                                     </td>
 
                                     {/* Host:Port (read-only) */}
-                                    <td className="py-3 px-3">
+                                    <td className={cn("py-3 px-3 transition-opacity duration-200", !row.enabled && "opacity-45")}>
                                         <span className="text-[11px] font-mono font-bold text-text-muted">{row.host}:{row.port}</span>
                                     </td>
 
                                     {/* Codec */}
-                                    <td className="py-3 px-3">
+                                    <td className={cn("py-3 px-3 transition-opacity duration-200", !row.enabled && "opacity-45")}>
                                         <select
                                             value={row.codec}
                                             onChange={e => updateRow(row.id, 'codec', e.target.value)}
@@ -819,7 +819,7 @@ export default function Voice(props: VoiceProps) {
                                     </td>
 
                                     {/* Duration */}
-                                    <td className="py-3 px-3">
+                                    <td className={cn("py-3 px-3 transition-opacity duration-200", !row.enabled && "opacity-45")}>
                                         <input
                                             type="number" min={1}
                                             value={row.duration}
@@ -829,7 +829,7 @@ export default function Voice(props: VoiceProps) {
                                     </td>
 
                                     {/* Weight */}
-                                    <td className="py-3 px-3">
+                                    <td className={cn("py-3 px-3 transition-opacity duration-200", !row.enabled && "opacity-45")}>
                                         <input
                                             type="number" min={1} max={100}
                                             value={row.weight}
@@ -839,7 +839,7 @@ export default function Voice(props: VoiceProps) {
                                     </td>
 
                                     {/* Actions */}
-                                    <td className="py-3 px-2">
+                                    <td className={cn("py-3 px-2 transition-opacity duration-200", !row.enabled && "opacity-45")}>
                                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             {row.isManual && (
                                                 <button
