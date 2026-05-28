@@ -48,19 +48,19 @@ When running the interactive console, the CLI features auto-completion, command 
 
 ## ⚙️ Automation & Headless Options
 
-You can automate tasks using arguments when launching the script:
+You can automate tasks by passing arguments directly to the docker execution command:
 
 *   **Override Backend URL**: Connect to a remote Stigix instance.
     ```bash
-    stigix-cli --url http://192.168.1.100:8080
+    docker exec -it stigix stigix-cli --url http://192.168.1.100:8080
     ```
 *   **Execute & Exit**: Run a command without opening the interactive prompt.
     ```bash
-    stigix-cli --exec "security suite"
+    docker exec -it stigix stigix-cli --exec "security suite"
     ```
 *   **Run Script File**: Execute a text file containing commands (one command per line).
     ```bash
-    stigix-cli --script test-plan.txt
+    docker exec -it stigix stigix-cli --script test-plan.txt
     ```
 
 ---
