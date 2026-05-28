@@ -9032,12 +9032,13 @@ app.post('/api/admin/maintenance/upgrade', authenticateToken, async (req, res) =
             setTimeout(async () => {
                 try {
                     // Start by checking if we have compose file
+                    const upCmd = version ? `TAG=${version} docker compose up -d` : 'docker compose up -d';
                     if (fs.existsSync(path.join(rootDir, 'docker-compose.yml'))) {
-                        G_UPGRADE_STATUS.logs.push(`[${new Date().toISOString()}] Running: docker compose up -d`);
-                        execSync('docker compose up -d', { cwd: rootDir });
+                        G_UPGRADE_STATUS.logs.push(`[${new Date().toISOString()}] Running: ${upCmd}`);
+                        execSync(upCmd, { cwd: rootDir });
                     } else if (fs.existsSync('/app/docker-compose.yml')) {
-                        G_UPGRADE_STATUS.logs.push(`[${new Date().toISOString()}] Running: docker compose up -d`);
-                        execSync('docker compose up -d', { cwd: '/app' });
+                        G_UPGRADE_STATUS.logs.push(`[${new Date().toISOString()}] Running: ${upCmd}`);
+                        execSync(upCmd, { cwd: '/app' });
                     } else {
                         // Fallback: forcefully restart the unified container
                         G_UPGRADE_STATUS.logs.push(`[${new Date().toISOString()}] No compose file found, falling back to docker restart stigix`);

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.67] - 2026-05-28
+### Fixed
+- **maintenance** 🐳 Fixed the system container upgrade workflow by dynamically interpolating the version tag (`TAG=${version}`) when pulling and recreating the Docker container.
+- **docker-compose** 📦 Updated the beta compose configurations (`docker-compose-latest-beta.yml` and `docker-compose-latest-beta.bridge.yml`) to use dynamic image tagging (`jsuzanne/stigix:${TAG:-latest}`) to support upgrade tag injection.
+
 ## [v1.4.0-patch.66] - 2026-05-28
 ### Added
 - **stigix-cli** 🏷️ Renamed CLI command `peer` to `target` to match the Stigix Targets UI dashboard. A backward-compatible `peer` alias is preserved.

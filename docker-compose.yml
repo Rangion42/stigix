@@ -7,7 +7,7 @@
 
 services:
   stigix:
-    image: jsuzanne/stigix:stable
+    image: jsuzanne/stigix:${TAG:-stable}
     container_name: stigix
     network_mode: host
     # Uncomment to force specific DNS resolvers for the container
@@ -30,6 +30,7 @@ services:
       - ./logs:/var/log/sdwan-traffic-gen
       - ./mcp-data:/app/mcp-data
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./docker-compose.yml:/app/docker-compose.yml
       
     environment:
       # --- General & Web UI ---
