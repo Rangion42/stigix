@@ -109,6 +109,7 @@ The CLI automatically saves your active connection URL and authenticated JWT tok
 *   `connect save <profile-name> [url]` — Save a named connection profile.
 *   `connect list` — List all saved profiles.
 *   `connect forget <profile-name>` — Remove a saved profile.
+*   `autocomplete <on|off|status>` — Enable, disable, or query tab autocompletion status (saves state in configuration).
 
 ---
 
@@ -121,7 +122,6 @@ The CLI automatically saves your active connection URL and authenticated JWT tok
 *   `traffic stats` — View real-time counters and traffic metrics.
 *   `traffic logs` — Print the latest log entries from the traffic generator.
 *   `traffic reset` — Reset statistics counters to zero.
-*   `traffic watch [interval]` — Launch a live dashboard refreshing every *N* seconds (default: 3s).
 *   `traffic export [file]` — Export applications traffic configuration to a local JSON file (defaults to `stigix-traffic-export.json`).
 *   `traffic import <file>` — Overwrite the applications traffic configuration from a local JSON file.
 

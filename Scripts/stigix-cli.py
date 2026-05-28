@@ -60,6 +60,7 @@ STIGIX_URL   = DEFAULT_URL
 PROFILES     = {}          # {name: {"url": ..., "token": ...}}
 INSTANCE_TOKENS = {}       # {url: token}
 HTTP_SESSION = requests.Session()
+AUTOCOMPLETE_ENABLED = True
 
 VERSION      = "1.4.0-patch.57"
 try:
@@ -80,12 +81,13 @@ TIMEOUT      = 10
 
 def load_session():
     """Load saved token, URL and profiles from ~/.stigix-cli.json"""
-    global JWT_TOKEN, STIGIX_URL, PROFILES, INSTANCE_TOKENS
+    global JWT_TOKEN, STIGIX_URL, PROFILES, INSTANCE_TOKENS, AUTOCOMPLETE_ENABLED
     if CONFIG_FILE.exists():
         try:
             data = json.loads(CONFIG_FILE.read_text())
             PROFILES = data.get("profiles", {})
             INSTANCE_TOKENS = data.get("instance_tokens", {})
+            AUTOCOMPLETE_ENABLED = data.get("autocomplete", True)
             
             saved_url = data.get("url")
             if saved_url and STIGIX_URL == DEFAULT_URL:
@@ -109,7 +111,7 @@ def load_session():
 
 def save_session():
     """Persist token, URL and profiles to ~/.stigix-cli.json (chmod 600)"""
-    global JWT_TOKEN, STIGIX_URL, PROFILES, INSTANCE_TOKENS
+    global JWT_TOKEN, STIGIX_URL, PROFILES, INSTANCE_TOKENS, AUTOCOMPLETE_ENABLED
     try:
         if STIGIX_URL:
             if JWT_TOKEN:
@@ -130,7 +132,8 @@ def save_session():
                 "token": JWT_TOKEN, 
                 "url": STIGIX_URL, 
                 "profiles": PROFILES,
-                "instance_tokens": INSTANCE_TOKENS
+                "instance_tokens": INSTANCE_TOKENS,
+                "autocomplete": AUTOCOMPLETE_ENABLED
             }, indent=2
         ))
         CONFIG_FILE.chmod(0o600)
@@ -470,11 +473,21 @@ def cmd_auth(args):
         ok("Logged out  (session cleared)")
 
     else:
-        print("Usage: auth login | status | logout")
+        _help_section("AUTHENTICATION", [
+            ("auth login",  "Authenticate session with Stigix"),
+            ("auth status", "Show current authentication status"),
+            ("auth logout", "Clear session token and disconnect"),
+        ])
 
 
 def cmd_status(args):
     if not require_auth(): return
+    if any(x in args for x in ("--help", "-h", "help")):
+        _help_section("STATUS", [
+            ("status", "Show Stigix instance overview"),
+        ])
+        return
+
     hdr("━━ Stigix Status ━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
     health = api_get("/api/system/health")
@@ -763,7 +776,7 @@ def cmd_traffic(args):
     elif sub == "logs":
         r = api_get("/api/logs")
         if r:
-            lines = r if isinstance(r, list) else r.get("lines", [])
+            lines = r if isinstance(r, list) else (r.get("logs") or r.get("lines") or [])
             hdr(f"━━ Last {len(lines)} log lines ━━━━━━━━━━━━━━━━━━━━━")
             for l in lines[-30:]:
                 dim(l)
@@ -774,30 +787,6 @@ def cmd_traffic(args):
             ok("Statistics reset")
             PREV_STATS["total_requests"] = None
             PREV_STATS["timestamp"] = None
-
-    elif sub == "watch":
-        show_all = "--all" in args
-        clean_args = [a for a in args if a != "--all"]
-        interval = int(clean_args[1]) if len(clean_args) > 1 else 3
-        info(f"Live traffic watch — refresh every {interval}s  (Ctrl+C to stop)")
-        try:
-            app_to_group, truncated_to_group = get_app_groups()
-            while True:
-                do_clear()
-                now = datetime.now().strftime("%H:%M:%S")
-                hdr(f"━━ Traffic Stats  [{now}]  (Ctrl+C to stop) ━━━━━━━")
-                print()
-                r = api_get("/api/stats")
-                t = api_get("/api/traffic/status")
-                if r:
-                    status_str = "stopped"
-                    if t:
-                        status_str = "running" if (t.get("enabled") or t.get("running")) else "stopped"
-                    render_traffic_dashboard(r, status_str, app_to_group, truncated_to_group, show_all=show_all)
-                time.sleep(interval)
-        except KeyboardInterrupt:
-            print()
-            ok("Watch stopped")
 
     elif sub == "export":
         filepath = args[1] if len(args) > 1 else "stigix-traffic-export.json"
@@ -841,7 +830,6 @@ def cmd_traffic(args):
             ("traffic stats [--all]",  "Show traffic statistics & active apps dashboard"),
             ("traffic logs",           "Show last 30 backend log lines"),
             ("traffic reset",          "Reset traffic statistics"),
-            ("traffic watch [sec] [--all]", "Live poll traffic stats and rate in real-time"),
             ("traffic export [file]",  "Export traffic configuration to JSON"),
             ("traffic import <file>",  "Import traffic configuration from JSON"),
         ])
@@ -3377,11 +3365,12 @@ def cmd_system(args):
                     info(f"{k}: {v}")
         health = api_get("/api/system/health")
         if health:
-            mem  = health.get("memory", {})
-            disk = health.get("disk", {})
-            print(f"  Memory  : {mem.get('percentage','?')}%  "
+            sys_obj = health.get("system", {})
+            mem  = sys_obj.get("memory", {})
+            disk = sys_obj.get("disk", {})
+            print(f"  Memory  : {mem.get('usedPercent','?')}%  "
                   f"({mem.get('used',0)//1024//1024}MB / {mem.get('total',0)//1024//1024}MB)")
-            print(f"  Disk    : {disk.get('percentage','?')}%  "
+            print(f"  Disk    : {disk.get('usedPercent','?')}%  "
                   f"({disk.get('used',0)//1024//1024//1024}GB / {disk.get('total',0)//1024//1024//1024}GB)")
 
     elif sub == "restart":
@@ -3482,7 +3471,7 @@ def cmd_system(args):
     elif sub == "logs":
         r = api_get("/api/logs")
         if r:
-            lines = r if isinstance(r, list) else r.get("lines", [])
+            lines = r if isinstance(r, list) else (r.get("logs") or r.get("lines") or [])
             for line in lines[-30:]:
                 dim(line)
 
@@ -3508,6 +3497,17 @@ def cmd_connect(args):
     global STIGIX_URL, JWT_TOKEN, PROFILES, INSTANCE_TOKENS
 
     sub = args[0] if args else None
+
+    if sub in ("--help", "-h", "help"):
+        _help_section("CONNECT", [
+            ("connect",                    "Show current connection + saved profiles"),
+            ("connect <ip[:port]|url>",    "Connect to a Stigix instance"),
+            ("connect <profile-name>",     "Connect to a saved profile"),
+            ("connect save <name> [url]",  "Save current URL as a named profile"),
+            ("connect forget <name>",      "Delete a saved profile"),
+            ("connect list",               "List all saved profiles"),
+        ])
+        return
 
     # ── connect (no args) — show current + profiles ──────────────────────────
     if not sub:
@@ -3612,6 +3612,33 @@ def cmd_connect(args):
         JWT_TOKEN  = old_tok
 
 
+def cmd_autocomplete(args):
+    global AUTOCOMPLETE_ENABLED
+    sub = args[0] if args else "status"
+    
+    if sub in ("--help", "-h", "help"):
+        _help_section("AUTOCOMPLETE", [
+            ("autocomplete status", "Show whether autocompletion is enabled"),
+            ("autocomplete on",     "Enable CLI tab autocompletion"),
+            ("autocomplete off",    "Disable CLI tab autocompletion"),
+        ])
+        return
+        
+    if sub == "on":
+        AUTOCOMPLETE_ENABLED = True
+        save_session()
+        ok("Autocompletion enabled")
+    elif sub == "off":
+        AUTOCOMPLETE_ENABLED = False
+        save_session()
+        ok("Autocompletion disabled")
+    elif sub == "status":
+        state = "enabled" if AUTOCOMPLETE_ENABLED else "disabled"
+        info(f"Autocompletion: {status_badge(state)}")
+    else:
+        err("Usage: autocomplete on | off | status")
+
+
 def cmd_help(args):
     """Full help screen."""
     do_clear()
@@ -3628,6 +3655,7 @@ def cmd_help(args):
     connect list           List all saved profiles
     status                 Global overview: backend, traffic, public IP
     auth login|logout      Authenticate / clear session
+    autocomplete on|off    Enable / disable tab autocompletion
 
   {c('1','TRAFFIC')}
     traffic start|stop     Enable / disable traffic generation
@@ -3636,7 +3664,6 @@ def cmd_help(args):
     traffic density [val]  Get or set parallel clients count (1-20)
     traffic logs           Show last log lines
     traffic reset          Reset statistics
-    traffic watch [sec]    {c('36','Live watch dashboard & real-time rate (use --all to show all apps)')}
     traffic export [file]  Export traffic configuration to JSON
     traffic import <file>  Import traffic configuration from JSON
 
@@ -3761,6 +3788,8 @@ class StigixCompleter(Completer):
         self.tree = tree
 
     def get_completions(self, document, complete_event):
+        if not AUTOCOMPLETE_ENABLED:
+            return
         text = document.text_before_cursor
         words = text.split()
         if not text:
@@ -3859,6 +3888,8 @@ DISPATCH = {
     "iot":         cmd_iot,
     "system":      cmd_system,
     "connect":     cmd_connect,
+    "autocomplete": cmd_autocomplete,
+    "autocompletion": cmd_autocomplete,
     "help":        cmd_help,
     "?":           cmd_help,
 }
@@ -3867,9 +3898,11 @@ COMPLETER_TREE = {
     "auth":        {"login": None, "logout": None, "status": None},
     "status":      None,
     "connect":     {"list": None, "save": None, "forget": None},
+    "autocomplete": {"on": None, "off": None, "status": None},
+    "autocompletion": {"on": None, "off": None, "status": None},
     "traffic":     {
         "start": None, "stop": None, "status": None,
-        "stats": None, "logs": None, "reset": None, "watch": None,
+        "stats": None, "logs": None, "reset": None,
         "import": None, "export": None,
         "speed": {"turbo": None, "fast": None, "normal": None, "slow": None},
         "density": None,

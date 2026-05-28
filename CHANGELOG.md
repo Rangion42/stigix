@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.73] - 2026-05-28
+### Added
+- **stigix-cli** ⚙️ Added `autocomplete <on|off|status>` (and `autocompletion` alias) command to configure tab completion preferences, which persist in the session config file.
+### Fixed
+- **stigix-cli** ⚙️ Fixed nesting key mismatch for CPU/memory/disk stats in `system info` output.
+- **stigix-cli** ⚙️ Fixed key mismatch in logs subcommands (`traffic logs`, `system logs`) to properly print streaming backend logs.
+- **stigix-cli** ⚙️ Added dedicated help handling (`--help`, `-h`, `help` subcommands) for all remaining CLI commands (`connect`, `auth`, `status`).
+- **stigix-cli** ⚙️ Removed the deprecated `traffic watch` command.
+
 ## [v1.4.0-patch.72] - 2026-05-28
 ### Added
 - **stigix-cli** ⚙️ Implemented real-time upgrade log output streaming and status monitoring for the `system upgrade` command, handling connection drop and automatic recovery when containers restart.
