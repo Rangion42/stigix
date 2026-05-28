@@ -92,6 +92,13 @@ cd "$INSTALL_DIR"
 echo "📦 Downloading Base Configuration from GitHub..."
 curl -sSL -o docker-compose.yml "$COMPOSE_URL"
 
+# Align the volume mount filename to 'docker-compose.yml' on the host
+if [ -f docker-compose.yml ]; then
+    if command -v sed &> /dev/null; then
+        sed -i.bak -E 's|-[[:space:]]+\./docker-compose.*:/app/docker-compose\.yml|- ./docker-compose.yml:/app/docker-compose.yml|g' docker-compose.yml && rm -f docker-compose.yml.bak
+    fi
+fi
+
 # 4. Mode-specific adjustments (Creating the right docker-compose/env)
 # Generate a unique JWT secret for this installation
 JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null | tr -d '-' || date +%s%N | sha256sum | head -c 64)
