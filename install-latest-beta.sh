@@ -105,6 +105,9 @@ JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || cat /proc/sys/kernel/random/uui
 
 echo "STIGIX_ROLE=$INSTALL_MODE" > .env
 echo "JWT_SECRET=$JWT_SECRET" >> .env
+echo "" >> .env
+echo "# --- Docker Image Tag (Uncomment to lock version/tag) ---" >> .env
+echo "# TAG=latest" >> .env
 
 # Base UI/Traffic Gen Config
 if [ "$INSTALL_MODE" == "both" ] || [ "$INSTALL_MODE" == "source" ]; then
