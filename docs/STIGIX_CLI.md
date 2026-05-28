@@ -172,13 +172,25 @@ Manage simulated IoT devices and view vulnerability findings.
 ---
 
 ### 7. VoIP Testing (`voice`)
-Measure VoIP link quality using Mean Opinion Score (MOS) against all configured targets.
+Measure VoIP link quality using Mean Opinion Score (MOS) against configured targets.
 
-Stigix simulates voice traffic in the background using a multi-stream daemon. Calling `voice start` toggles the global Voice Simulation daemon on, initiating periodic simulated RTP call streams to all enabled peer targets configured with the voice capability.
+Stigix simulates voice traffic in the background using a multi-stream daemon. Calling `voice start` toggles the global Voice Simulation daemon on, initiating periodic simulated RTP call streams to configured peer targets.
 
-*   `voice start` — Start the global VoIP simulation daemon (generates calls to all available targets in the background).
+*   `voice start` — Start VoIP simulation.
+    *   **Interactive Mode**: If run without any arguments in interactive console mode, it fetches the list of available voice targets from the registry and prompts you to choose which targets to simulate:
+        ```text
+        Available Voice Targets:
+          0: [All Targets] (Simulate all concurrently)
+          1: Branch-1 (192.168.1.120)
+          2: Branch-2 (192.168.1.130)
+
+        Select target [0]: 
+        ```
+    *   **Non-Interactive / Headless Mode**: If run headlessly, it default-configures all available targets in the registry with voice capability and starts the daemon.
+*   `voice start --target <IP_or_Name>` — Syncs and starts VoIP simulation *only* to the specified target.
+*   `voice start --target all` — Syncs and starts VoIP simulation to *all* available voice-capable targets.
 *   `voice stop` — Stop the global VoIP simulation daemon.
-*   `voice status` — Show if the VoIP simulation daemon is currently active.
+*   `voice status` — Show if the VoIP simulation daemon is currently active and how many concurrent calls are allowed.
 *   `voice stats` — View MOS score, Jitter, Packet Loss, and RTT statistics from recent calls.
 
 ---

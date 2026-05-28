@@ -1019,11 +1019,128 @@ def cmd_voice(args):
 
     elif sub == "start":
         parsed = parse_flags(args[1:], ["target"])
-        if parsed.get("target"):
-            warn("Target-specific testing is deprecated in favor of global voice simulation.")
-            info("Please configure voice targets using 'peer add' or the web UI, then run 'voice start'.")
+        target = parsed.get("target")
+
+        # 1. Fetch available voice targets from registry
+        targets = api_get("/api/targets")
+        if targets is None:
+            targets = []
+        else:
+            targets = targets if isinstance(targets, list) else targets.get("targets", [])
+        
+        voice_targets = [
+            t for t in targets 
+            if t.get("enabled", True) and t.get("capabilities", {}).get("voice")
+        ]
+
+        selected_targets = []
+
+        if not voice_targets:
+            warn("No enabled peer targets with voice capability found in registry.")
+            if sys.stdin.isatty() and not target:
+                try:
+                    choice = input("Start voice simulation daemon with default settings? [y/N]: ").strip().lower()
+                    if choice != 'y':
+                        return
+                except (KeyboardInterrupt, EOFError):
+                    print()
+                    return
+        else:
+            # We have voice targets! Decide which to simulate.
+            if target:
+                if target.lower() == "all":
+                    selected_targets = voice_targets
+                else:
+                    # Find by name or host IP
+                    match = None
+                    for vt in voice_targets:
+                        if vt.get("name", "").lower() == target.lower() or vt.get("host") == target:
+                            match = vt
+                            break
+                    if match:
+                        selected_targets = [match]
+                    else:
+                        # Fallback: treat target as a raw IP/host
+                        selected_targets = [{"name": target, "host": target, "ports": {"voice": 6100}}]
+            elif sys.stdin.isatty():
+                # Interactive target selection menu
+                print("\nAvailable Voice Targets:")
+                print("  0: [All Targets] (Simulate all concurrently)")
+                for idx, vt in enumerate(voice_targets, 1):
+                    print(f"  {idx}: {vt.get('name')} ({vt.get('host')})")
+                
+                print()
+                try:
+                    choice = input("Select target [0]: ").strip()
+                    if not choice:
+                        idx_choice = 0
+                    else:
+                        idx_choice = int(choice)
+                except ValueError:
+                    err("Invalid choice. Aborting.")
+                    return
+                except (KeyboardInterrupt, EOFError):
+                    print()
+                    return
+
+                if idx_choice == 0:
+                    selected_targets = voice_targets
+                elif 1 <= idx_choice <= len(voice_targets):
+                    selected_targets = [voice_targets[idx_choice - 1]]
+                else:
+                    err("Invalid index. Aborting.")
+                    return
+            else:
+                # Non-interactive headless fallback: default to all available targets
+                selected_targets = voice_targets
+
+        # 2. Sync selected targets to voice configuration
+        if selected_targets:
+            # Get current config to preserve existing custom codecs/weights/durations
+            cfg = api_get("/api/voice/config")
+            current_servers = {}
+            control_settings = {}
+            if cfg and cfg.get("success"):
+                control_settings = cfg.get("control", {})
+                servers_str = cfg.get("servers", "")
+                # Parse current servers string
+                for line in servers_str.split("\n"):
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    parts = line.split("|")
+                    if parts:
+                        current_servers[parts[0]] = parts
+
+            # Rebuild servers configuration string
+            new_lines = []
+            for st in selected_targets:
+                host = st.get("host")
+                port = st.get("ports", {}).get("voice") or 6100
+                key = f"{host}:{port}"
+                
+                # Check if it was already configured
+                if key in current_servers:
+                    new_lines.append("|".join(current_servers[key]))
+                else:
+                    # Defaults: G.711-ulaw, weight 50, duration 30
+                    new_lines.append(f"{key}|G.711-ulaw|50|30")
+            
+            new_servers_str = "\n".join(new_lines)
+            
+            # Post updated config to server
+            api_post("/api/voice/config", {
+                "servers": new_servers_str,
+                "control": control_settings
+            })
+            
+            targets_desc = "all targets" if len(selected_targets) > 1 else selected_targets[0].get("name")
+            info(f"Synchronized voice target configuration ({targets_desc}).")
+
+        # 3. Start the voice simulation daemon
         r = api_post("/api/voice/control", {"enabled": True})
-        if r: ok("Voice simulation daemon started (generating calls to all enabled voice targets in background)")
+        if r:
+            ok("Voice simulation daemon started successfully.")
 
     elif sub == "stop":
         r = api_post("/api/voice/control", {"enabled": False})
