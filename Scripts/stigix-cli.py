@@ -1011,25 +1011,23 @@ def cmd_voice(args):
     if sub == "status":
         r = api_get("/api/voice/status")
         if r:
-            running = r.get("running") or r.get("active", False)
+            running = r.get("enabled") or r.get("running") or r.get("active", False)
             if running:
-                ok(f"Voice test running — session {r.get('sessionId','?')}")
+                ok(f"Voice simulation active — running calls in background (max_simultaneous={r.get('max_simultaneous_calls', 3)})")
             else:
-                dim("No voice test running")
+                dim("Voice simulation is stopped")
 
     elif sub == "start":
-        parsed   = parse_flags(args[1:], ["target","codec","duration"])
-        target   = parsed.get("target")   or input("Target IP: ").strip()
-        codec    = parsed.get("codec",    "g711")
-        duration = int(parsed.get("duration", 30))
-        r = api_post("/api/voice/control", {
-            "action": "start", "target": target, "codec": codec, "duration": duration
-        })
-        if r: ok(f"Voice test started (codec={codec}, duration={duration}s)")
+        parsed = parse_flags(args[1:], ["target"])
+        if parsed.get("target"):
+            warn("Target-specific testing is deprecated in favor of global voice simulation.")
+            info("Please configure voice targets using 'peer add' or the web UI, then run 'voice start'.")
+        r = api_post("/api/voice/control", {"enabled": True})
+        if r: ok("Voice simulation daemon started (generating calls to all enabled voice targets in background)")
 
     elif sub == "stop":
-        r = api_post("/api/voice/control", {"action": "stop"})
-        if r: ok("Voice test stopped")
+        r = api_post("/api/voice/control", {"enabled": False})
+        if r: ok("Voice simulation daemon stopped")
 
     elif sub == "stats":
         r = api_get("/api/voice/stats")
@@ -1051,12 +1049,11 @@ def cmd_voice(args):
 
     else:
         _help_section("VOICE / VoIP", [
-            ("voice start",    "Start VoIP MOS test (interactive or --flags)"),
-            ("voice stop",     "Stop VoIP test"),
-            ("voice status",   "Show active session"),
-            ("voice stats",    "Show MOS / jitter / loss"),
+            ("voice start",    "Start global VoIP simulation daemon (calls all enabled targets)"),
+            ("voice stop",     "Stop VoIP simulation daemon"),
+            ("voice status",   "Show VoIP simulation status"),
+            ("voice stats",    "Show MOS / jitter / loss stats"),
         ])
-        dim("  Flags for start: --target  --codec {g711,g729,opus}  --duration")
 
 
 def cmd_iot(args):
@@ -1360,10 +1357,10 @@ def cmd_help(args):
     convergence watch [s]  {c('36','Live poll until Ctrl+C')}
 
   {c('1','VOICE / VoIP')}
-    voice start            Start MOS test  (--target --codec --duration)
-    voice stop             Stop VoIP test
-    voice status           Active session
-    voice stats            MOS / jitter / loss
+    voice start            Start global VoIP simulation daemon
+    voice stop             Stop VoIP simulation daemon
+    voice status           Show VoIP simulation status
+    voice stats            MOS / jitter / loss stats
 
   {c('1','VyOS CONTROL')}
     vyos list              Configured routers
@@ -1555,8 +1552,7 @@ COMPLETER_TREE = {
     },
     "vyos":        {"list": None, "sequences": None, "run": None, "stop": None, "history": None},
     "voice":       {
-        "status": None, "stop": None, "stats": None,
-        "start": {"--target": None, "--codec": {"g711","g729","opus"}, "--duration": None},
+        "status": None, "stop": None, "stats": None, "start": None,
     },
     "iot":         {"list": None, "start": None, "stop": None, "stats": None, "vulns": None},
     "system":      {"info": None, "interfaces": None, "logs": None, "restart": None, "upgrade": None},

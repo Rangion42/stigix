@@ -172,12 +172,14 @@ Manage simulated IoT devices and view vulnerability findings.
 ---
 
 ### 7. VoIP Testing (`voice`)
-Measure VoIP link quality using Mean Opinion Score (MOS).
+Measure VoIP link quality using Mean Opinion Score (MOS) against all configured targets.
 
-*   `voice status` — Show if a voice test is currently active.
-*   `voice start --target <ip> --codec <codec> --duration <sec>` — Start a VoIP test. Codecs: `g711`, `g729`, `opus`.
-*   `voice stop` — Terminate a running VoIP test.
-*   `voice stats` — View MOS score, Jitter, Packet Loss, and RTT.
+Stigix simulates voice traffic in the background using a multi-stream daemon. Calling `voice start` toggles the global Voice Simulation daemon on, initiating periodic simulated RTP call streams to all enabled peer targets configured with the voice capability.
+
+*   `voice start` — Start the global VoIP simulation daemon (generates calls to all available targets in the background).
+*   `voice stop` — Stop the global VoIP simulation daemon.
+*   `voice status` — Show if the VoIP simulation daemon is currently active.
+*   `voice stats` — View MOS score, Jitter, Packet Loss, and RTT statistics from recent calls.
 
 ---
 
@@ -194,7 +196,13 @@ Measure VoIP link quality using Mean Opinion Score (MOS).
 Manually manage Stigix peer nodes (which host echo responders, VoIP targets, and speedtest servers).
 
 *   `peer list` — List all configured Stigix peer targets, their capabilities, and online status.
-*   `peer add --name <name> --host <ip/domain>` — Add a new peer target manually. Optional flags: `--voice {true|false}`, `--convergence {true|false}`, `--xfr {true|false}`, `--security {true|false}`, `--connectivity {true|false}`.
+*   `peer add` — Add a new peer target manually using **Interactive Mode**. If you run `peer add` without any flags, the console will prompt you for the target parameters step-by-step:
+    ```text
+    Name (e.g. Branch-1): Branch-1
+    Host (IP or FQDN): 192.168.1.120
+    ```
+    *By default, interactive mode will enable all capabilities (`voice`, `convergence`, `xfr`, `security`, `connectivity`) on the new target.*
+*   `peer add --name <name> --host <ip/domain>` — Add a new peer target using explicit flags. Optional flags can be used to disable specific capabilities: `--voice {true|false}`, `--convergence {true|false}`, `--xfr {true|false}`, `--security {true|false}`, `--connectivity {true|false}`.
 *   `peer remove <id>` — Delete a peer target by ID.
 *   `peer enable <id>` / `peer disable <id>` — Toggle a peer target's status.
 
