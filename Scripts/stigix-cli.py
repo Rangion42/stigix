@@ -1105,12 +1105,120 @@ def cmd_experience(args):
         if r:
             ok("Experience probes imported successfully")
 
+    elif sub == "stats":
+        import re
+        stats_data = api_get("/api/connectivity/stats?range=1h")
+        results_data = api_get("/api/connectivity/results?timeRange=1h&limit=1500")
+        custom_data = api_get("/api/connectivity/custom")
+        
+        if custom_data is None:
+            err("Failed to fetch custom experience probes config.")
+            return
+            
+        probes_config = custom_data if isinstance(custom_data, list) else custom_data.get("targets", [])
+        results_list = results_data.get("results", []) if results_data else []
+        
+        global_health = stats_data.get("globalHealth", 0) if stats_data else 0
+        health_color = "32" if global_health >= 80 else ("33" if global_health >= 50 else "31")
+        
+        score_text = f"Global Score: {global_health:>3}/100"
+        padding_total = 78 - len(score_text)
+        left_pad = padding_total // 2
+        right_pad = padding_total - left_pad
+        score_part = c(health_color, f"{global_health}/100")
+        row_content = " " * left_pad + "Global Score: " + score_part + " " * right_pad
+        
+        hdr("╔══════════════════════════════════════════════════════════════════════════════╗")
+        hdr("║" + "DIGITAL EXPERIENCE GLOBAL SUMMARY".center(78) + "║")
+        hdr("╠══════════════════════════════════════════════════════════════════════════════╣")
+        hdr(f"║{row_content}║")
+        hdr("╚══════════════════════════════════════════════════════════════════════════════╝")
+        print()
+        
+        # Group results by endpointId
+        results_by_id = {}
+        for r in results_list:
+            eid = r.get("endpointId")
+            if eid:
+                if eid not in results_by_id:
+                    results_by_id[eid] = []
+                results_by_id[eid].append(r)
+                
+        rows = []
+        for p in probes_config:
+            pname = p.get("name", "Unknown")
+            pid = re.sub(r'\s+', '-', pname.lower())
+            
+            presults = results_by_id.get(pid, [])
+            ptype = p.get("type") or (presults[0].get("endpointType") if presults else "HTTP")
+            ptarget = p.get("target") or p.get("host") or p.get("url") or (presults[0].get("url") if presults else "---")
+            
+            enabled = p.get("enabled", True)
+            status_str = "ACTIVE" if enabled else "INACTIVE"
+            
+            if presults:
+                last_res = presults[0]
+                reachable_results = [r for r in presults if r.get("reachable", False)]
+                
+                last_score = last_res.get("score", 0)
+                
+                if reachable_results:
+                    avg_score = round(sum(r.get("score", 0) for r in reachable_results) / len(reachable_results))
+                    min_score = min(r.get("score", 0) for r in reachable_results)
+                    max_score = max(r.get("score", 0) for r in reachable_results)
+                    
+                    avg_lat = sum(r.get("metrics", {}).get("total_ms", 0) for r in reachable_results) / len(reachable_results)
+                    avg_lat_str = f"{avg_lat:.1f}ms" if avg_lat < 10 else f"{avg_lat:.0f}ms"
+                else:
+                    avg_score = 0
+                    min_score = 0
+                    max_score = 0
+                    avg_lat_str = "---"
+                    
+                reliability = round((len(reachable_results) / len(presults)) * 100)
+            else:
+                last_score = 0
+                avg_score = 0
+                min_score = 0
+                max_score = 0
+                avg_lat_str = "---"
+                reliability = 0
+                
+            status_color = "32" if enabled else "30"
+            status_colored = c(status_color, status_str)
+            
+            score_color = "32" if last_score >= 80 else ("33" if last_score >= 50 else "31")
+            score_str = c(score_color, f"{last_score}")
+            score_sub = c("2", f"({avg_score} avg)")
+            score_display = f"{score_str} {score_sub}"
+            
+            rel_color = "32" if reliability >= 95 else ("33" if reliability >= 80 else "31")
+            reliability_str = c(rel_color, f"{reliability}%")
+            
+            rows.append([
+                pname[:20],
+                ptarget[:30],
+                ptype,
+                status_colored,
+                score_display,
+                avg_lat_str,
+                reliability_str
+            ])
+            
+        if not rows:
+            dim("  No synthetic probes configured")
+            return
+            
+        rows.sort(key=lambda x: x[0].lower())
+        table(["Probe Name", "Target/URL", "Type", "Status", "Score", "Latency (avg)", "Reliability"], rows)
+
     else:
         _help_section("DIGITAL EXPERIENCE", [
             ("experience list",           "List connectivity probe targets"),
             ("experience add",            "Add a new target (interactive or --flags)"),
             ("experience remove <id>",    "Remove a target"),
             ("experience probe",          "Run all probes now"),
+            ("experience stats",          "Show historical scores, latency, and reliability"),
             ("experience export [file]",  "Export custom probes to JSON"),
             ("experience import <file>",  "Import custom probes from JSON"),
         ])
@@ -2572,6 +2680,7 @@ def cmd_help(args):
 
   {c('1','DIGITAL EXPERIENCE')}
     experience list        List connectivity probe targets
+    experience stats       Show historical scores, latency, and reliability
     experience add         Add a new target (--name --host --type --port)
     experience remove <id> Remove a target
     experience probe       Run all probes now
