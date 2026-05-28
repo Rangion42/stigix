@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.42] - 2026-05-28
+### Added
+- **stigix-cli** 🧪 Added `(Beta)` notice to interactive console start and help banners.
+- **stigix-cli** 🎙️ Implemented interactive target selection/proposals and configuration auto-sync on `voice start`.
+- **stigix-cli** 🔍 Added target name, host IP, and prefix matching for `peer remove/enable/disable` commands, and added an interactive deletion confirmation prompt.
+- **README.md** 📊 Enhanced the post-installation verification guide with step-by-step checks including checking containers, querying system health, monitoring logs, and utilizing the CLI.
+### Fixed
+- **stigix-cli** 🎙️ Corrected `voice start` and `voice stop` to send `enabled: true/false` payload, fixing a bug where they inadvertently disabled the voice orchestrator.
+
 ## [v1.4.0-patch.41] - 2026-05-27
 ### Fixed
 - **install.sh** 🐛 macOS and Windows installs were silently using `docker-compose.yml` (host networking) instead of bridge mode, despite the correct platform detection message being displayed. All three OS branches previously pointed to the same file. Fixed: macOS and WSL/Windows now correctly download `docker-compose.bridge.yml`.
