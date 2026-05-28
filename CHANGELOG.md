@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [v1.4.0-patch.51] - 2026-05-28
+### Added
+- **stigix-cli** 🔌 Enhanced `experience add` to support guided interactive prompting, with type-specific target/timeout defaults, and displaying the equivalent CLI command.
+- **stigix-cli** 🎛️ Switched `experience list` to friendly 1-based index numbers and correctly mapped the probe targets.
+- **stigix-cli** ❌ Upgraded `experience remove` to support deleting probes by index or by name.
+- **stigix-cli** 💬 Integrated `shlex.split` for command tokenization to parse quoted strings correctly (e.g. `--name "My Custom Name"`).
+### Fixed
+- **stigix-cli** 🐛 Corrected the POST endpoint payload schema for custom connectivity targets.
+
 ## [v1.4.0-patch.50] - 2026-05-28
 ### Added
 - **stigix-cli** 🔌 Implemented `peer export [file]` and `peer import <file>` commands to import/export peer targets from/to JSON files.

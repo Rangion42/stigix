@@ -635,33 +635,186 @@ def cmd_experience(args):
                 dim("  No custom digital experience targets configured")
                 return
             rows = []
-            for t in targets:
+            for idx, t in enumerate(targets, 1):
                 enabled = "✓" if t.get("enabled", True) else "✗"
                 rows.append([
-                    t.get("id","?")[:12],
-                    t.get("name","?")[:20],
-                    t.get("host") or t.get("url","?"),
+                    str(idx),
+                    t.get("name","?")[:30],
+                    t.get("target") or t.get("host") or t.get("url","?"),
                     t.get("type","?"),
                     enabled
                 ])
-            table(["ID", "Name", "Host/URL", "Type", "On"], rows)
+            table(["Index", "Name", "Target", "Type", "On"], rows)
 
     elif sub == "add":
-        parsed  = parse_flags(args[1:], ["name","host","type","port","url","timeout"])
-        name    = parsed.get("name")    or input("Name: ").strip()
-        host    = parsed.get("host")    or parsed.get("url") or input("Host/URL: ").strip()
-        ttype   = parsed.get("type",   "http")
-        port    = int(parsed.get("port",   80))
-        timeout = int(parsed.get("timeout", 5))
-        body    = {"name": name, "host": host, "type": ttype, "port": port, "timeout": timeout, "enabled": True}
-        r = api_post("/api/connectivity/custom", body)
-        if r: ok(f"Experience target '{name}' added")
+        parsed = parse_flags(args[1:], ["name", "target", "host", "url", "type", "port", "timeout"])
+        
+        # 1. Probe Type
+        ttype = parsed.get("type")
+        if not ttype:
+            if sys.stdin.isatty():
+                print("\nSelect Probe Type:")
+                print("  1: HTTP   (curl web check)")
+                print("  2: HTTPS  (secure web check)")
+                print("  3: PING   (ICMP echo)")
+                print("  4: TCP    (netcat port check)")
+                print("  5: UDP    (iperf3 jitter check)")
+                print("  6: DNS    (dig lookup check)")
+                print()
+                try:
+                    choice = input("Select type [1]: ").strip()
+                    if not choice:
+                        idx = 1
+                    else:
+                        idx = int(choice)
+                except (ValueError, KeyboardInterrupt, EOFError):
+                    print("\nAborted.")
+                    return
+                
+                type_map = {1: "HTTP", 2: "HTTPS", 3: "PING", 4: "TCP", 5: "UDP", 6: "DNS"}
+                ttype = type_map.get(idx, "HTTP")
+            else:
+                ttype = "HTTP"
+        
+        ttype = ttype.upper()
+        if ttype == "ICMP":
+            ttype = "PING"
+        if ttype not in ["HTTP", "HTTPS", "PING", "TCP", "UDP", "DNS"]:
+            err(f"Invalid probe type: {ttype}. Supported: HTTP, HTTPS, PING, TCP, UDP, DNS")
+            return
+            
+        # 2. Target (Host/URL/IP)
+        target = parsed.get("target") or parsed.get("host") or parsed.get("url")
+        if not target:
+            if sys.stdin.isatty():
+                prompt_placeholder = {
+                    "HTTP": "https://example.com",
+                    "HTTPS": "https://example.com",
+                    "PING": "8.8.8.8",
+                    "DNS": "8.8.8.8",
+                    "TCP": "1.2.3.4:5201",
+                    "UDP": "1.2.3.4:5201"
+                }.get(ttype, "1.2.3.4")
+                try:
+                    target = input(f"Enter Target Host/URL (e.g. {prompt_placeholder}): ").strip()
+                except (KeyboardInterrupt, EOFError):
+                    print()
+                    return
+            if not target:
+                err("Target is required. Usage: experience add --target <host_or_url>")
+                return
+        
+        # 3. Port (optional helper, mostly for TCP/UDP if not in target)
+        port = parsed.get("port")
+        if port and ":" not in target and ttype in ["TCP", "UDP"]:
+            target = f"{target}:{port}"
+
+        # 4. Name
+        name = parsed.get("name")
+        if not name:
+            default_name = f"{ttype} Probe to {target}"
+            if sys.stdin.isatty():
+                try:
+                    name = input(f"Enter Name [{default_name}]: ").strip()
+                except (KeyboardInterrupt, EOFError):
+                    print()
+                    return
+            name = name or default_name
+
+        # 5. Timeout (ms)
+        timeout_val = parsed.get("timeout")
+        default_timeout = {
+            "HTTP": 5000,
+            "HTTPS": 5000,
+            "PING": 2000,
+            "DNS": 3000,
+            "TCP": 5000,
+            "UDP": 5000
+        }.get(ttype, 2000)
+        
+        if not timeout_val:
+            if sys.stdin.isatty():
+                try:
+                    t_str = input(f"Enter Timeout in ms [{default_timeout}]: ").strip()
+                    timeout = int(t_str) if t_str else default_timeout
+                except ValueError:
+                    warn(f"Using default {default_timeout}ms")
+                    timeout = default_timeout
+                except (KeyboardInterrupt, EOFError):
+                    print()
+                    return
+            else:
+                timeout = default_timeout
+        else:
+            try:
+                timeout = int(timeout_val)
+            except ValueError:
+                err("Timeout must be an integer.")
+                return
+
+        # Fetch existing probes list so we don't wipe it out!
+        r_get = api_get("/api/connectivity/custom")
+        if r_get is None:
+            err("Failed to retrieve existing experience probes. Aborting add.")
+            return
+            
+        probes_list = r_get if isinstance(r_get, list) else r_get.get("targets", [])
+        
+        # Build the new probe dict
+        new_probe = {
+            "name": name,
+            "type": ttype,
+            "target": target,
+            "timeout": timeout,
+            "enabled": True
+        }
+        
+        # Append and POST back
+        probes_list.append(new_probe)
+        r = api_post("/api/connectivity/custom", {"endpoints": probes_list})
+        if r:
+            ok(f"Experience target '{name}' added successfully")
+            print(f"→ Equivalent CLI: experience add --name \"{name}\" --target \"{target}\" --type \"{ttype}\" --timeout {timeout}")
 
     elif sub == "remove":
-        tid = args[1] if len(args) > 1 else None
-        if not tid: err("Usage: experience remove <id>"); return
-        r = api_delete(f"/api/connectivity/custom/{tid}")
-        if r: ok(f"Experience target {tid} removed")
+        match_val = args[1] if len(args) > 1 else None
+        if not match_val:
+            err("Usage: experience remove <index_or_name>")
+            return
+            
+        r_get = api_get("/api/connectivity/custom")
+        if r_get is None:
+            err("Failed to retrieve existing experience probes.")
+            return
+        probes_list = r_get if isinstance(r_get, list) else r_get.get("targets", [])
+        if not probes_list:
+            err("No probes configured.")
+            return
+            
+        # Try matching by index (1-based)
+        matched_idx = None
+        try:
+            val_idx = int(match_val)
+            if 1 <= val_idx <= len(probes_list):
+                matched_idx = val_idx - 1
+        except ValueError:
+            pass
+            
+        # If not index, try matching by name (case-insensitive)
+        if matched_idx is None:
+            for idx, p in enumerate(probes_list):
+                if p.get("name", "").lower() == match_val.lower():
+                    matched_idx = idx
+                    break
+                    
+        if matched_idx is None:
+            err(f"Probe matching '{match_val}' not found (tried index and name)")
+            return
+            
+        removed_probe = probes_list.pop(matched_idx)
+        r = api_post("/api/connectivity/custom", {"endpoints": probes_list})
+        if r:
+            ok(f"Experience target '{removed_probe.get('name')}' removed")
 
     elif sub == "probe":
         r = api_get("/api/connectivity/test")
@@ -2376,15 +2529,15 @@ COMPLETER_TREE = {
     "experience":  {
         "list": None, "probe": None, "remove": None,
         "import": None, "export": None,
-        "add":  {"--name": None, "--host": None,
-                 "--type": {"http", "ping", "dns"},
+        "add":  {"--name": None, "--target": None, "--host": None, "--url": None,
+                 "--type": {"http", "https", "ping", "icmp", "tcp", "udp", "dns"},
                  "--port": None, "--timeout": None},
     },
     "target":      {
         "list": None, "probe": None, "remove": None,
         "import": None, "export": None,
-        "add":  {"--name": None, "--host": None,
-                 "--type": {"http", "ping", "dns"},
+        "add":  {"--name": None, "--target": None, "--host": None, "--url": None,
+                 "--type": {"http", "https", "ping", "icmp", "tcp", "udp", "dns"},
                  "--port": None, "--timeout": None},
     },
     "peer":        {
@@ -2433,7 +2586,11 @@ def run_command(line):
     line = line.strip()
     if not line or line.startswith("#"):
         return
-    parts  = line.split()
+    import shlex
+    try:
+        parts = shlex.split(line)
+    except ValueError:
+        parts = line.split()
     cmd    = parts[0].lower()
     rest   = parts[1:]
     if cmd in ("exit", "quit"):
