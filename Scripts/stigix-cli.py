@@ -802,8 +802,7 @@ def cmd_speedtest(args):
                 else:
                     ts = "?"
                 params = j.get("params", {})
-                target = params.get("target", {})
-                host = target.get("host", "?")
+                host = params.get("host", "?")
                 proto = params.get("protocol", "tcp")
                 status = j.get("status", "?")
                 
@@ -916,17 +915,199 @@ def cmd_speedtest(args):
                     target_host = match.get("host")
 
         parsed = parse_flags(remaining_opts, ["port", "protocol", "direction", "duration", "bitrate", "streams", "psk"])
-        has_custom = len(parsed) > 0
-        
-        port = int(parsed.get("port", 9000))
-        protocol = parsed.get("protocol", "tcp")
-        direction = parsed.get("direction", "client-to-server")
-        duration = int(parsed.get("duration", 10))
-        bitrate = parsed.get("bitrate", "200M")
-        streams = int(parsed.get("streams", 4))
-        psk = parsed.get("psk", "")
 
-        if has_custom:
+        def prompt_option(name, default_val, validator=None):
+            if not sys.stdin.isatty():
+                return default_val
+            while True:
+                try:
+                    val = input(f"{name} [{default_val}]: ").strip()
+                    if not val:
+                        return default_val
+                    if validator:
+                        valid, parsed_val = validator(val)
+                        if valid:
+                            return parsed_val
+                        else:
+                            err(f"Invalid value for {name}. Please try again.")
+                    else:
+                        return val
+                except (KeyboardInterrupt, EOFError):
+                    print()
+                    raise
+
+        def validate_port(v):
+            try:
+                p = int(v)
+                if 1 <= p <= 65535:
+                    return True, p
+            except ValueError:
+                pass
+            return False, None
+
+        def validate_protocol(v):
+            p = str(v).strip().lower()
+            if p in ("tcp", "udp", "quic"):
+                return True, p
+            return False, None
+
+        def validate_direction(v):
+            d = str(v).strip().lower()
+            if d in ("client-to-server", "c2s"):
+                return True, "client-to-server"
+            if d in ("server-to-client", "s2c"):
+                return True, "server-to-client"
+            if d in ("bidirectional", "bi"):
+                return True, "bidirectional"
+            return False, None
+
+        def validate_duration(v):
+            try:
+                d = int(v)
+                if d > 0:
+                    return True, d
+            except ValueError:
+                pass
+            return False, None
+
+        def validate_streams(v):
+            try:
+                s = int(v)
+                if s > 0:
+                    return True, s
+            except ValueError:
+                pass
+            return False, None
+
+        def validate_bitrate(v):
+            v = str(v).strip()
+            if v:
+                return True, v
+            return False, None
+
+        has_cli_flags = len(parsed) > 0
+
+        # Port
+        port = None
+        if "port" in parsed:
+            is_valid, parsed_port = validate_port(parsed["port"])
+            if is_valid:
+                port = parsed_port
+            elif sys.stdin.isatty():
+                warn(f"Invalid port '{parsed['port']}' provided on command line.")
+                port = prompt_option("Port", 9000, validate_port)
+            else:
+                port = 9000
+        else:
+            if not has_cli_flags and sys.stdin.isatty():
+                port = prompt_option("Port", 9000, validate_port)
+            else:
+                port = 9000
+
+        # Protocol
+        protocol = None
+        if "protocol" in parsed:
+            is_valid, parsed_proto = validate_protocol(parsed["protocol"])
+            if is_valid:
+                protocol = parsed_proto
+            elif sys.stdin.isatty():
+                warn(f"Invalid protocol '{parsed['protocol']}' provided on command line.")
+                protocol = prompt_option("Protocol (tcp/udp/quic)", "tcp", validate_protocol)
+            else:
+                protocol = "tcp"
+        else:
+            if not has_cli_flags and sys.stdin.isatty():
+                protocol = prompt_option("Protocol (tcp/udp/quic)", "tcp", validate_protocol)
+            else:
+                protocol = "tcp"
+
+        # Direction
+        direction = None
+        if "direction" in parsed:
+            is_valid, parsed_dir = validate_direction(parsed["direction"])
+            if is_valid:
+                direction = parsed_dir
+            elif sys.stdin.isatty():
+                warn(f"Invalid direction '{parsed['direction']}' provided on command line.")
+                direction = prompt_option("Direction (client-to-server/server-to-client/bidirectional)", "client-to-server", validate_direction)
+            else:
+                direction = "client-to-server"
+        else:
+            if not has_cli_flags and sys.stdin.isatty():
+                direction = prompt_option("Direction (client-to-server/server-to-client/bidirectional)", "client-to-server", validate_direction)
+            else:
+                direction = "client-to-server"
+
+        # Duration
+        duration = None
+        if "duration" in parsed:
+            is_valid, parsed_dur = validate_duration(parsed["duration"])
+            if is_valid:
+                duration = parsed_dur
+            elif sys.stdin.isatty():
+                warn(f"Invalid duration '{parsed['duration']}' provided on command line.")
+                duration = prompt_option("Duration (sec)", 10, validate_duration)
+            else:
+                duration = 10
+        else:
+            if not has_cli_flags and sys.stdin.isatty():
+                duration = prompt_option("Duration (sec)", 10, validate_duration)
+            else:
+                duration = 10
+
+        # Bitrate
+        bitrate = None
+        if "bitrate" in parsed:
+            is_valid, parsed_bit = validate_bitrate(parsed["bitrate"])
+            if is_valid:
+                bitrate = parsed_bit
+            elif sys.stdin.isatty():
+                warn(f"Invalid bitrate '{parsed['bitrate']}' provided on command line.")
+                bitrate = prompt_option("Bitrate", "200M", validate_bitrate)
+            else:
+                bitrate = "200M"
+        else:
+            if not has_cli_flags and sys.stdin.isatty():
+                bitrate = prompt_option("Bitrate", "200M", validate_bitrate)
+            else:
+                bitrate = "200M"
+
+        # Streams
+        streams = None
+        if "streams" in parsed:
+            is_valid, parsed_str = validate_streams(parsed["streams"])
+            if is_valid:
+                streams = parsed_str
+            elif sys.stdin.isatty():
+                warn(f"Invalid streams '{parsed['streams']}' provided on command line.")
+                streams = prompt_option("Streams", 4, validate_streams)
+            else:
+                streams = 4
+        else:
+            if not has_cli_flags and sys.stdin.isatty():
+                streams = prompt_option("Streams", 4, validate_streams)
+            else:
+                streams = 4
+
+        # PSK
+        psk = None
+        if "psk" in parsed:
+            if isinstance(parsed["psk"], bool) and parsed["psk"]:
+                if sys.stdin.isatty():
+                    psk = prompt_option("PSK (optional)", "")
+                else:
+                    psk = ""
+            else:
+                psk = str(parsed["psk"])
+        else:
+            if not has_cli_flags and sys.stdin.isatty():
+                psk = prompt_option("PSK (optional)", "")
+            else:
+                psk = ""
+
+        is_custom = has_cli_flags or sys.stdin.isatty()
+
+        if is_custom:
             body = {
                 "mode": "custom",
                 "target": {"host": target_host, "port": port, "psk": psk},

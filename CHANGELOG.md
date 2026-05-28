@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [v1.4.0-patch.45] - 2026-05-28
+### Added
+- **stigix-cli** ⚙️ Implemented comprehensive parameter validation and interactive prompting for speedtest options (`port`, `protocol`, `direction`, `duration`, `bitrate`, `streams`, `psk`), proposing default choices in square brackets for each option.
+- **stigix-cli** 🐛 Fixed a bug in `speedtest list` where target hosts were incorrectly displayed as `?` due to an incorrect key lookup path in the job params schema.
+
 ## [v1.4.0-patch.44] - 2026-05-28
 ### Added
 - **stigix-cli** ⚡ Enhanced `speedtest run` command to propose a list of available Stigix targets with the `xfr` capability (similar to the voice simulation target selector) or allow entering a manual IP/Host.
