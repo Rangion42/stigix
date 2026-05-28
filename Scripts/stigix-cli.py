@@ -493,32 +493,64 @@ def cmd_status(args):
     health = api_get("/api/system/health")
     if health:
         s = health.get("status", "?")
-        ok(f"Backend    {status_badge(s)}  uptime {health.get('uptime','?')}s")
+        ok(f"Backend     {status_badge(s)}  uptime {health.get('uptime','?')}s")
 
     v = api_get("/api/version")
     if v:
-        info(f"Version    {v.get('version', v)}")
+        info(f"Version     {v.get('version', v)}")
 
     t = api_get("/api/traffic/status")
     if t:
         state = "running" if (t.get("enabled") or t.get("running")) else "stopped"
-        print(f"Traffic    {status_badge(state)}")
+        print(f"Traffic     {status_badge(state)}")
         STATUS.traffic = "▶ RUNNING" if state == "running" else "■ STOPPED"
+
+    # Fetch local IP and default interface
+    ifaces_data = api_get("/api/system/interfaces")
+    local_ip = None
+    default_iface = None
+    if ifaces_data:
+        default_iface = ifaces_data.get("default_interface")
+        iface_list = ifaces_data.get("interfaces", [])
+        for iface in iface_list:
+            if iface.get("is_default") or iface.get("name") == default_iface:
+                local_ip = iface.get("ip")
+                break
+        if not local_ip and iface_list:
+            local_ip = iface_list[0].get("ip")
+
+    # Fetch gateway IP
+    gw_data = api_get("/api/system/gateway-ip")
+    gw_ip = gw_data.get("ip") if gw_data else None
+
+    # Fetch configured traffic interfaces
+    traffic_ifaces_data = api_get("/api/config/interfaces")
+    traffic_ifaces = None
+    if traffic_ifaces_data and isinstance(traffic_ifaces_data, list):
+        traffic_ifaces = ", ".join(traffic_ifaces_data)
+
+    if local_ip:
+        info(f"Local IP    {local_ip}" + (f" ({default_iface})" if default_iface else ""))
+    if gw_ip and gw_ip != "Unknown OS":
+        info(f"Gateway     {gw_ip}")
+    if traffic_ifaces:
+        info(f"Traffic If  {traffic_ifaces}")
 
     ip = api_get("/api/connectivity/public-ip")
     if ip:
-        info(f"Public IP  {ip.get('ip', ip)}")
+        info(f"Public IP   {ip.get('ip', ip)}")
+
+    site = api_get("/api/siteinfo")
+    if site:
+        site_name = site.get("detected_site_name") or site.get("siteName")
+        if site_name:
+            info(f"Prisma Site {site_name}")
 
     conv = api_get("/api/convergence/status")
     if conv and isinstance(conv, list):
         running = [t for t in conv if t.get("running")]
         if running:
             ok(f"Failover running: {', '.join(t.get('testId','?') for t in running)}")
-
-
-    site = api_get("/api/siteinfo")
-    if site and site.get("siteName"):
-        info(f"Prisma site: {site['siteName']}")
 
 PREV_STATS = {"total_requests": None, "timestamp": None}
 
