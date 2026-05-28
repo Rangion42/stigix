@@ -546,32 +546,30 @@ def render_traffic_dashboard(stats, status_str, app_to_group, truncated_to_group
 
     status_text = status_str.upper()
     status_color = "32" if status_str == "running" else "31"
-    status_colored = c(status_color, f"[{status_text}]".ljust(13))
-    col1_row1 = f" Status: {status_colored}"
+    status_val = f"[{status_text}]"
+    col1_row1 = " Status: " + c(status_color, status_val.ljust(9))
     
     success_color = "32" if success_rate >= 95 else ("33" if success_rate >= 80 else "31")
-    success_colored = c(success_color, f"{success_rate:>5.1f}%")
-    col2_row1 = f" Success Rate: {success_colored} "
+    success_val = f"{success_rate:>5.1f}%"
+    col2_row1 = " Success Rate: " + c(success_color, success_val) + " "
     
-    rpm_colored = c("36", rpm_str.ljust(17))
-    col3_row1 = f" Traffic Rate: {rpm_colored} "
+    col3_row1 = " Rate:   " + c("36", rpm_str.ljust(26)) + " "
     
-    col1_row2 = f" Active Apps: {active_apps:>5}    "
-    col2_row2 = f" Total Requests: {total_req:>6}"
+    col1_row2 = f" Active Apps: {active_apps:>3} "
+    col2_row2 = f" Total Requests: {total_req:>5} "
     
     errors_color = "31" if total_errors > 0 else "32"
-    errors_colored = c(errors_color, f"{total_errors}".ljust(17))
-    col3_row2 = f" Total Errors: {errors_colored} "
+    col3_row2 = " Errors: " + c(errors_color, f"{total_errors}".ljust(26)) + " "
     
     row1 = f"║{col1_row1}║{col2_row1}║{col3_row1}║"
     row2 = f"║{col1_row2}║{col2_row2}║{col3_row2}║"
     
-    hdr("╔══════════════════════╦══════════════════════╦════════════════════════════════╗")
+    hdr("╔══════════════════╦══════════════════════╦════════════════════════════════════╗")
     hdr("║" + "TRAFFIC DASHBOARD".center(78) + "║")
-    hdr("╠══════════════════════╬══════════════════════╬════════════════════════════════╣")
+    hdr("╠══════════════════╬══════════════════════╬════════════════════════════════════╣")
     hdr(row1)
     hdr(row2)
-    hdr("╚══════════════════════╩══════════════════════╩════════════════════════════════╝")
+    hdr("╚══════════════════╩══════════════════════╩════════════════════════════════════╝")
     print()
     
     # Print App Table

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [v1.4.0-patch.59] - 2026-05-28
+### Fixed
+- **stigix-cli** 🎨 Fixed box alignment overflow in the Traffic Dashboard (`traffic stats` / `traffic watch`) to prevent border duplication and trailing vertical separator glitches.
+
 ## [v1.4.0-patch.58] - 2026-05-28
 ### Added
 - **stigix-cli** 🧠 Added `stats` subcommand to autocompletion options under `experience` and `target` commands.
