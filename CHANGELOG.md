@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [v1.4.0-patch.55] - 2026-05-28
+### Added
+- **stigix-cli** 📊 Implemented a premium terminal-based Traffic Dashboard for `traffic stats` and `traffic watch` commands. Displays running status, success rate, active apps count, total requests, total errors, real-time traffic rate (req/min & pps), and a detailed table of per-application stats (sorted by volume, resolving category group names from the backend configuration). Added a `--all` option to display the full list of active applications.
+
 ## [v1.4.0-patch.54] - 2026-05-28
 ### Added
 - **stigix-cli** 🔑 Upgraded session persistence to support multi-instance token storage. The CLI now stores tokens in a URL-indexed mapping (`instance_tokens` in `~/.stigix-cli.json`), automatically restoring and preserving credentials when connecting to or switching between multiple Stigix instances.

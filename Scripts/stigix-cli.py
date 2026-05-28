@@ -483,8 +483,142 @@ def cmd_status(args):
     if site and site.get("siteName"):
         info(f"Prisma site: {site['siteName']}")
 
-    STATUS.invalidate()
+PREV_STATS = {"total_requests": None, "timestamp": None}
 
+def get_app_groups():
+    app_to_group = {}
+    truncated_to_group = {}
+    
+    r = api_get("/api/config/apps")
+    if r and isinstance(r, list):
+        for cat in r:
+            cat_name = cat.get("name", "Uncategorized")
+            apps = cat.get("apps", [])
+            for app in apps:
+                domain = app.get("domain", "")
+                clean_name = domain.replace("https://", "").replace("http://", "")
+                app_to_group[clean_name] = cat_name
+                app_to_group[domain] = cat_name
+                
+                host_part = clean_name.split('.')[0]
+                if host_part and host_part not in truncated_to_group:
+                    truncated_to_group[host_part] = cat_name
+                    
+    return app_to_group, truncated_to_group
+
+def render_traffic_dashboard(stats, status_str, app_to_group, truncated_to_group, show_all=False):
+    total_req = stats.get("total_requests", 0)
+    errors_by_app = stats.get("errors_by_app", {})
+    requests_by_app = stats.get("requests_by_app", {})
+    
+    total_errors = sum(errors_by_app.values())
+    success_rate = ((total_req - total_errors) / total_req * 100) if total_req > 0 else 100.0
+    active_apps = len([k for k, v in requests_by_app.items() if v > 0])
+    
+    # Calculate Traffic Rate
+    current_ts = stats.get("timestamp", 0)
+    rpm_str = "Calculating..."
+    if PREV_STATS["total_requests"] is not None and PREV_STATS["timestamp"] is not None:
+        delta_req = total_req - PREV_STATS["total_requests"]
+        delta_time = current_ts - PREV_STATS["timestamp"]
+        if delta_time > 0 and delta_req >= 0:
+            pps = delta_req / delta_time
+            rpm = pps * 60
+            rpm_str = f"{rpm:.1f} req/min ({pps:.1f} pps)"
+        elif delta_req >= 0:
+            rpm_str = "0.0 req/min (0.0 pps)"
+            
+    # Update previous stats for rate tracking
+    PREV_STATS["total_requests"] = total_req
+    PREV_STATS["timestamp"] = current_ts
+
+    status_text = status_str.upper()
+    status_color = "32" if status_str == "running" else "31"
+    status_colored = c(status_color, f"[{status_text}]".ljust(13))
+    col1_row1 = f" Status: {status_colored}"
+    
+    success_color = "32" if success_rate >= 95 else ("33" if success_rate >= 80 else "31")
+    success_colored = c(success_color, f"{success_rate:>5.1f}%")
+    col2_row1 = f" Success Rate: {success_colored} "
+    
+    rpm_colored = c("36", rpm_str.ljust(17))
+    col3_row1 = f" Traffic Rate: {rpm_colored} "
+    
+    col1_row2 = f" Active Apps: {active_apps:>5}    "
+    col2_row2 = f" Total Requests: {total_req:>6}"
+    
+    errors_color = "31" if total_errors > 0 else "32"
+    errors_colored = c(errors_color, f"{total_errors}".ljust(17))
+    col3_row2 = f" Total Errors: {errors_colored} "
+    
+    row1 = f"║{col1_row1}║{col2_row1}║{col3_row1}║"
+    row2 = f"║{col1_row2}║{col2_row2}║{col3_row2}║"
+    
+    hdr("╔══════════════════════╦══════════════════════╦════════════════════════════════╗")
+    hdr("║" + "TRAFFIC DASHBOARD".center(78) + "║")
+    hdr("╠══════════════════════╬══════════════════════╬════════════════════════════════╣")
+    hdr(row1)
+    hdr(row2)
+    hdr("╚══════════════════════╩══════════════════════╩════════════════════════════════╝")
+    print()
+    
+    # Print App Table
+    hdr("━━ Active Applications ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    
+    app_rows = []
+    for app, reqs in requests_by_app.items():
+        if reqs == 0:
+            continue
+        clean_app = app.replace("https://", "").replace("http://", "")
+        group = app_to_group.get(clean_app) or app_to_group.get(app) or truncated_to_group.get(clean_app.split('.')[0]) or "Uncategorized"
+        errs = errors_by_app.get(app, 0)
+        app_success = ((reqs - errs) / reqs * 100) if reqs > 0 else 100.0
+        app_rows.append({
+            "app": clean_app,
+            "group": group,
+            "requests": reqs,
+            "errors": errs,
+            "success_rate": app_success
+        })
+        
+    # Sort by requests descending
+    app_rows.sort(key=lambda x: x["requests"], reverse=True)
+    
+    table_rows = []
+    for idx, row in enumerate(app_rows, 1):
+        app_name = row["app"][:30]
+        group_name = row["group"][:20]
+        reqs_str = c("34" if row["requests"] > 0 else "0", f"{row['requests']:,}")
+        errs_str = c("31", f"{row['errors']:,}") if row["errors"] > 0 else c("2", "0")
+        
+        sr = row["success_rate"]
+        if sr >= 95:
+            sr_color = "32"
+        elif sr >= 80:
+            sr_color = "33"
+        else:
+            sr_color = "31"
+        sr_str = c(sr_color, f"{sr:.1f}%")
+        
+        table_rows.append([
+            str(idx),
+            app_name,
+            group_name,
+            reqs_str,
+            errs_str,
+            sr_str
+        ])
+        
+    if not table_rows:
+        dim("  No applications traffic recorded yet")
+        return
+        
+    display_rows = table_rows if show_all else table_rows[:15]
+    table(["#", "Application", "Group", "Requests", "Errors", "Success Rate"], display_rows)
+    
+    if not show_all and len(table_rows) > 15:
+        print()
+        dim(f"  (Showing top 15 of {len(table_rows)} active applications. Use 'traffic stats --all' to list all)")
 
 def cmd_traffic(args):
     if not require_auth(): return
@@ -509,11 +643,15 @@ def cmd_traffic(args):
             print(f"Traffic: {status_badge(state)}")
 
     elif sub == "stats":
+        show_all = "--all" in args
         r = api_get("/api/stats")
+        t = api_get("/api/traffic/status")
         if r:
-            hdr("━━ Traffic Stats ━━━━━━━━━━━━━━━━━━━━━")
-            rows = [(k, v) for k, v in r.items() if not isinstance(v, dict)]
-            table(["Metric", "Value"], rows[:20])
+            status_str = "stopped"
+            if t:
+                status_str = "running" if (t.get("enabled") or t.get("running")) else "stopped"
+            app_to_group, truncated_to_group = get_app_groups()
+            render_traffic_dashboard(r, status_str, app_to_group, truncated_to_group, show_all=show_all)
 
     elif sub == "logs":
         r = api_get("/api/logs")
@@ -525,26 +663,30 @@ def cmd_traffic(args):
 
     elif sub == "reset":
         r = api_delete("/api/stats")
-        if r: ok("Statistics reset")
+        if r:
+            ok("Statistics reset")
+            PREV_STATS["total_requests"] = None
+            PREV_STATS["timestamp"] = None
 
     elif sub == "watch":
-        interval = int(args[1]) if len(args) > 1 else 3
+        show_all = "--all" in args
+        clean_args = [a for a in args if a != "--all"]
+        interval = int(clean_args[1]) if len(clean_args) > 1 else 3
         info(f"Live traffic watch — refresh every {interval}s  (Ctrl+C to stop)")
         try:
+            app_to_group, truncated_to_group = get_app_groups()
             while True:
                 do_clear()
                 now = datetime.now().strftime("%H:%M:%S")
                 hdr(f"━━ Traffic Stats  [{now}]  (Ctrl+C to stop) ━━━━━━━")
                 print()
                 r = api_get("/api/stats")
-                if r:
-                    rows = [(k, v) for k, v in r.items() if not isinstance(v, dict)]
-                    table(["Metric", "Value"], rows[:20])
-                print()
                 t = api_get("/api/traffic/status")
-                if t:
-                    state = "running" if (t.get("enabled") or t.get("running")) else "stopped"
-                    print(f"  Status: {status_badge(state)}")
+                if r:
+                    status_str = "stopped"
+                    if t:
+                        status_str = "running" if (t.get("enabled") or t.get("running")) else "stopped"
+                    render_traffic_dashboard(r, status_str, app_to_group, truncated_to_group, show_all=show_all)
                 time.sleep(interval)
         except KeyboardInterrupt:
             print()
@@ -575,10 +717,10 @@ def cmd_traffic(args):
             ("traffic start",          "Start traffic generation"),
             ("traffic stop",           "Stop traffic generation"),
             ("traffic status",         "Show current traffic state"),
-            ("traffic stats",          "Show traffic statistics"),
+            ("traffic stats [--all]",  "Show traffic statistics & active apps dashboard"),
             ("traffic logs",           "Show last 30 backend log lines"),
             ("traffic reset",          "Reset traffic statistics"),
-            ("traffic watch [sec]",    "Live poll traffic stats"),
+            ("traffic watch [sec] [--all]", "Live poll traffic stats and rate in real-time"),
             ("traffic export [file]",  "Export traffic configuration to JSON"),
             ("traffic import <file>",  "Import traffic configuration from JSON"),
         ])
@@ -2410,10 +2552,10 @@ def cmd_help(args):
 
   {c('1','TRAFFIC')}
     traffic start|stop     Enable / disable traffic generation
-    traffic status|stats   State and counters
+    traffic status|stats   Show traffic state, rate, and active apps dashboard
     traffic logs           Show last log lines
     traffic reset          Reset statistics
-    traffic watch [sec]    {c('36','Live watch — refreshes every N seconds')}
+    traffic watch [sec]    {c('36','Live watch dashboard & real-time rate (use --all to show all apps)')}
     traffic export [file]  Export traffic configuration to JSON
     traffic import <file>  Import traffic configuration from JSON
 
