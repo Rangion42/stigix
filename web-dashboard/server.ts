@@ -8975,23 +8975,61 @@ app.get('/api/admin/maintenance/status', authenticateToken, (req, res) => {
 
 async function getHostProjectDir(): Promise<string | null> {
     try {
-        const { stdout: inspectOut } = await promisify(exec)(`docker inspect ${os.hostname()}`);
-        const inspectData = JSON.parse(inspectOut);
-        if (Array.isArray(inspectData) && inspectData.length > 0) {
-            const mounts = inspectData[0].Mounts || [];
-            const composeMount = mounts.find((m: any) => 
-                m.Destination === '/app/docker-compose.yml' || 
-                m.Destination === '/app' ||
-                m.Destination === '/app/config'
-            );
-            if (composeMount) {
-                const hostPath = composeMount.Source;
-                if (composeMount.Destination === '/app/config') {
-                    return path.dirname(hostPath);
-                } else if (composeMount.Destination === '/app/docker-compose.yml') {
-                    return path.dirname(hostPath);
-                } else {
-                    return hostPath;
+        // 1. Try to inspect by hostname (container ID in bridge mode)
+        const hostname = os.hostname();
+        let inspectOut = '';
+        
+        try {
+            const execResult = await promisify(exec)(`docker inspect ${hostname}`);
+            inspectOut = execResult.stdout;
+        } catch (e) {
+            // 2. Fallback: hostname did not work (likely host network mode). Try container name "stigix"
+            try {
+                const execResult = await promisify(exec)(`docker inspect stigix`);
+                inspectOut = execResult.stdout;
+            } catch (e2) {
+                // 3. Fallback: Try to find a running container with image containing "stigix"
+                try {
+                    const { stdout: psOut } = await promisify(exec)(`docker ps --filter "image=stigix" --format "{{.ID}}"`);
+                    const lines = psOut.trim().split('\n').filter(Boolean);
+                    if (lines.length > 0) {
+                        const execResult = await promisify(exec)(`docker inspect ${lines[0].trim()}`);
+                        inspectOut = execResult.stdout;
+                    } else {
+                        // 4. Try generic jsuzanne/stigix image match in docker ps
+                        const { stdout: psOut2 } = await promisify(exec)(`docker ps --format "{{.ID}} {{.Image}}"`);
+                        const matching = psOut2.trim().split('\n')
+                            .map(line => line.split(' '))
+                            .find(parts => parts[1] && parts[1].includes('stigix'));
+                        if (matching) {
+                            const execResult = await promisify(exec)(`docker inspect ${matching[0]}`);
+                            inspectOut = execResult.stdout;
+                        }
+                    }
+                } catch (e3) {
+                    // Ignore and print warning later
+                }
+            }
+        }
+
+        if (inspectOut) {
+            const inspectData = JSON.parse(inspectOut);
+            if (Array.isArray(inspectData) && inspectData.length > 0) {
+                const mounts = inspectData[0].Mounts || [];
+                const composeMount = mounts.find((m: any) => 
+                    m.Destination === '/app/docker-compose.yml' || 
+                    m.Destination === '/app' ||
+                    m.Destination === '/app/config'
+                );
+                if (composeMount) {
+                    const hostPath = composeMount.Source;
+                    if (composeMount.Destination === '/app/config') {
+                        return path.dirname(hostPath);
+                    } else if (composeMount.Destination === '/app/docker-compose.yml') {
+                        return path.dirname(hostPath);
+                    } else {
+                        return hostPath;
+                    }
                 }
             }
         }
