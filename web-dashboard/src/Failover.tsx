@@ -265,7 +265,7 @@ export default function Failover(props: FailoverProps) {
         if (maxBlackout === 0) return { label: 'PERFECT', color: 'text-green-400', bg: 'bg-green-400/10', desc: 'No packet loss detected.' };
         if (maxBlackout < thresholds.good) return { label: 'GOOD', color: 'text-green-400', bg: 'bg-green-400/10', desc: 'Typical SD-WAN failover range. Sessions usually stay up.' };
         if (maxBlackout < thresholds.degraded) return { label: 'DEGRADED', color: 'text-yellow-400', bg: 'bg-yellow-400/10', desc: 'Noticeable outage. Video freeze and voice drops expected.' };
-        if (maxBlackout < thresholds.critical) return { label: 'BAD', color: 'text-orange-400', bg: 'bg-orange-400/10', desc: 'High convergence time. Application health impacted.' };
+        if (maxBlackout < thresholds.critical) return { label: 'BAD', color: 'text-orange-400', bg: 'bg-orange-400/10', desc: 'High failover time. Application health impacted.' };
         return { label: 'CRITICAL', color: 'text-red-400', bg: 'bg-red-400/10', desc: 'Major blackout. Application sessions will disconnect.' };
     };
 
@@ -309,7 +309,7 @@ export default function Failover(props: FailoverProps) {
                             <Zap size={24} className={activeTests.length > 0 ? 'text-white' : 'text-text-muted'} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-text-primary tracking-tight">Convergence Lab</h2>
+                            <h2 className="text-xl font-bold text-text-primary tracking-tight">Failover Lab</h2>
                             <div className="flex items-center gap-2 mt-1">
                                 <p className="text-sm text-text-muted">Manage multiple failover targets for specialized test plans</p>
                                 {activeInterfaces.length > 0 && (
@@ -468,7 +468,7 @@ export default function Failover(props: FailoverProps) {
                                                             ? 'bg-card-secondary text-text-muted border-transparent opacity-50 cursor-not-allowed' 
                                                             : 'bg-blue-500/10 text-blue-500 hover:bg-blue-600 hover:text-white border-blue-500/20 hover:border-blue-600 disabled:opacity-50 disabled:cursor-not-allowed'
                                                     }`}
-                                                    title={isTesting ? "Test already running" : "Launch Convergence Test"}
+                                                    title={isTesting ? "Test already running" : "Launch Failover Test"}
                                                 >
                                                     <Play size={10} fill="currentColor" />
                                                 </button>
@@ -864,9 +864,9 @@ export default function Failover(props: FailoverProps) {
                     </h3>
                     <div className="grid grid-cols-1 gap-3">
                         {[
-                            { color: 'text-green-600 dark:text-green-400', label: 'GOOD', range: `< ${thresholds.good / 1000}s`, desc: 'Typical SD-WAN sub-second or near-second convergence.' },
+                            { color: 'text-green-600 dark:text-green-400', label: 'GOOD', range: `< ${thresholds.good / 1000}s`, desc: 'Typical SD-WAN sub-second or near-second failover.' },
                             { color: 'text-yellow-500', label: 'DEGRADED', range: `${thresholds.good / 1000}s - ${thresholds.degraded / 1000}s`, desc: 'Noticeable outage. Video freeze and voice drops expected.' },
-                            { color: 'text-orange-500', label: 'BAD', range: `${thresholds.degraded / 1000}s - ${thresholds.critical / 1000}s`, desc: 'High convergence time. Application health impacted.' },
+                            { color: 'text-orange-500', label: 'BAD', range: `${thresholds.degraded / 1000}s - ${thresholds.critical / 1000}s`, desc: 'High failover time. Application health impacted.' },
                             { color: 'text-red-500', label: 'CRITICAL', range: `> ${thresholds.critical / 1000}s`, desc: 'Major network blackout. Application session risk.' }
                         ].map(v => (
                             <div key={v.label} className="bg-card-secondary border border-border p-3 rounded-xl flex gap-3 shadow-sm">
@@ -898,7 +898,7 @@ export default function Failover(props: FailoverProps) {
                     <p className="text-[11px] text-text-muted leading-relaxed italic">
                         This test sends high-frequency UDP packets (millisecond timestamps) to the target server.
                         It calculates failover duration based on <strong>packet sequence gaps</strong>.
-                        Use this to validate SD-WAN steering policies and tunnel convergence times during circuit failover events.
+                        Use this to validate SD-WAN steering policies and tunnel failover times during circuit failover events.
                         <span className="block mt-1 font-bold text-text-muted/60">Correlation tip: Use the TEST ID and Source Port displayed while the test is running to search for logs in your SD-WAN Orchestrator or firewall.</span>
                     </p>
                 </div>

@@ -356,8 +356,11 @@ def cmd_status(args):
         info(f"Public IP  {ip.get('ip', ip)}")
 
     conv = api_get("/api/convergence/status")
-    if conv and conv.get("running"):
-        ok(f"Convergence running: {conv.get('testId','?')}")
+    if conv and isinstance(conv, list):
+        running = [t for t in conv if t.get("running")]
+        if running:
+            ok(f"Failover running: {', '.join(t.get('testId','?') for t in running)}")
+
 
     site = api_get("/api/siteinfo")
     if site and site.get("siteName"):
@@ -664,8 +667,8 @@ def cmd_peer(args):
                 caps = p.get("capabilities", {})
                 caps_list = []
                 for k, v in caps.items():
-                    if v:
-                        caps_list.append(k)
+                     if v:
+                         caps_list.append("failover" if k == "convergence" else k)
                 caps_str = ", ".join(caps_list) if caps_list else "none"
                 source = p.get("source", "managed")
                 rows.append([
@@ -679,12 +682,19 @@ def cmd_peer(args):
             table(["ID", "Name", "Host", "Capabilities", "On", "Source"], rows)
 
     elif sub == "add":
-        parsed = parse_flags(args[1:], ["name", "host", "voice", "convergence", "xfr", "security", "connectivity"])
+        parsed = parse_flags(args[1:], ["name", "host", "voice", "convergence", "failover", "xfr", "security", "connectivity"])
         name = parsed.get("name") or input("Name (e.g. Branch-1): ").strip()
         host = parsed.get("host") or input("Host (IP or FQDN): ").strip()
         
         voice = str(parsed.get("voice", "true")).lower() == "true"
-        convergence = str(parsed.get("convergence", "true")).lower() == "true"
+        failover_val = parsed.get("failover")
+        convergence_val = parsed.get("convergence")
+        if failover_val is not None:
+            failover = str(failover_val).lower() == "true"
+        elif convergence_val is not None:
+            failover = str(convergence_val).lower() == "true"
+        else:
+            failover = True
         xfr = str(parsed.get("xfr", "true")).lower() == "true"
         security = str(parsed.get("security", "true")).lower() == "true"
         connectivity = str(parsed.get("connectivity", "true")).lower() == "true"
@@ -699,7 +709,7 @@ def cmd_peer(args):
             "enabled": True,
             "capabilities": {
                 "voice": voice,
-                "convergence": convergence,
+                "convergence": failover,
                 "xfr": xfr,
                 "security": security,
                 "connectivity": connectivity
@@ -776,7 +786,7 @@ def cmd_peer(args):
             ("peer enable <id>",      "Enable a Stigix target"),
             ("peer disable <id>",     "Disable a Stigix target"),
         ])
-        dim("  Flags for add: --name  --host  --voice {true,false}  --convergence {true,false}")
+        dim("  Flags for add: --name  --host  --voice {true,false}  --failover {true,false}")
         dim("                 --xfr {true,false}  --security {true,false}  --connectivity {true,false}")
 
 
@@ -1180,17 +1190,24 @@ def cmd_speedtest(args):
         dim("                 server-to-client,bidirectional}  --duration  --bitrate  --streams  --psk")
 
 
-def cmd_convergence(args):
+def cmd_failover(args):
     if not require_auth(): return
     sub = args[0] if args else "status"
 
     if sub == "status":
         r = api_get("/api/convergence/status")
-        if r:
-            if r.get("running"):
-                ok(f"Running — test ID: {r.get('testId','?')}  elapsed: {r.get('elapsed','?')}s")
+        if isinstance(r, list) and r:
+            running_tests = [t for t in r if t.get("running")]
+            if running_tests:
+                for t in running_tests:
+                    ok(f"Running — ID: {t.get('testId','?')}  elapsed: {t.get('elapsed','?')}s")
+                    for key in ("loss","blackout","rtt","ppsReceived"):
+                        if key in t:
+                            print(f"  {key}: {t[key]}")
             else:
-                dim("No convergence test running")
+                dim("No failover test running")
+        else:
+            dim("No failover test running")
 
     elif sub == "start":
         parsed = parse_flags(args[1:], ["target","pps","label"])
@@ -1205,10 +1222,10 @@ def cmd_convergence(args):
         else:
             targets = targets if isinstance(targets, list) else targets.get("targets", [])
 
-        # Filter targets with convergence capability
+        # Filter targets with failover capability
         conv_targets = [
             t for t in targets
-            if t.get("enabled", True) and t.get("capabilities", {}).get("convergence")
+            if t.get("enabled", True) and (t.get("capabilities", {}).get("convergence") or t.get("capabilities", {}).get("failover"))
         ]
 
         if target_host:
@@ -1225,7 +1242,7 @@ def cmd_convergence(args):
             if not conv_targets:
                 if sys.stdin.isatty():
                     try:
-                        target_host = input("Enter convergence target IP/Host: ").strip()
+                        target_host = input("Enter failover target IP/Host: ").strip()
                     except (KeyboardInterrupt, EOFError):
                         print()
                         return
@@ -1233,11 +1250,11 @@ def cmd_convergence(args):
                         err("Target IP/Host cannot be empty. Aborting.")
                         return
                 else:
-                    err("No convergence target specified. Usage: convergence start --target <host>")
+                    err("No failover target specified. Usage: failover start --target <host>")
                     return
             else:
                 if sys.stdin.isatty():
-                    print("\nAvailable Convergence Targets:")
+                    print("\nAvailable Failover Targets:")
                     for idx, ct in enumerate(conv_targets, 1):
                         print(f"  {idx}: {ct.get('name')} ({ct.get('host')})")
                     manual_idx = len(conv_targets) + 1
@@ -1260,7 +1277,7 @@ def cmd_convergence(args):
                         target_host = conv_targets[idx_choice - 1].get("host")
                     elif idx_choice == manual_idx:
                         try:
-                            target_host = input("Enter convergence target IP/Host: ").strip()
+                            target_host = input("Enter failover target IP/Host: ").strip()
                         except (KeyboardInterrupt, EOFError):
                             print()
                             return
@@ -1273,17 +1290,17 @@ def cmd_convergence(args):
                 else:
                     # Non-interactive fallback
                     target_host = conv_targets[0].get("host")
-                    info(f"Auto-selected convergence target: {target_host} ({conv_targets[0].get('name')})")
+                    info(f"Auto-selected failover target: {target_host} ({conv_targets[0].get('name')})")
 
         r = api_post("/api/convergence/start", {"target": target_host, "pps": pps, "label": label})
         if r:
-            ok(f"Convergence test started: {r.get('testId','?')}")
+            ok(f"Failover test started: {r.get('testId','?')}")
             STATUS.invalidate()
 
     elif sub == "stop":
         r = api_post("/api/convergence/stop")
         if r:
-            ok("Convergence test stopped")
+            ok("Failover test stopped")
             STATUS.invalidate()
 
     elif sub == "history":
@@ -1292,15 +1309,49 @@ def cmd_convergence(args):
         if r:
             rows = r if isinstance(r, list) else r.get("results", [])
             rows = rows[:limit]
-            table(["ID", "Label", "Target", "Blackout", "Score"], [
-                [
-                    row.get("testId","?")[:12],
-                    row.get("label","?")[:15],
-                    row.get("target","?"),
-                    str(row.get("maxBlackout", row.get("blackout","?")))+("ms" if isinstance(row.get("maxBlackout","?"), (int,float)) else ""),
-                    row.get("score", row.get("result","?"))
-                ] for row in rows
-            ])
+            
+            def get_verdict(max_blackout):
+                if max_blackout is None:
+                    return "?"
+                try:
+                    mb = float(max_blackout)
+                except Exception:
+                    return "?"
+                if mb == 0:
+                    return c("32", "PERFECT")
+                if mb < 1000:
+                    return c("32", "GOOD")
+                if mb < 5000:
+                    return c("33", "DEGRADED")
+                if mb < 10000:
+                    return c("31", "BAD")
+                return c("1;31", "CRITICAL")
+
+            history_rows = []
+            for row in rows:
+                tid = row.get("test_id") or row.get("testId") or "?"
+                if " (" in tid:
+                    tid = tid.split(" (")[0]
+                label = row.get("label", "?")
+                tgt = row.get("target", "?")
+                max_bo = None
+                for key in ("max_blackout_ms", "maxBlackout", "blackout"):
+                    if key in row:
+                        max_bo = row[key]
+                        break
+                if max_bo is not None:
+                    bo_str = f"{max_bo}ms"
+                else:
+                    bo_str = "?"
+                verd = get_verdict(max_bo)
+                history_rows.append([
+                    tid,
+                    label,
+                    tgt,
+                    bo_str,
+                    verd
+                ])
+            table(["ID", "Label", "Target", "Blackout", "Verdict"], history_rows)
 
     elif sub == "endpoints":
         r = api_get("/api/convergence/endpoints")
@@ -1313,34 +1364,38 @@ def cmd_convergence(args):
 
     elif sub == "watch":
         interval = int(args[1]) if len(args) > 1 else 2
-        info(f"Convergence watch — refresh every {interval}s  (Ctrl+C to stop)")
+        info(f"Failover watch — refresh every {interval}s  (Ctrl+C to stop)")
         try:
             while True:
                 do_clear()
                 now = datetime.now().strftime("%H:%M:%S")
-                hdr(f"━━ Convergence Status  [{now}] ━━━━━━━━━━━━━━━━━")
+                hdr(f"━━ Failover Status  [{now}] ━━━━━━━━━━━━━━━━━")
                 r = api_get("/api/convergence/status")
-                if r:
-                    if r.get("running"):
-                        ok(f"Running — ID: {r.get('testId','?')}  elapsed: {r.get('elapsed','?')}s")
-                        for key in ("loss","blackout","rtt","ppsReceived"):
-                            if key in r:
-                                info(f"  {key}: {r[key]}")
+                if isinstance(r, list) and r:
+                    running_tests = [t for t in r if t.get("running")]
+                    if running_tests:
+                        for t in running_tests:
+                            ok(f"Running — ID: {t.get('testId','?')}  elapsed: {t.get('elapsed','?')}s")
+                            for key in ("loss","blackout","rtt","ppsReceived"):
+                                if key in t:
+                                    info(f"  {key}: {t[key]}")
                     else:
                         dim("  No test running")
+                else:
+                    dim("  No test running")
                 time.sleep(interval)
         except KeyboardInterrupt:
             print()
             ok("Watch stopped")
 
     else:
-        _help_section("CONVERGENCE / FAILOVER", [
-            ("convergence status",          "Show running test state"),
-            ("convergence start",           "Start failover test (interactive or --flags)"),
-            ("convergence stop",            "Stop running test"),
-            ("convergence history [n]",     "Show past test results"),
-            ("convergence endpoints",       "List saved endpoints"),
-            ("convergence watch [sec]",     "Live poll test until stopped"),
+        _help_section("FAILOVER MONITORING", [
+            ("failover status",          "Show running test state"),
+            ("failover start",           "Start failover test (interactive or --flags)"),
+            ("failover stop",            "Stop running test"),
+            ("failover history [n]",     "Show past test results"),
+            ("failover endpoints",       "List saved endpoints"),
+            ("failover watch [sec]",     "Live poll test until stopped"),
         ])
         dim("  Flags for start: --target  --pps  --label")
 
@@ -2030,13 +2085,13 @@ def cmd_help(args):
     speedtest list         Show past speedtest jobs
     speedtest run <host>   Run speedtest (--port --protocol --direction)
 
-  {c('1','CONVERGENCE / FAILOVER')}
-    convergence start      Start failover test  (--target --pps --label)
-    convergence stop       Stop running test
-    convergence status     Running test state
-    convergence history    Past test results
-    convergence endpoints  Saved endpoints
-    convergence watch [s]  {c('36','Live poll until Ctrl+C')}
+  {c('1','FAILOVER MONITORING')}
+    failover start      Start failover test  (--target --pps --label)
+    failover stop       Stop running test
+    failover status     Running test state
+    failover history    Past test results
+    failover endpoints  Saved endpoints
+    failover watch [s]  {c('36','Live poll until Ctrl+C')}
 
   {c('1','VOICE / VoIP')}
     voice start            Start global VoIP simulation daemon
@@ -2176,7 +2231,8 @@ DISPATCH = {
     "target":      cmd_experience,
     "peer":        cmd_peer,
     "speedtest":   cmd_speedtest,
-    "convergence": cmd_convergence,
+    "failover":    cmd_failover,
+    "convergence": cmd_failover,
     "vyos":        cmd_vyos,
     "voice":       cmd_voice,
     "iot":         cmd_iot,
@@ -2216,6 +2272,7 @@ COMPLETER_TREE = {
         "add":  {"--name": None, "--host": None,
                  "--voice": {"true", "false"},
                  "--convergence": {"true", "false"},
+                 "--failover": {"true", "false"},
                  "--xfr": {"true", "false"},
                  "--security": {"true", "false"},
                  "--connectivity": {"true", "false"}},
@@ -2226,6 +2283,11 @@ COMPLETER_TREE = {
                  "--protocol": {"tcp", "udp", "quic"},
                  "--direction": {"client-to-server", "server-to-client", "bidirectional"},
                  "--duration": None, "--bitrate": None, "--streams": None, "--psk": None},
+    },
+    "failover": {
+        "status": None, "stop": None, "history": None,
+        "endpoints": None, "watch": None,
+        "start": {"--target": None, "--pps": None, "--label": None},
     },
     "convergence": {
         "status": None, "stop": None, "history": None,

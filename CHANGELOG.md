@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [v1.4.0-patch.49] - 2026-05-28
+### Refactored
+- **stigix-cli** 🔀 Renamed the `convergence` command group to `failover` to align with the UX, while maintaining `convergence` as a backward-compatible alias.
+- **stigix-cli** 🔌 Mapped the `"convergence"` peer capability to `"failover"` in the `peer list` command output, and supported both `--failover` and `--convergence` flags in `peer add`.
+- **web-dashboard** 🎨 Updated the "Convergence Lab" and other user-facing UI labels, headers, and descriptions to use the "Failover" terminology.
+- **docker-compose** 🐳 Updated comments mapping UDP port 6200 and describing the failover features to say "Failover probes".
+### Fixed
+- **stigix-cli** 🐛 Fixed list-type status crash in `cmd_status` and updated the status string format.
+
+## [v1.4.0-patch.48] - 2026-05-28
+### Fixed
+- **stigix-cli** 🐛 Fixed a bug in `convergence history` where Blackout and Verdict columns printed `?` for tests with 0ms max blackout due to python's falsy behavior on `0`.
+
+## [v1.4.0-patch.47] - 2026-05-28
+### Fixed
+- **stigix-cli** 🐛 Fixed a crash in `convergence status` and `convergence watch` commands caused by trying to call `.get()` on a list object returned by the backend status API. It now correctly iterates over the active test status list.
+
 ## [v1.4.0-patch.46] - 2026-05-28
 ### Added
 - **stigix-cli** 🔀 Enhanced `convergence start` command to query and present available Stigix targets with the `convergence` capability in a selection menu (similar to voice start and speedtest run), allowing manual IP/Host input or target name resolution (e.g. `DC1`).

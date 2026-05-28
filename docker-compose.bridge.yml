@@ -6,7 +6,7 @@
 # │  Most features work identically in bridge mode:                            │
 # │    ✅ Traffic generation (HTTP/HTTPS to internet)                          │
 # │    ✅ Security tests (URL, DNS, EICAR, C2, AI)                             │
-# │    ✅ Convergence / Failover tests to external IPs (via NAT)               │
+# │    ✅ Failover monitoring tests to external IPs (via NAT)                  │
 # │    ✅ Voice RTP simulation to external targets (via NAT)                   │
 # │    ✅ VyOS control, probes, dashboard, MCP                                 │
 # │                                                                             │
@@ -33,7 +33,7 @@ services:
       - "5201:5201/udp"  # iPerf UDP
       - "6100:6100/udp"  # Voice RTP
       - "6101:6101/udp"  # Voice RTP (secondary)
-      - "6200:6200/udp"  # Convergence / Failover probes
+      - "6200:6200/udp"  # Failover probes
       - "3100:3100"      # MCP Server
     cap_add:
       - NET_ADMIN
