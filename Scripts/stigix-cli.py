@@ -808,25 +808,32 @@ def cmd_security(args):
                 profile = api_get("/api/security/profile")
                 if profile:
                     items = profile.get("url_filtering", {}).get("items", [])
-                    popular = items[:10]
-                    if popular:
-                        print("\nSelect Predefined URL Category to Test:")
-                        for idx, item in enumerate(popular, 1):
-                            print(f"  {idx}: {item.get('name')}  ({item.get('url')})")
-                        print(f"  {len(popular)+1}: Custom URL")
-                        print()
-                        try:
+                    print("\nURL Filtering Predefined Categories search:")
+                    try:
+                        q = input("Search categories (e.g. 'malware', press enter for popular): ").strip().lower()
+                        filtered = [item for item in items if q in item.get('name','').lower() or q in item.get('id','').lower()] if q else items[:10]
+                        if not filtered:
+                            print(f"No categories matching '{q}'.")
+                            url = input("Enter Custom URL: ").strip()
+                            category = "Manual"
+                        else:
+                            matches = filtered[:25]
+                            print(f"\nSelect Predefined URL Category to Test" + (f" (matching '{q}')" if q else " (popular)") + ":")
+                            for idx, item in enumerate(matches, 1):
+                                print(f"  {idx}: {item.get('name')}  ({item.get('url')})")
+                            print(f"  {len(matches)+1}: Custom URL")
+                            print()
                             choice = input("Select category [1]: ").strip()
                             c_idx = int(choice) if choice else 1
-                            if 1 <= c_idx <= len(popular):
-                                url = popular[c_idx - 1].get("url")
-                                category = popular[c_idx - 1].get("name")
+                            if 1 <= c_idx <= len(matches):
+                                url = matches[c_idx - 1].get("url")
+                                category = matches[c_idx - 1].get("name")
                             else:
                                 url = input("Enter Custom URL: ").strip()
                                 category = "Manual"
-                        except (ValueError, KeyboardInterrupt, EOFError):
-                            print("\nAborted.")
-                            return
+                    except (ValueError, KeyboardInterrupt, EOFError):
+                        print("\nAborted.")
+                        return
             if not url:
                 err("Usage: security url <url_or_category>")
                 return
@@ -881,25 +888,32 @@ def cmd_security(args):
                 profile = api_get("/api/security/profile")
                 if profile:
                     items = profile.get("dns_security", {}).get("items", [])
-                    popular = items[:10]
-                    if popular:
-                        print("\nSelect Predefined DNS Category to Test:")
-                        for idx, item in enumerate(popular, 1):
-                            print(f"  {idx}: {item.get('name')}  ({item.get('domain')})")
-                        print(f"  {len(popular)+1}: Custom Domain")
-                        print()
-                        try:
+                    print("\nDNS Security Predefined Categories search:")
+                    try:
+                        q = input("Search categories (e.g. 'phishing', press enter for popular): ").strip().lower()
+                        filtered = [item for item in items if q in item.get('name','').lower() or q in item.get('id','').lower()] if q else items[:10]
+                        if not filtered:
+                            print(f"No categories matching '{q}'.")
+                            domain = input("Enter Custom Domain: ").strip()
+                            test_name = "Manual"
+                        else:
+                            matches = filtered[:25]
+                            print(f"\nSelect Predefined DNS Category to Test" + (f" (matching '{q}')" if q else " (popular)") + ":")
+                            for idx, item in enumerate(matches, 1):
+                                print(f"  {idx}: {item.get('name')}  ({item.get('domain')})")
+                            print(f"  {len(matches)+1}: Custom Domain")
+                            print()
                             choice = input("Select category [1]: ").strip()
                             c_idx = int(choice) if choice else 1
-                            if 1 <= c_idx <= len(popular):
-                                domain = popular[c_idx - 1].get("domain")
-                                test_name = popular[c_idx - 1].get("name")
+                            if 1 <= c_idx <= len(matches):
+                                domain = matches[c_idx - 1].get("domain")
+                                test_name = matches[c_idx - 1].get("name")
                             else:
                                 domain = input("Enter Custom Domain: ").strip()
                                 test_name = "Manual"
-                        except (ValueError, KeyboardInterrupt, EOFError):
-                            print("\nAborted.")
-                            return
+                    except (ValueError, KeyboardInterrupt, EOFError):
+                        print("\nAborted.")
+                        return
             if not domain:
                 err("Usage: security dns <domain_or_category>")
                 return
@@ -1197,8 +1211,8 @@ def cmd_security(args):
             for res in r.get("results", []):
                 ts    = datetime.fromtimestamp(res["timestamp"]/1000).strftime("%H:%M:%S") if "timestamp" in res else "?"
                 s     = res.get("result", {}).get("status") or res.get("status","?")
-                name  = res.get("testName") or res.get("category","?")
-                ttype = res.get("testType","?")
+                name  = res.get("name") or res.get("testName") or res.get("category","?")
+                ttype = res.get("type") or res.get("testType","?")
                 rows.append([ts, ttype[:4], name[:25], status_badge(s)])
             table(["Time", "Type", "Name", "Result"], rows)
 
