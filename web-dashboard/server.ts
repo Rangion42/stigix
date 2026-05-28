@@ -6651,6 +6651,17 @@ app.get('/api/security/results', authenticateToken, async (req, res) => {
     }
 });
 
+// API: Get Test Statistics
+app.get('/api/security/results/stats', authenticateToken, async (req, res) => {
+    try {
+        const stats = await testLogger.getStats();
+        res.json(stats);
+    } catch (error) {
+        console.error('[API] Failed to get test stats:', error);
+        res.status(500).json({ error: 'Failed to retrieve statistics' });
+    }
+});
+
 // API: Get Single Test Result by ID
 app.get('/api/security/results/:id', authenticateToken, async (req, res) => {
     try {
@@ -6665,17 +6676,6 @@ app.get('/api/security/results/:id', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('[API] Failed to get test result:', error);
         res.status(500).json({ error: 'Failed to retrieve test result' });
-    }
-});
-
-// API: Get Test Statistics
-app.get('/api/security/results/stats', authenticateToken, async (req, res) => {
-    try {
-        const stats = await testLogger.getStats();
-        res.json(stats);
-    } catch (error) {
-        console.error('[API] Failed to get test stats:', error);
-        res.status(500).json({ error: 'Failed to retrieve statistics' });
     }
 });
 

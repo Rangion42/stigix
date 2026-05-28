@@ -759,23 +759,82 @@ def cmd_security(args):
     if sub == "status":
         r = api_get("/api/security/results/stats")
         if r:
-            hdr("━━ Security Stats ━━━━━━━━━━━━━━━━━━━━━")
-            ut = r.get("urlTests",    r.get("urltests",    {}))
-            dt = r.get("dnsTests",    r.get("dnstests",    {}))
-            tt = r.get("threatTests", r.get("threattests", {}))
-            table(["Category", "Total", "Blocked", "Allowed"], [
-                ["URL Filtering", ut.get("total",0), c("31",str(ut.get("blocked",0))), c("32",str(ut.get("allowed",0)))],
-                ["DNS Security",  dt.get("total",0), c("31",str(dt.get("blocked",0))), c("32",str(dt.get("allowed",0)))],
-                ["Threat Prev.",  tt.get("total",0), c("31",str(tt.get("blocked",0))), c("32",str(tt.get("allowed",0)))],
+            hdr("━━ Security Test Statistics ━━━━━━━━━━━━━━━━━━━━━━━━")
+            print()
+            total = r.get("totalTests", 0)
+            by_type = r.get("testsByType", {})
+            by_status = r.get("testsByStatus", {})
+            
+            print(f"  Total Security Tests: {c('1;34', str(total))}")
+            disk_kb = r.get("diskUsageBytes", 0) / 1024
+            print(f"  Disk Usage:           {c('2', f'{disk_kb:.1f} KB')}")
+            print()
+            
+            hdr("  Type Breakdown:")
+            table(["Test Type", "Count"], [
+                ["URL Filtering", str(by_type.get("url", 0))],
+                ["DNS Security",  str(by_type.get("dns", 0))],
+                ["Threat Prev.",  str(by_type.get("threat", 0))],
+                ["C2 Attack Sim", str(by_type.get("c2", 0))],
+                ["AI Security",   str(by_type.get("ai", 0))],
+            ])
+            print()
+            
+            hdr("  Verdict Breakdown:")
+            table(["Verdict", "Count"], [
+                [c("32", "[ALLOWED]"),      str(by_status.get("allowed", 0))],
+                [c("31", "[BLOCKED]"),      str(by_status.get("blocked", 0))],
+                [c("33", "[SINKHOLED]"),     str(by_status.get("sinkholed", 0))],
+                [c("31", "[ENFORCED/C2]"),   str(by_status.get("enforced", 0))],
+                [c("32", "[BYPASS/C2]"),     str(by_status.get("bypass", 0))],
+                [c("36", "[COMPLETED]"),     str(by_status.get("completed", 0))],
+                [c("33", "[INCONCLUSIVE]"),  str(by_status.get("inconclusive", 0))],
+                [c("31", "[ERROR]"),         str(by_status.get("error", 0))],
             ])
 
     elif sub == "url":
         url = args[1] if len(args) > 1 else None
+        category = "Manual"
         if not url:
-            err("Usage: security url <url>")
-            return
-        info(f"Testing URL: {url}")
-        r = api_post("/api/security/url-test", {"url": url, "category": "Manual"})
+            if sys.stdin.isatty():
+                profile = api_get("/api/security/profile")
+                if profile:
+                    items = profile.get("url_filtering", {}).get("items", [])
+                    popular = items[:10]
+                    if popular:
+                        print("\nSelect Predefined URL Category to Test:")
+                        for idx, item in enumerate(popular, 1):
+                            print(f"  {idx}: {item.get('name')}  ({item.get('url')})")
+                        print(f"  {len(popular)+1}: Custom URL")
+                        print()
+                        try:
+                            choice = input("Select category [1]: ").strip()
+                            c_idx = int(choice) if choice else 1
+                            if 1 <= c_idx <= len(popular):
+                                url = popular[c_idx - 1].get("url")
+                                category = popular[c_idx - 1].get("name")
+                            else:
+                                url = input("Enter Custom URL: ").strip()
+                                category = "Manual"
+                        except (ValueError, KeyboardInterrupt, EOFError):
+                            print("\nAborted.")
+                            return
+            if not url:
+                err("Usage: security url <url_or_category>")
+                return
+        else:
+            # Check if url matches a predefined category name/id (e.g. malware)
+            profile = api_get("/api/security/profile")
+            if profile:
+                items = profile.get("url_filtering", {}).get("items", [])
+                for item in items:
+                    if item.get("id").lower() == url.lower() or item.get("name").lower() == url.lower():
+                        url = item.get("url")
+                        category = item.get("name")
+                        break
+
+        info(f"Testing URL: {url} (Category: {category})")
+        r = api_post("/api/security/url-test", {"url": url, "category": category})
         if r:
             status = r.get("status", r.get("result", {}).get("status", "?"))
             print(f"Result: {status_badge(status)}  (HTTP {r.get('httpCode','?')})")
@@ -784,12 +843,20 @@ def cmd_security(args):
         info("Running batch URL filter test (all enabled categories)...")
         r = api_get("/api/security/config")
         if not r: return
-        cats = r.get("urlfiltering", r.get("urlFiltering", {})).get("enabledcategories", [])
+        cats = r.get("url_filtering", {}).get("enabled_categories", [])
         if not cats:
             warn("No URL categories enabled in config")
             return
-        BASE  = "http://urlfiltering.paloaltonetworks.com/test-"
-        tests = [{"url": f"{BASE}{cat.lower().replace(' ','-')}", "category": cat} for cat in cats]
+        profile = api_get("/api/security/profile")
+        if not profile:
+            err("Failed to fetch security profile")
+            return
+        items = profile.get("url_filtering", {}).get("items", [])
+        enabled_items = [item for item in items if item.get("id") in cats]
+        if not enabled_items:
+            warn("No enabled URL categories found in profile")
+            return
+        tests = [{"url": item["url"], "category": item["name"]} for item in enabled_items]
         result = api_post("/api/security/url-test-batch", {"tests": tests})
         if result:
             rows = []
@@ -800,11 +867,47 @@ def cmd_security(args):
 
     elif sub == "dns":
         domain = args[1] if len(args) > 1 else None
+        test_name = "Manual"
         if not domain:
-            err("Usage: security dns <domain>")
-            return
-        info(f"Testing DNS: {domain}")
-        r = api_post("/api/security/dns-test", {"domain": domain, "testName": "Manual"})
+            if sys.stdin.isatty():
+                profile = api_get("/api/security/profile")
+                if profile:
+                    items = profile.get("dns_security", {}).get("items", [])
+                    popular = items[:10]
+                    if popular:
+                        print("\nSelect Predefined DNS Category to Test:")
+                        for idx, item in enumerate(popular, 1):
+                            print(f"  {idx}: {item.get('name')}  ({item.get('domain')})")
+                        print(f"  {len(popular)+1}: Custom Domain")
+                        print()
+                        try:
+                            choice = input("Select category [1]: ").strip()
+                            c_idx = int(choice) if choice else 1
+                            if 1 <= c_idx <= len(popular):
+                                domain = popular[c_idx - 1].get("domain")
+                                test_name = popular[c_idx - 1].get("name")
+                            else:
+                                domain = input("Enter Custom Domain: ").strip()
+                                test_name = "Manual"
+                        except (ValueError, KeyboardInterrupt, EOFError):
+                            print("\nAborted.")
+                            return
+            if not domain:
+                err("Usage: security dns <domain_or_category>")
+                return
+        else:
+            # Check if domain matches a predefined category name/id (e.g. malware)
+            profile = api_get("/api/security/profile")
+            if profile:
+                items = profile.get("dns_security", {}).get("items", [])
+                for item in items:
+                    if item.get("id").lower() == domain.lower() or item.get("name").lower() == domain.lower():
+                        domain = item.get("domain")
+                        test_name = item.get("name")
+                        break
+
+        info(f"Testing DNS: {domain} (Test Name: {test_name})")
+        r = api_post("/api/security/dns-test", {"domain": domain, "testName": test_name})
         if r:
             status   = r.get("status", "?")
             resolved = r.get("resolved", False)
@@ -814,17 +917,20 @@ def cmd_security(args):
         info("Running batch DNS security test (all enabled domains)...")
         r = api_get("/api/security/config")
         if not r: return
-        tests_conf = r.get("dnssecurity", r.get("dnsSecurity", {})).get("enabledtests", [])
+        tests_conf = r.get("dns_security", {}).get("enabled_tests", [])
         if not tests_conf:
             warn("No DNS tests enabled in config")
             return
-        DOMAINS = {
-            "malware":       "test-malware.testpanw.com",
-            "phishing":      "test-phishing.testpanw.com",
-            "dns-tunneling": "test-dnstunneling.testpanw.com",
-            "botnet":        "test-botnet.testpanw.com",
-        }
-        tests  = [{"domain": DOMAINS.get(t, t), "testName": t.title()} for t in tests_conf if t in DOMAINS]
+        profile = api_get("/api/security/profile")
+        if not profile:
+            err("Failed to fetch security profile")
+            return
+        items = profile.get("dns_security", {}).get("items", [])
+        enabled_items = [item for item in items if item.get("id") in tests_conf]
+        if not enabled_items:
+            warn("No enabled DNS tests found in profile")
+            return
+        tests = [{"domain": item["domain"], "testName": item["name"]} for item in enabled_items]
         result = api_post("/api/security/dns-test-batch", {"tests": tests})
         if result:
             rows = []
@@ -836,16 +942,69 @@ def cmd_security(args):
     elif sub == "eicar":
         target   = args[1] if len(args) > 1 else None
         r_cfg    = api_get("/api/security/config")
-        if not r_cfg: return
-        tp       = r_cfg.get("threatprevention", r_cfg.get("threatPrevention", {}))
-        endpoints = tp.get("eicarendpoints", []) or tp.get("eicarEndpoints", [])
-        if target:
-            if not target.startswith("http"):
-                target = f"http://{target}/eicar.com.txt"
-            endpoints = [target]
-        if not endpoints:
-            err("No EICAR endpoints configured. Usage: security eicar [http://ip:8082/eicar.com.txt]")
-            return
+        tp       = r_cfg.get("threat_prevention", r_cfg.get("threatprevention", r_cfg.get("threatPrevention", {}))) if r_cfg else {}
+        endpoints = tp.get("eicar_endpoints", tp.get("eicarendpoints", tp.get("eicarEndpoints", [])))
+        
+        if not target:
+            if sys.stdin.isatty():
+                # Fetch security targets
+                targets = api_get("/api/targets")
+                sec_targets = []
+                if targets:
+                    sec_targets = [t for t in (targets if isinstance(targets, list) else targets.get("targets", []))
+                                   if t.get("enabled", True) and t.get("capabilities", {}).get("security")]
+                
+                # Fetch cloud EICAR URL
+                cloud_url = "https://secure.eicar.org/eicar.com.txt"
+                r_cloud = api_get("/api/security/cloud-eicar-url")
+                if r_cloud and r_cloud.get("url"):
+                    cloud_url = r_cloud.get("url")
+                    
+                print("\nSelect EICAR Threat Prevention Target:")
+                print(f"  1: Cloud EICAR URL  ({cloud_url})")
+                for idx, t in enumerate(sec_targets, 2):
+                    print(f"  {idx}: {t.get('name')}  (http://{t.get('host')}/eicar.com.txt)")
+                print(f"  {len(sec_targets)+2}: Custom URL / IP")
+                print()
+                
+                try:
+                    choice = input("Select target [1]: ").strip()
+                    c_idx = int(choice) if choice else 1
+                    if c_idx == 1:
+                        endpoints = [cloud_url]
+                    elif 2 <= c_idx <= len(sec_targets) + 1:
+                        t = sec_targets[c_idx - 2]
+                        endpoints = [f"http://{t.get('host')}/eicar.com.txt"]
+                    else:
+                        custom = input("Enter Custom URL or IP: ").strip()
+                        if custom:
+                            if not custom.startswith("http"):
+                                custom = f"http://{custom}/eicar.com.txt"
+                            endpoints = [custom]
+                except (ValueError, KeyboardInterrupt, EOFError):
+                    print("\nAborted.")
+                    return
+            
+            if not endpoints:
+                err("No EICAR endpoints configured. Usage: security eicar [target]")
+                return
+        else:
+            # CLI mode target given
+            # Check if target matches an existing peer name
+            targets = api_get("/api/targets")
+            matched_host = None
+            if targets:
+                for t in (targets if isinstance(targets, list) else targets.get("targets", [])):
+                    if t.get("name").lower() == target.lower() or t.get("id").lower() == target.lower():
+                        matched_host = t.get("host")
+                        break
+            if matched_host:
+                endpoints = [f"http://{matched_host}/eicar.com.txt"]
+            else:
+                if not target.startswith("http"):
+                    target = f"http://{target}/eicar.com.txt"
+                endpoints = [target]
+
         info(f"Running EICAR threat prevention test ({len(endpoints)} endpoint(s))...")
         r = api_post("/api/security/threat-test", {"endpoints": endpoints})
         if r:
@@ -855,6 +1014,158 @@ def cmd_security(args):
                 ep = res.get("endpoint", "?")
                 rows.append([ep[:60], status_badge(s), res.get("message","")[:40]])
             table(["Endpoint", "Result", "Message"], rows)
+
+    elif sub == "select-all":
+        config = api_get("/api/security/config")
+        if not config:
+            err("Failed to fetch security config")
+            return
+            
+        type_choice = args[1].lower() if len(args) > 1 else None
+        state_choice = args[2].lower() if len(args) > 2 else None
+        
+        if not type_choice or type_choice not in ("url", "dns"):
+            if sys.stdin.isatty():
+                print("\nSelect Action:")
+                print("  1: Enable all URL filtering categories")
+                print("  2: Disable all URL filtering categories")
+                print("  3: Enable all DNS security tests")
+                print("  4: Disable all DNS security tests")
+                print()
+                try:
+                    c_idx = input("Select action [1]: ").strip()
+                    if c_idx in ("1", "2"):
+                        type_choice = "url"
+                        state_choice = "on" if c_idx == "1" else "off"
+                    elif c_idx in ("3", "4"):
+                        type_choice = "dns"
+                        state_choice = "on" if c_idx == "3" else "off"
+                    else:
+                        type_choice = "url"
+                        state_choice = "on"
+                except (KeyboardInterrupt, EOFError):
+                    print("\nAborted.")
+                    return
+            else:
+                err("Usage: security select-all <url|dns> <on|off>")
+                return
+                
+        if not state_choice or state_choice not in ("on", "off"):
+            if sys.stdin.isatty():
+                try:
+                    c_state = input(f"Enable all for {type_choice.upper()}? [Y/n]: ").strip().lower()
+                    state_choice = "off" if c_state == "n" else "on"
+                except (KeyboardInterrupt, EOFError):
+                    print("\nAborted.")
+                    return
+            else:
+                err("Usage: security select-all <url|dns> <on|off>")
+                return
+                
+        enabled = (state_choice == "on")
+        
+        profile = api_get("/api/security/profile")
+        if not profile:
+            err("Failed to fetch security profile (needed for full list of IDs)")
+            return
+            
+        if type_choice == "url":
+            if enabled:
+                cats = [c["id"] for c in profile.get("url_filtering", {}).get("items", [])]
+                config["url_filtering"]["enabled_categories"] = cats
+                msg = f"Enabled all {len(cats)} URL filtering categories"
+            else:
+                config["url_filtering"]["enabled_categories"] = []
+                msg = "Cleared/Disabled all URL filtering categories"
+        else:
+            if enabled:
+                tests = [t["id"] for t in profile.get("dns_security", {}).get("items", [])]
+                config["dns_security"]["enabled_tests"] = tests
+                msg = f"Enabled all {len(tests)} DNS security tests"
+            else:
+                config["dns_security"]["enabled_tests"] = []
+                msg = "Cleared/Disabled all DNS security tests"
+                
+        r = api_post("/api/security/config", config)
+        if r:
+            ok(msg)
+
+    elif sub == "schedule":
+        config = api_get("/api/security/config")
+        if not config:
+            err("Failed to fetch security config")
+            return
+            
+        sched = config.get("scheduled_execution", {})
+        
+        type_choice = args[1].lower() if len(args) > 1 else None
+        state_choice = args[2].lower() if len(args) > 2 else None
+        interval_choice = args[3] if len(args) > 3 else None
+        
+        if not type_choice or type_choice not in ("url", "dns", "threat"):
+            if sys.stdin.isatty():
+                print("\nSelect Scheduler Category:")
+                print("  1: URL Filtering")
+                print("  2: DNS Security")
+                print("  3: Threat Prevention (EICAR)")
+                print()
+                try:
+                    c_idx = input("Select category [1]: ").strip()
+                    type_choice = {"1": "url", "2": "dns", "3": "threat"}.get(c_idx or "1", "url")
+                except (KeyboardInterrupt, EOFError):
+                    print("\nAborted.")
+                    return
+            else:
+                err("Scheduler category is required: security schedule <url|dns|threat> <on|off> [minutes]")
+                return
+
+        if not state_choice or state_choice not in ("on", "off"):
+            if sys.stdin.isatty():
+                try:
+                    c_state = input("Enable scheduler? [y/N]: ").strip().lower()
+                    state_choice = "on" if c_state == "y" else "off"
+                except (KeyboardInterrupt, EOFError):
+                    print("\nAborted.")
+                    return
+            else:
+                err("State (on|off) is required: security schedule <url|dns|threat> <on|off> [minutes]")
+                return
+
+        enabled = (state_choice == "on")
+        
+        cur_sched = sched.get(type_choice, {})
+        cur_int = cur_sched.get("interval_minutes", 15 if type_choice != "threat" else 30)
+        
+        minutes = cur_int
+        if enabled:
+            if interval_choice:
+                try:
+                    minutes = int(interval_choice)
+                except ValueError:
+                    err("Interval must be an integer (minutes).")
+                    return
+            elif sys.stdin.isatty():
+                try:
+                    options = [5, 10, 15, 30, 45, 60]
+                    print(f"\nSelect Interval in minutes:")
+                    for idx, m in enumerate(options, 1):
+                        print(f"  {idx}: {m}m" + (" (default)" if m == cur_int else ""))
+                    print()
+                    choice = input(f"Select interval [{options.index(cur_int)+1 if cur_int in options else 3}]: ").strip()
+                    if not choice:
+                        minutes = cur_int
+                    else:
+                        minutes = options[int(choice)-1] if (1 <= int(choice) <= len(options)) else cur_int
+                except (ValueError, KeyboardInterrupt, EOFError):
+                    print("\nAborted.")
+                    return
+
+        sched[type_choice] = {"enabled": enabled, "interval_minutes": minutes}
+        config["scheduled_execution"] = sched
+        
+        r = api_post("/api/security/config", config)
+        if r:
+            ok(f"Scheduler for {type_choice.upper()} updated: {'ON' if enabled else 'OFF'} ({minutes} min)")
 
     elif sub == "suite":
         hdr("━━ Security Suite ━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -890,11 +1201,13 @@ def cmd_security(args):
     else:
         _help_section("SECURITY", [
             ("security status",            "Blocked/allowed aggregate stats"),
-            ("security url <url>",         "Test a single URL"),
+            ("security url [url/category]", "Test a single URL (predefined or custom)"),
             ("security url-batch",         "Test all enabled URL categories"),
-            ("security dns <domain>",      "Test a single DNS query"),
+            ("security dns [domain/cat]",  "Test a single DNS query (predefined or custom)"),
             ("security dns-batch",         "Test all enabled DNS domains"),
-            ("security eicar [ip:8082]",   "EICAR threat prevention test"),
+            ("security eicar [target]",    "EICAR threat prevention test (proposal or custom)"),
+            ("security select-all <url|dns> <on|off>", "Enable/Disable all categories or tests"),
+            ("security schedule <url|dns|threat> <on|off> [min]", "Configure test schedules"),
             ("security suite",             "Run all tests in sequence"),
             ("security results [n]",       "Last N results (default 20)"),
             ("security clear",             "Clear results history"),
@@ -2939,9 +3252,17 @@ COMPLETER_TREE = {
         "import": None, "export": None,
     },
     "security":    {
-        "status": None, "url": None, "url-batch": None,
-        "dns": None, "dns-batch": None, "eicar": None,
+        "status": None,
+        "url": None, "url-batch": None,
+        "dns": None, "dns-batch": None,
+        "eicar": None,
         "suite": None, "results": None, "clear": None,
+        "select-all": {"url": {"on": None, "off": None}, "dns": {"on": None, "off": None}},
+        "schedule": {
+            "url": {"on": None, "off": None},
+            "dns": {"on": None, "off": None},
+            "threat": {"on": None, "off": None}
+        },
     },
     "experience":  {
         "list": None, "probe": None, "remove": None, "stats": None,

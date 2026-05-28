@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [v1.4.0-patch.61] - 2026-05-28
+### Added
+- **stigix-cli** 🛡️ Added `select-all` subcommand to toggle enabling/disabling all URL filtering categories or DNS tests at once.
+- **stigix-cli** ⏰ Added `schedule` subcommand to configure scheduled execution for URL filtering, DNS, and Threat tests with custom/predefined intervals.
+- **stigix-cli** 💬 Enabled interactive selection menus and name-to-IP/peer mapping for `url`, `dns`, and `eicar` commands when executed without arguments.
+- **stigix-cli** 📊 Rewrote the `status` command to align with the backend `LogStats` schema and display accurate Verdict counters.
+### Fixed
+- **web-dashboard** 🐛 Swapped route registration order in Express backend (`/api/security/results/stats` before `/:id`) to resolve route shadowing and fix the security status 404 error.
+- **stigix-cli** 🐛 Corrected configuration key parsing (`url_filtering`, `dns_security`, `threat_prevention`) in `url-batch`, `dns-batch`, and `eicar` subcommands to match the backend JSON structure.
+
 ## [v1.4.0-patch.60] - 2026-05-28
 ### Fixed
 - **stigix-cli** 🔌 Implemented connection pooling via a global `requests.Session()` with HTTP keepalive to speed up toolbar updates, reduce socket overhead, and prevent connection drops.
