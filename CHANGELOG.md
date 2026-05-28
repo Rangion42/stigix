@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [v1.4.0-patch.53] - 2026-05-28
+### Added
+- **stigix-cli** 📁 Improved CLI import/export features (`experience`, `peer`, `traffic`) by supporting standard input (passing `-` as filepath) and automatically falling back to / routing relative paths to the host-mounted `config/` directory. Added a clear instructions note about Docker environment limitations on file not found.
+
 ## [v1.4.0-patch.52] - 2026-05-28
 ### Fixed
 - **stigix-cli** 🔌 Wrapped script module-level imports and the main execution entrypoint in a try-except block to cleanly intercept `KeyboardInterrupt` (Ctrl+C) and exit with a message, preventing tracebacks.

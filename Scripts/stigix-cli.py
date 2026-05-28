@@ -88,6 +88,86 @@ def save_session():
     except Exception:
         pass
 
+def read_json_file(filepath):
+    """
+    Reads a JSON file. Supports '-' to read from stdin.
+    If running in a Docker container and a relative path is not found in the current directory,
+    tries falling back to the mounted config/ directory.
+    """
+    if filepath == "-":
+        try:
+            return json.loads(sys.stdin.read())
+        except Exception as e:
+            err(f"Failed to read/parse from stdin: {e}")
+            return None
+
+    path = Path(filepath)
+    
+    # Check if the file exists in current working directory
+    if path.exists():
+        target_path = path
+    else:
+        # Fallback 1: check inside config/
+        fallback_rel = Path("config") / path.name
+        # Fallback 2: check inside /app/config/
+        fallback_app = Path("/app/config") / path.name
+        
+        if fallback_rel.exists():
+            target_path = fallback_rel
+        elif fallback_app.exists():
+            target_path = fallback_app
+        else:
+            target_path = path
+
+    if not target_path.exists():
+        err(f"File not found: '{filepath}'")
+        # Check if we are likely in a Docker container
+        is_docker = Path("/.dockerenv").exists() or Path("/app/config").exists()
+        if is_docker:
+            info("Note: Since stigix-cli is running inside a Docker container, it cannot access files on your host directly.")
+            info("To import a host file, you can:")
+            info(f"  1. Place the file in the './config' folder on the host, and import it as 'config/{path.name}'")
+            info("  2. Pipe the file from your host terminal using stdin:")
+            info(f"     docker exec -i stigix stigix-cli --exec \"... import -\" < {path.name}")
+        return None
+
+    try:
+        with open(target_path, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        err(f"Failed to read/parse file: {e}")
+        return None
+
+def write_json_file(filepath, data):
+    """
+    Writes data to a JSON file.
+    If the path is relative and we are running in a Docker container,
+    automatically resolves it to the mounted config/ directory (which maps to the host's config/ folder),
+    so that the exported file is visible outside the container.
+    """
+    path = Path(filepath)
+    if not path.is_absolute():
+        # Check if config directory exists and is writable
+        config_dirs = [Path("config"), Path("/app/config")]
+        for cdir in config_dirs:
+            if cdir.exists() and os.access(cdir, os.W_OK):
+                path = cdir / path.name
+                break
+
+    try:
+        # Ensure parent directory exists
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w") as f:
+            json.dump(data, f, indent=2)
+        ok(f"Exported configuration to {path}")
+        # If it was resolved to config/ let the user know where it is on the host
+        if not Path(filepath).is_absolute() and path.parent.name == "config":
+            info(f"  (This corresponds to './config/{path.name}' on your host filesystem)")
+        return True
+    except Exception as e:
+        err(f"Failed to write file: {e}")
+        return False
+
 # ─── Colors / output helpers ──────────────────────────────────────────────────
 
 def c(code, text): return f"\033[{code}m{text}\033[0m" if sys.stdout.isatty() else text
@@ -447,24 +527,17 @@ def cmd_traffic(args):
         r = api_get("/api/config/applications/export?format=json")
         if r is None:
             return
-        try:
-            with open(filepath, "w") as f:
-                json.dump(r, f, indent=2)
-            ok(f"Exported traffic applications config to {filepath}")
-        except Exception as e:
-            err(f"Failed to write file: {e}")
+        write_json_file(filepath, r)
 
     elif sub == "import":
         filepath = args[1] if len(args) > 1 else None
         if not filepath:
             err("Usage: traffic import <filepath>")
             return
-        try:
-            with open(filepath, "r") as f:
-                content = json.dumps(json.load(f))
-        except Exception as e:
-            err(f"Failed to read/parse file: {e}")
+        data = read_json_file(filepath)
+        if data is None:
             return
+        content = json.dumps(data)
         r = api_post("/api/config/applications/import", {"content": content})
         if r:
             ok("Traffic applications config imported successfully")
@@ -844,23 +917,15 @@ def cmd_experience(args):
         r = api_get("/api/connectivity/custom/export")
         if r is None:
             return
-        try:
-            with open(filepath, "w") as f:
-                json.dump(r, f, indent=2)
-            ok(f"Exported custom experience probes to {filepath}")
-        except Exception as e:
-            err(f"Failed to write file: {e}")
+        write_json_file(filepath, r)
 
     elif sub == "import":
         filepath = args[1] if len(args) > 1 else None
         if not filepath:
             err("Usage: experience import <filepath>")
             return
-        try:
-            with open(filepath, "r") as f:
-                data = json.load(f)
-        except Exception as e:
-            err(f"Failed to read/parse file: {e}")
+        data = read_json_file(filepath)
+        if data is None:
             return
         endpoints = data if isinstance(data, list) else data.get("endpoints")
         if not endpoints:
@@ -1023,23 +1088,15 @@ def cmd_peer(args):
             "capabilities": t.get("capabilities"),
             "ports": t.get("ports")
         } for t in targets_list]
-        try:
-            with open(filepath, "w") as f:
-                json.dump(data_to_export, f, indent=2)
-            ok(f"Exported peer targets to {filepath}")
-        except Exception as e:
-            err(f"Failed to write file: {e}")
+        write_json_file(filepath, data_to_export)
 
     elif sub == "import":
         filepath = args[1] if len(args) > 1 else None
         if not filepath:
             err("Usage: peer import <filepath>")
             return
-        try:
-            with open(filepath, "r") as f:
-                data = json.load(f)
-        except Exception as e:
-            err(f"Failed to read/parse file: {e}")
+        data = read_json_file(filepath)
+        if data is None:
             return
         targets_to_import = data if isinstance(data, list) else data.get("targets")
         if not targets_to_import:
