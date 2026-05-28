@@ -663,6 +663,91 @@ def cmd_traffic(args):
         if r:
             state = "running" if (r.get("enabled") or r.get("running")) else "stopped"
             print(f"Traffic: {status_badge(state)}")
+            rate = r.get("sleep_interval", 1.0)
+            client_count = r.get("client_count", 1)
+            if rate <= 0.5:
+                speed_badge = "🚀 TURBO"
+            elif rate <= 2.0:
+                speed_badge = "⚡ FAST"
+            elif rate <= 5.0:
+                speed_badge = "📱 NORMAL"
+            else:
+                speed_badge = "🐢 SLOW"
+            print(f"Traffic Speed: {c('36', speed_badge)} ({rate}s delay)")
+            print(f"Traffic Density: {c('35', f'{client_count} CLIENTS')} (x{client_count} parallel)")
+
+    elif sub == "speed":
+        if len(args) < 2:
+            r = api_get("/api/traffic/status")
+            if r:
+                rate = r.get("sleep_interval", 1.0)
+                if rate <= 0.5:
+                    speed_badge = "🚀 TURBO"
+                elif rate <= 2.0:
+                    speed_badge = "⚡ FAST"
+                elif rate <= 5.0:
+                    speed_badge = "📱 NORMAL"
+                else:
+                    speed_badge = "🐢 SLOW"
+                info(f"Traffic Speed: {c('36', speed_badge)} ({rate}s delay)")
+            return
+
+        val_str = args[1].lower()
+        presets = {
+            "turbo": 0.1,
+            "fast": 1.0,
+            "normal": 3.0,
+            "slow": 5.0
+        }
+        if val_str in presets:
+            value = presets[val_str]
+        else:
+            try:
+                value = float(val_str)
+            except ValueError:
+                err("Speed must be a number of seconds (0.01 - 60.0) or one of: turbo, fast, normal, slow")
+                return
+
+        if not (0.01 <= value <= 60.0):
+            err("Speed must be between 0.01 and 60.0 seconds")
+            return
+
+        r = api_post("/api/traffic/rate", {"rate": value})
+        if r:
+            if value <= 0.5:
+                speed_badge = "🚀 TURBO"
+            elif value <= 2.0:
+                speed_badge = "⚡ FAST"
+            elif value <= 5.0:
+                speed_badge = "📱 NORMAL"
+            else:
+                speed_badge = "🐢 SLOW"
+            ok(f"Traffic speed updated to {value}s delay ({speed_badge})")
+            STATUS.invalidate()
+
+    elif sub == "density":
+        if len(args) < 2:
+            r = api_get("/api/traffic/status")
+            if r:
+                client_count = r.get("client_count", 1)
+                info(f"Traffic Density: {c('35', f'{client_count} CLIENTS')} (x{client_count} parallel)")
+            return
+
+        val_str = args[1]
+        try:
+            value = int(val_str)
+        except ValueError:
+            err("Density must be an integer between 1 and 20")
+            return
+
+        if not (1 <= value <= 20):
+            err("Density must be between 1 and 20")
+            return
+
+        r = api_post("/api/traffic/rate", {"client_count": value})
+        if r:
+            ok(f"Traffic density updated to {value} CLIENTS (x{value} parallel)")
+            STATUS.invalidate()
 
     elif sub == "stats":
         show_all = "--all" in args
@@ -751,6 +836,8 @@ def cmd_traffic(args):
             ("traffic start",          "Start traffic generation"),
             ("traffic stop",           "Stop traffic generation"),
             ("traffic status",         "Show current traffic state"),
+            ("traffic speed [val]",    "Get or set delay in seconds or preset (turbo/fast/normal/slow)"),
+            ("traffic density [val]",  "Get or set parallel clients count (1-20)"),
             ("traffic stats [--all]",  "Show traffic statistics & active apps dashboard"),
             ("traffic logs",           "Show last 30 backend log lines"),
             ("traffic reset",          "Reset traffic statistics"),
@@ -3474,6 +3561,8 @@ def cmd_help(args):
   {c('1','TRAFFIC')}
     traffic start|stop     Enable / disable traffic generation
     traffic status|stats   Show traffic state, rate, and active apps dashboard
+    traffic speed [val]    Get or set delay in seconds or preset (turbo/fast/normal/slow)
+    traffic density [val]  Get or set parallel clients count (1-20)
     traffic logs           Show last log lines
     traffic reset          Reset statistics
     traffic watch [sec]    {c('36','Live watch dashboard & real-time rate (use --all to show all apps)')}
@@ -3676,7 +3765,7 @@ class StigixCompleter(Completer):
 
         typed_flags = set(w for w in prefix_words if w.startswith('--'))
         for flag in options.keys():
-            if flag.startswith('--') and flag not in typed_flags:
+            if not flag.startswith('--') or flag not in typed_flags:
                 if flag.startswith(current_word):
                     yield Completion(flag, start_position=-len(current_word))
 
@@ -3711,6 +3800,8 @@ COMPLETER_TREE = {
         "start": None, "stop": None, "status": None,
         "stats": None, "logs": None, "reset": None, "watch": None,
         "import": None, "export": None,
+        "speed": {"turbo": None, "fast": None, "normal": None, "slow": None},
+        "density": None,
     },
     "security":    {
         "status": None,

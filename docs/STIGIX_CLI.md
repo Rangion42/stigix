@@ -115,7 +115,9 @@ The CLI automatically saves your active connection URL and authenticated JWT tok
 ### 2. Traffic Generator (`traffic`)
 *   `traffic start` — Start generating background traffic.
 *   `traffic stop` — Stop generating traffic.
-*   `traffic status` — Check if traffic generator is running or stopped.
+*   `traffic status` — Check if traffic generator is running or stopped (displays current speed delay and density clients).
+*   `traffic speed [val]` — Get or set delay in seconds (0.01 - 60.0s) or preset (`turbo`, `fast`, `normal`, `slow`) to change request rate.
+*   `traffic density [val]` — Get or set number of parallel client generators (1 - 20) to change traffic volume.
 *   `traffic stats` — View real-time counters and traffic metrics.
 *   `traffic logs` — Print the latest log entries from the traffic generator.
 *   `traffic reset` — Reset statistics counters to zero.

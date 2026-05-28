@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.70] - 2026-05-28
+### Added
+- **stigix-cli** ⚙️ Added `traffic speed [val]` and `traffic density [val]` subcommands to dynamically adjust traffic delay/rate and parallel client counts.
+- **stigix-cli** 📊 Updated `traffic status` to display current traffic speed (with visual preset badges matching the dashboard UI) and density parallel client count.
+- **stigix-cli** 🧠 Enhanced CLI auto-completer (`StigixCompleter`) to suggest non-flag subkeys at level 3+ of the tree.
+- **docs** 📘 Documented the new traffic commands in `docs/STIGIX_CLI.md` and updated `STIGIX_CLI.pdf`.
+
 ## [v1.4.0-patch.69] - 2026-05-28
 ### Fixed
 - **stigix-cli** ⚙️ Fixed the VyOS sequence run command execution issues by adding command redirection for `vyos sequences run/stop` and implementing client-side prefix matching to resolve truncated sequence IDs to full unique IDs before calling the backend.
