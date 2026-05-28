@@ -693,24 +693,64 @@ def cmd_peer(args):
         if r:
             ok(f"Peer '{name}' added successfully")
 
-    elif sub == "remove":
+    elif sub in ("remove", "enable", "disable"):
         pid = args[1] if len(args) > 1 else None
         if not pid:
-            err("Usage: peer remove <id>")
+            err(f"Usage: peer {sub} <name/id/host>")
             return
-        r = api_delete(f"/api/targets/{pid}")
-        if r:
-            ok(f"Peer target {pid} removed")
 
-    elif sub in ("enable", "disable"):
-        pid = args[1] if len(args) > 1 else None
-        if not pid:
-            err(f"Usage: peer {sub} <id>")
+        # Fetch targets from server to find match
+        targets = api_get("/api/targets")
+        if targets is None:
+            targets = []
+        else:
+            targets = targets if isinstance(targets, list) else targets.get("targets", [])
+
+        # Search for matching targets
+        matches = []
+        for p in targets:
+            full_id = p.get("id", "")
+            name = p.get("name", "")
+            host = p.get("host", "")
+            
+            # Match by full ID, prefix match, name (case insensitive), or host IP
+            if (full_id == pid or 
+                (len(pid) >= 4 and full_id.startswith(pid)) or 
+                name.lower() == pid.lower() or 
+                host == pid):
+                matches.append(p)
+
+        if not matches:
+            err(f"Peer target '{pid}' not found")
             return
-        body = {"enabled": sub == "enable"}
-        r = api_put(f"/api/targets/{pid}", body)
-        if r:
-            ok(f"Peer target {pid} {'enabled' if sub == 'enable' else 'disabled'}")
+        elif len(matches) > 1:
+            err(f"Multiple peers matched '{pid}':")
+            for m in matches:
+                info(f"  - {m.get('id')[:12]} | {m.get('name')} | {m.get('host')}")
+            return
+
+        target = matches[0]
+        full_id = target.get("id")
+        name = target.get("name")
+        host = target.get("host")
+
+        if sub == "remove":
+            if sys.stdin.isatty():
+                try:
+                    confirm = input(f"Are you sure you want to delete peer '{name}' ({host})? [y/N]: ").strip().lower()
+                    if confirm != 'y':
+                        return
+                except (KeyboardInterrupt, EOFError):
+                    print()
+                    return
+            r = api_delete(f"/api/targets/{full_id}")
+            if r:
+                ok(f"Peer target '{name}' ({host}) removed")
+        else:
+            body = {"enabled": sub == "enable"}
+            r = api_put(f"/api/targets/{full_id}", body)
+            if r:
+                ok(f"Peer target '{name}' ({host}) {'enabled' if sub == 'enable' else 'disabled'}")
 
     else:
         _help_section("PEER TARGETS", [

@@ -215,8 +215,8 @@ Manually manage Stigix peer nodes (which host echo responders, VoIP targets, and
     ```
     *By default, interactive mode will enable all capabilities (`voice`, `convergence`, `xfr`, `security`, `connectivity`) on the new target.*
 *   `peer add --name <name> --host <ip/domain>` — Add a new peer target using explicit flags. Optional flags can be used to disable specific capabilities: `--voice {true|false}`, `--convergence {true|false}`, `--xfr {true|false}`, `--security {true|false}`, `--connectivity {true|false}`.
-*   `peer remove <id>` — Delete a peer target by ID.
-*   `peer enable <id>` / `peer disable <id>` — Toggle a peer target's status.
+*   `peer remove <name/id/host>` — Delete a peer target by name, host IP, or truncated 12-character ID. In interactive mode, it will prompt for confirmation (`Are you sure...`).
+*   `peer enable <name/id/host>` / `peer disable <name/id/host>` — Enable or disable a peer target by name, host IP, or truncated 12-character ID.
 
 ---
 
