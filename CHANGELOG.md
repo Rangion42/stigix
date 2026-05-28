@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [v1.4.0-patch.58] - 2026-05-28
+### Added
+- **stigix-cli** 🧠 Added `stats` subcommand to autocompletion options under `experience` and `target` commands.
+- **stigix-cli** 📁 Added local `.json` file suggestions to the autocompletion menu for `import` and `export` file path inputs.
+- **stigix-cli** ⚠️ Added interactive safety overwrite warnings to all `import` subcommands (`traffic`, `experience`, `peer`) to prevent accidental remote config deletion or overrides.
+
 ## [v1.4.0-patch.57] - 2026-05-28
 ### Added
 - **stigix-cli** 🔌 Added support for a custom `timeout` parameter in API request helpers (`api_get`, `api_post`, `api_put`, and `api_delete`).

@@ -719,6 +719,18 @@ def cmd_traffic(args):
         data = read_json_file(filepath)
         if data is None:
             return
+
+        # Warning confirmation to avoid accidental override
+        if sys.stdin.isatty():
+            try:
+                confirm = input(c("33", "⚠ Warning: Importing will completely OVERWRITE the current traffic configuration on the remote instance. Proceed? [y/N]: ")).strip().lower()
+                if confirm != 'y':
+                    print("Aborted.")
+                    return
+            except (KeyboardInterrupt, EOFError):
+                print()
+                return
+
         content = json.dumps(data)
         r = api_post("/api/config/applications/import", {"content": content})
         if r:
@@ -1113,6 +1125,18 @@ def cmd_experience(args):
         if not endpoints:
             err("Invalid format: expected a JSON array or an object containing an 'endpoints' array")
             return
+
+        # Warning confirmation to avoid accidental override
+        if sys.stdin.isatty():
+            try:
+                confirm = input(c("33", "⚠ Warning: Importing will completely OVERWRITE the custom experience probes on the remote instance. Proceed? [y/N]: ")).strip().lower()
+                if confirm != 'y':
+                    print("Aborted.")
+                    return
+            except (KeyboardInterrupt, EOFError):
+                print()
+                return
+
         r = api_post("/api/connectivity/custom", {"endpoints": endpoints})
         if r:
             ok("Experience probes imported successfully")
@@ -1392,6 +1416,18 @@ def cmd_peer(args):
         if not targets_to_import:
             err("Invalid format: expected a JSON array or an object containing a 'targets' array")
             return
+
+        # Warning confirmation to avoid accidental override
+        if sys.stdin.isatty():
+            try:
+                confirm = input(c("33", "⚠ Warning: Importing will completely OVERWRITE the peer targets on the remote instance. Proceed? [y/N]: ")).strip().lower()
+                if confirm != 'y':
+                    print("Aborted.")
+                    return
+            except (KeyboardInterrupt, EOFError):
+                print()
+                return
+
         r = api_post("/api/targets/import", {"targets": targets_to_import})
         if r:
             ok("Peer targets imported successfully")
@@ -2830,6 +2866,28 @@ class StigixCompleter(Completer):
         if not isinstance(subcmds, dict) or subcmd not in subcmds:
             return
 
+        # Special case: suggest local JSON files for import / export
+        if subcmd in ("import", "export"):
+            import glob
+            files = set()
+            # 1. Current working directory
+            for f in glob.glob("*.json"):
+                files.add(f)
+            # 2. config/
+            if os.path.exists("config"):
+                for f in glob.glob("config/*.json"):
+                    files.add(f)
+            # 3. /app/config/
+            if os.path.exists("/app/config"):
+                for f in glob.glob("/app/config/*.json"):
+                    files.add(f"/app/config/{os.path.basename(f)}")
+                    files.add(os.path.basename(f))
+            
+            for f in sorted(files):
+                if f.startswith(current_word):
+                    yield Completion(f, start_position=-len(current_word))
+            return
+
         options = subcmds[subcmd]
         if not isinstance(options, dict):
             return
@@ -2884,14 +2942,14 @@ COMPLETER_TREE = {
         "suite": None, "results": None, "clear": None,
     },
     "experience":  {
-        "list": None, "probe": None, "remove": None,
+        "list": None, "probe": None, "remove": None, "stats": None,
         "import": None, "export": None,
         "add":  {"--name": None, "--target": None, "--host": None, "--url": None,
                  "--type": {"http", "https", "ping", "icmp", "tcp", "udp", "dns"},
                  "--port": None, "--timeout": None},
     },
     "target":      {
-        "list": None, "probe": None, "remove": None,
+        "list": None, "probe": None, "remove": None, "stats": None,
         "import": None, "export": None,
         "add":  {"--name": None, "--target": None, "--host": None, "--url": None,
                  "--type": {"http", "https", "ping", "icmp", "tcp", "udp", "dns"},
