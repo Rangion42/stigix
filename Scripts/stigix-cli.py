@@ -59,6 +59,7 @@ JWT_TOKEN    = None
 STIGIX_URL   = DEFAULT_URL
 PROFILES     = {}          # {name: {"url": ..., "token": ...}}
 INSTANCE_TOKENS = {}       # {url: token}
+HTTP_SESSION = requests.Session()
 
 VERSION      = "1.4.0-patch.57"
 try:
@@ -270,7 +271,7 @@ def _headers():
 
 def api_get(path, timeout=TIMEOUT):
     try:
-        r = requests.get(f"{STIGIX_URL}{path}", headers=_headers(), timeout=timeout)
+        r = HTTP_SESSION.get(f"{STIGIX_URL}{path}", headers=_headers(), timeout=timeout)
         r.raise_for_status()
         return r.json()
     except requests.exceptions.ConnectionError:
@@ -289,11 +290,11 @@ def api_get(path, timeout=TIMEOUT):
 def api_post(path, body=None, method="POST", timeout=TIMEOUT):
     try:
         if method == "POST":
-            fn = requests.post
+            fn = HTTP_SESSION.post
         elif method == "PUT":
-            fn = requests.put
+            fn = HTTP_SESSION.put
         else:
-            fn = requests.delete
+            fn = HTTP_SESSION.delete
         r  = fn(f"{STIGIX_URL}{path}", json=body or {}, headers=_headers(), timeout=timeout)
         r.raise_for_status()
         return r.json()
@@ -348,7 +349,7 @@ class _StatusCache:
 
     def _fetch(self):
         try:
-            r = requests.get(f"{STIGIX_URL}/api/traffic/status", headers=_headers(), timeout=3)
+            r = HTTP_SESSION.get(f"{STIGIX_URL}/api/traffic/status", headers=_headers(), timeout=3)
             if r.ok:
                 d = r.json()
                 self.traffic   = "▶ RUNNING" if (d.get("enabled") or d.get("running")) else "■ STOPPED"
@@ -360,7 +361,7 @@ class _StatusCache:
             self.traffic   = "?"
             self.reachable = False
         try:
-            r = requests.get(f"{STIGIX_URL}/api/version", headers=_headers(), timeout=3)
+            r = HTTP_SESSION.get(f"{STIGIX_URL}/api/version", headers=_headers(), timeout=3)
             if r.ok:
                 self.version = r.json().get("version", "?")
         except Exception:
@@ -374,36 +375,39 @@ STATUS = _StatusCache()
 
 def _toolbar():
     """Bottom toolbar rendered by prompt_toolkit on every keystroke."""
-    STATUS.refresh()
+    try:
+        STATUS.refresh()
 
-    host = STIGIX_URL.replace("https://", "").replace("http://", "")
+        host = STIGIX_URL.replace("https://", "").replace("http://", "")
 
-    # connection indicator
-    if not STATUS.reachable:
-        conn = '<style bg="#B71C1C" fg="white"> ✗ OFFLINE </style>'
-    elif JWT_TOKEN:
-        conn = '<style bg="#1B5E20" fg="white"> ● connected </style>'
-    else:
-        conn = '<style bg="#E65100" fg="white"> ● no auth </style>'
+        # connection indicator
+        if not STATUS.reachable:
+            conn = '<style bg="#B71C1C" fg="white"> ✗ OFFLINE </style>'
+        elif JWT_TOKEN:
+            conn = '<style bg="#1B5E20" fg="white"> ● connected </style>'
+        else:
+            conn = '<style bg="#E65100" fg="white"> ● no auth </style>'
 
-    # traffic badge
-    if STATUS.traffic == "▶ RUNNING":
-        traf = f'<b fg="#69F0AE">▶ RUNNING</b>'
-    elif STATUS.traffic == "■ STOPPED":
-        traf = f'<b fg="#FF5252">■ STOPPED</b>'
-    else:
-        traf = f'<b fg="#90A4AE">? UNKNOWN</b>'
+        # traffic badge
+        if STATUS.traffic == "▶ RUNNING":
+            traf = f'<b fg="#69F0AE">▶ RUNNING</b>'
+        elif STATUS.traffic == "■ STOPPED":
+            traf = f'<b fg="#FF5252">■ STOPPED</b>'
+        else:
+            traf = f'<b fg="#90A4AE">? UNKNOWN</b>'
 
-    ver  = f'v{STATUS.version}' if STATUS.version != "?" else ""
-    div  = ' <b fg="#546E7A"> │ </b> '
+        ver  = f'v{STATUS.version}' if STATUS.version != "?" else ""
+        div  = ' <b fg="#546E7A"> │ </b> '
 
-    return HTML(
-        f' {conn}'
-        f'{div}<b fg="#80CBC4">{host}</b>'
-        f'{div}Traffic: {traf}'
-        + (f'{div}<b fg="#78909C">{ver}</b>' if ver else "")
-        + f'{div}<b fg="#546E7A">F1</b>:help  <b fg="#546E7A">F5</b>:status  <b fg="#546E7A">Ctrl+L</b>:clear'
-    )
+        return HTML(
+            f' {conn}'
+            f'{div}<b fg="#80CBC4">{host}</b>'
+            f'{div}Traffic: {traf}'
+            + (f'{div}<b fg="#78909C">{ver}</b>' if ver else "")
+            + f'{div}<b fg="#546E7A">F1</b>:help  <b fg="#546E7A">F5</b>:status  <b fg="#546E7A">Ctrl+L</b>:clear'
+        )
+    except Exception as e:
+        return HTML(f'<style bg="#B71C1C" fg="white"> Toolbar Error: {e} </style>')
 
 
 # ─── Key bindings ─────────────────────────────────────────────────────────────
@@ -1800,7 +1804,7 @@ def cmd_speedtest(args):
         info("Streaming real-time performance metrics (Ctrl+C to stop)...")
         
         try:
-            resp = requests.get(f"{STIGIX_URL}{stream_url}", stream=True, timeout=90)
+            resp = HTTP_SESSION.get(f"{STIGIX_URL}{stream_url}", stream=True, timeout=90)
             current_event = None
             for line in resp.iter_lines():
                 if not line:

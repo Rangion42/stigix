@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [v1.4.0-patch.60] - 2026-05-28
+### Fixed
+- **stigix-cli** 🔌 Implemented connection pooling via a global `requests.Session()` with HTTP keepalive to speed up toolbar updates, reduce socket overhead, and prevent connection drops.
+- **stigix-cli** 🛡️ Wrapped the bottom toolbar rendering logic in a robust exception-handler to prevent UI freezes or lockups in prompt_toolkit during network instability or host sleep states.
+
 ## [v1.4.0-patch.59] - 2026-05-28
 ### Fixed
 - **stigix-cli** 🎨 Fixed box alignment overflow in the Traffic Dashboard (`traffic stats` / `traffic watch`) to prevent border duplication and trailing vertical separator glitches.
