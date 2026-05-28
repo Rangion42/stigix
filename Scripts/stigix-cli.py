@@ -2442,6 +2442,40 @@ def cmd_vyos(args):
                              status_badge(item.get("status","?"))])
             table(["Time", "Router", "Command", "Status"], rows)
 
+    elif sub == "export":
+        filepath = args[1] if len(args) > 1 else "vyos-config.json"
+        info(f"Exporting VyOS configuration to {filepath}...")
+        r = api_get("/api/vyos/config/export")
+        if r is None:
+            return
+        write_json_file(filepath, r)
+        ok(f"VyOS configuration exported to {filepath}")
+
+    elif sub == "import":
+        filepath = args[1] if len(args) > 1 else None
+        if not filepath:
+            err("Usage: vyos import <filepath>")
+            return
+        data = read_json_file(filepath)
+        if data is None:
+            return
+
+        # Warning confirmation to avoid accidental override
+        if sys.stdin.isatty():
+            try:
+                confirm = input(c("33", "⚠ Warning: Importing will completely OVERWRITE the current VyOS configuration (routers and sequences) on the remote instance. Proceed? [y/N]: ")).strip().lower()
+                if confirm != 'y':
+                    print("Aborted.")
+                    return
+            except (KeyboardInterrupt, EOFError):
+                print()
+                return
+
+        info(f"Importing VyOS configuration from {filepath}...")
+        r = api_post("/api/vyos/config/import", data)
+        if r:
+            ok("VyOS configuration imported successfully")
+
     else:
         _help_section("VyOS CONTROL", [
             ("vyos list",            "List configured routers"),
@@ -2449,6 +2483,8 @@ def cmd_vyos(args):
             ("vyos run <id>",        "Execute a sequence"),
             ("vyos stop <id>",       "Stop a sequence"),
             ("vyos history [n]",     "Show execution history"),
+            ("vyos export [file]",   "Export VyOS configuration to JSON"),
+            ("vyos import <file>",   "Import VyOS configuration from JSON"),
         ])
 
 
@@ -3448,6 +3484,8 @@ def cmd_help(args):
     vyos run <id>          Execute a sequence
     vyos stop <id>         Stop a sequence
     vyos history [n]       Execution history
+    vyos export [file]     Export config to JSON
+    vyos import <file>     Import config from JSON
 
   {c('1','IoT SIMULATION')}
     iot list               Simulated devices
@@ -3678,7 +3716,7 @@ COMPLETER_TREE = {
         "endpoints": None, "watch": None,
         "start": {"--target": None, "--pps": None, "--label": None},
     },
-    "vyos":        {"list": None, "sequences": None, "run": None, "stop": None, "history": None},
+    "vyos":        {"list": None, "sequences": None, "run": None, "stop": None, "history": None, "import": None, "export": None},
     "voice":       {
         "status": None, "stop": None, "stats": None, "start": None,
     },

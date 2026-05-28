@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.65] - 2026-05-28
+### Added
+- **stigix-cli** 📥 Added `vyos import <file>` subcommand to import VyOS routers and sequences unified configuration from a local JSON file.
+- **stigix-cli** 📤 Added `vyos export [file]` subcommand to export configured VyOS routers and sequences to a local JSON file (defaults to `vyos-config.json`).
+- **stigix-cli** 🧠 Enabled autocomplete file suggestions for local `.json` files when using `vyos import` and `vyos export` commands.
+
 ## [v1.4.0-patch.64] - 2026-05-28
 ### Added
 - **stigix-cli** 🔍 Added an interactive search-based category lookup for `security url` and `security dns` commands. Allows typing a search term to dynamically filter predefined categories instead of showing only the top 10.
