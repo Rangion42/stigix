@@ -100,6 +100,7 @@ Upon success, the session token is saved automatically to your profile config. T
 ### 1. Connection & Session (`connect`, `auth`)
 The CLI automatically saves your active connection URL and authenticated JWT token in `~/.stigix-cli.json` for future sessions.
 
+*   `status` — Show overall Stigix instance status (backend readiness, version, traffic engine state, and public IP).
 *   `auth login` — Authenticate with Stigix using username and password.
 *   `auth status` — Check current session authentication status.
 *   `auth logout` — Log out and clear saved JWT token.
@@ -119,6 +120,8 @@ The CLI automatically saves your active connection URL and authenticated JWT tok
 *   `traffic logs` — Print the latest log entries from the traffic generator.
 *   `traffic reset` — Reset statistics counters to zero.
 *   `traffic watch [interval]` — Launch a live dashboard refreshing every *N* seconds (default: 3s).
+*   `traffic export [file]` — Export applications traffic configuration to a local JSON file (defaults to `stigix-traffic-export.json`).
+*   `traffic import <file>` — Overwrite the applications traffic configuration from a local JSON file.
 
 ---
 
@@ -134,6 +137,8 @@ Simulates traffic corresponding to security capabilities of Palo Alto Networks S
 *   `security eicar [endpoint]` — Perform an EICAR Threat Prevention test against a specific target.
 *   `security results [n]` — View the last *N* security logs (default: 20).
 *   `security clear` — Clear all security test results from the history database.
+*   `security select-all <url|dns> <on|off>` — Enable or disable all URL filtering categories or DNS security tests at once.
+*   `security schedule <url|dns|threat> <on|off> [minutes]` — Configure periodic security testing timers (intervals can be 5, 10, 15, 30, 45, or 60 minutes).
 
 ---
 
@@ -146,6 +151,7 @@ Used to measure packet loss and network recovery time during link/routing failov
 *   `convergence history [n]` — View past failover test results and blackout times.
 *   `convergence endpoints` — List configured probe targets.
 *   `convergence watch [interval]` — Watch real-time probe loss and latency metrics.
+*(Note: the `failover` command is supported as a backward-compatible alias for `convergence`)*
 
 ---
 
