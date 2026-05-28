@@ -8973,6 +8973,73 @@ app.get('/api/admin/maintenance/status', authenticateToken, (req, res) => {
     res.json(G_UPGRADE_STATUS);
 });
 
+async function detectDockerComposeCmd(): Promise<string> {
+    const dockerPath = '/usr/local/bin/docker';
+    const dockerComposePath = '/usr/local/bin/docker-compose';
+    const resolvedDocker = fs.existsSync(dockerPath) ? dockerPath : 'docker';
+    const resolvedCompose = fs.existsSync(dockerComposePath) ? dockerComposePath : 'docker-compose';
+
+    // Try to detect what works
+    try {
+        await promisify(exec)(`${resolvedCompose} version`);
+        return resolvedCompose;
+    } catch (e) {
+        try {
+            await promisify(exec)(`${resolvedDocker} compose version`);
+            return `${resolvedDocker} compose`;
+        } catch (e2) {
+            try {
+                await promisify(exec)(`${resolvedDocker} --version`);
+                return resolvedDocker;
+            } catch (e3) {
+                // If nothing works, check if standard PATH has docker compose
+                try {
+                    await promisify(exec)('docker compose version');
+                    return 'docker compose';
+                } catch (e4) {
+                    try {
+                        await promisify(exec)('docker-compose version');
+                        return 'docker-compose';
+                    } catch (e5) {
+                        throw new Error(`Neither "docker-compose" nor "docker compose" found. (Checked ${resolvedDocker}, ${resolvedCompose}, and PATH)`);
+                    }
+                }
+            }
+        }
+    }
+}
+
+const runCommandAndLog = (cmd: string, cwd: string, stage: string): Promise<number | null> => {
+    G_UPGRADE_STATUS.stage = stage;
+    G_UPGRADE_STATUS.logs.push(`[${new Date().toISOString()}] Executing [${stage}]: ${cmd}`);
+    
+    return new Promise((resolve) => {
+        const process = spawn('sh', ['-c', cmd], { cwd });
+        
+        process.stdout.on('data', (data: any) => {
+            const lines = data.toString().split('\n');
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed) G_UPGRADE_STATUS.logs.push(trimmed);
+            }
+            while (G_UPGRADE_STATUS.logs.length > 100) G_UPGRADE_STATUS.logs.shift();
+        });
+        
+        process.stderr.on('data', (data: any) => {
+            const lines = data.toString().split('\n');
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed) G_UPGRADE_STATUS.logs.push(`[INFO] ${trimmed}`);
+            }
+            while (G_UPGRADE_STATUS.logs.length > 100) G_UPGRADE_STATUS.logs.shift();
+        });
+        
+        process.on('close', (code) => {
+            resolve(code);
+        });
+    });
+};
+
 app.post('/api/admin/maintenance/upgrade', authenticateToken, async (req, res) => {
     const { version } = req.body;
 
@@ -8990,73 +9057,92 @@ app.post('/api/admin/maintenance/upgrade', authenticateToken, async (req, res) =
         startTime: Date.now()
     };
 
-    const pullTarget = version || 'stable';
-
-    const rootDir = PROJECT_ROOT;
-
     res.json({ success: true, message: 'Upgrade started in background' });
 
     const runUpgrade = async () => {
         try {
-            const pullCmd = fs.existsSync(path.join(rootDir, 'docker-compose.yml'))
-                ? (version ? `TAG=${version} docker compose pull` : 'docker compose pull')
-                : `docker pull jsuzanne/stigix:${pullTarget}`;
+            const rootDir = PROJECT_ROOT;
+            const hasAppCompose = fs.existsSync('/app/docker-compose.yml');
+            const hasRootCompose = fs.existsSync(path.join(rootDir, 'docker-compose.yml'));
+            const composeFile = hasAppCompose ? '/app/docker-compose.yml' : (hasRootCompose ? path.join(rootDir, 'docker-compose.yml') : null);
+            const workingDir = hasAppCompose ? '/app' : rootDir;
 
-            G_UPGRADE_STATUS.logs.push(`[${new Date().toISOString()}] Executing: ${pullCmd}`);
-
-            const pullProcess = spawn('sh', ['-c', pullCmd], { cwd: rootDir });
-
-            pullProcess.stdout.on('data', (data: any) => {
-                const line = data.toString().trim();
-                if (line) G_UPGRADE_STATUS.logs.push(line);
-                if (G_UPGRADE_STATUS.logs.length > 50) G_UPGRADE_STATUS.logs.shift();
-            });
-
-            pullProcess.stderr.on('data', (data: any) => {
-                const line = data.toString().trim();
-                if (line) G_UPGRADE_STATUS.logs.push(`[WARN] ${line}`);
-            });
-
-            const pullExitCode = await new Promise((resolve) => {
-                pullProcess.on('close', resolve);
-            });
-
-            if (pullExitCode !== 0) {
-                throw new Error(`Pull failed with exit code ${pullExitCode}`);
+            // 1. Detect docker compose command
+            let baseCmd = 'docker compose';
+            try {
+                baseCmd = await detectDockerComposeCmd();
+            } catch (err: any) {
+                G_UPGRADE_STATUS.logs.push(`[WARN] Docker compose detection failed: ${err.message}. Defaulting to 'docker compose'`);
             }
 
-            G_UPGRADE_STATUS.stage = 'restarting';
-            G_UPGRADE_STATUS.logs.push(`[${new Date().toISOString()}] Pull complete. Refreshing services...`);
+            // 2. Prune stage (Purge)
+            try {
+                // Run system prune to clean up unused layers/containers
+                const pruneExit = await runCommandAndLog('docker system prune -a -f', workingDir, 'pruning');
+                if (pruneExit !== 0) {
+                    G_UPGRADE_STATUS.logs.push(`[WARN] Prune returned exit code ${pruneExit}. Continuing...`);
+                }
+            } catch (e: any) {
+                G_UPGRADE_STATUS.logs.push(`[WARN] Prune failed: ${e.message}. Continuing...`);
+            }
 
-            // Short delay before restart
+            // 3. Pull stage
+            const pullTarget = version || 'stable';
+            let pullCmd = '';
+            if (composeFile) {
+                pullCmd = version ? `TAG=${version} ${baseCmd} -f ${composeFile} pull` : `${baseCmd} -f ${composeFile} pull`;
+            } else {
+                pullCmd = `docker pull jsuzanne/stigix:${pullTarget}`;
+            }
+
+            const pullExit = await runCommandAndLog(pullCmd, workingDir, 'pulling');
+            if (pullExit !== 0) {
+                throw new Error(`Pull failed with exit code ${pullExit}`);
+            }
+
+            // 4. Recreate/Up stage (Restarting)
+            G_UPGRADE_STATUS.stage = 'restarting';
+            
+            // Short delay to allow client to read pull completion log
             setTimeout(async () => {
                 try {
-                    // Start by checking if we have compose file
-                    const upCmd = version ? `TAG=${version} docker compose up -d` : 'docker compose up -d';
-                    if (fs.existsSync(path.join(rootDir, 'docker-compose.yml'))) {
-                        G_UPGRADE_STATUS.logs.push(`[${new Date().toISOString()}] Running: ${upCmd}`);
-                        execSync(upCmd, { cwd: rootDir });
-                    } else if (fs.existsSync('/app/docker-compose.yml')) {
-                        G_UPGRADE_STATUS.logs.push(`[${new Date().toISOString()}] Running: ${upCmd}`);
-                        execSync(upCmd, { cwd: '/app' });
+                    if (composeFile) {
+                        // First try with --force-recreate
+                        const upCmd = version 
+                            ? `TAG=${version} ${baseCmd} -f ${composeFile} up -d --force-recreate` 
+                            : `${baseCmd} -f ${composeFile} up -d --force-recreate`;
+                        
+                        const upExit = await runCommandAndLog(upCmd, workingDir, 'restarting');
+                        if (upExit !== 0) {
+                            G_UPGRADE_STATUS.logs.push(`[WARN] Up with --force-recreate failed (exit ${upExit}). Falling back to simple up...`);
+                            // Fallback to simple up without force-recreate
+                            const fallbackUpCmd = version 
+                                ? `TAG=${version} ${baseCmd} -f ${composeFile} up -d` 
+                                : `${baseCmd} -f ${composeFile} up -d`;
+                            
+                            const fallbackExit = await runCommandAndLog(fallbackUpCmd, workingDir, 'restarting');
+                            if (fallbackExit !== 0) {
+                                throw new Error(`Up failed with exit code ${fallbackExit}`);
+                            }
+                        }
                     } else {
-                        // Fallback: forcefully restart the unified container
-                        G_UPGRADE_STATUS.logs.push(`[${new Date().toISOString()}] No compose file found, falling back to docker restart stigix`);
-                        try {
-                            execSync('docker restart stigix');
-                        } catch (e) {
-                            G_UPGRADE_STATUS.logs.push(`[WARN] Fallback restart failed: ${e}`);
+                        // Fallback to docker restart stigix if no compose file
+                        const restartCmd = 'docker restart stigix';
+                        const restartExit = await runCommandAndLog(restartCmd, workingDir, 'restarting');
+                        if (restartExit !== 0) {
+                            throw new Error(`Fallback restart failed with exit code ${restartExit}`);
                         }
                     }
 
                     G_UPGRADE_STATUS.stage = 'complete';
-                    G_UPGRADE_STATUS.logs.push(`[${new Date().toISOString()}] ✅ Upgrade complete. Restarting dashboard...`);
-
+                    G_UPGRADE_STATUS.logs.push(`[${new Date().toISOString()}] ✅ Upgrade complete. Restarting backend...`);
                     setTimeout(() => process.exit(0), 1000);
-                } catch (e: any) {
+
+                } catch (upErr: any) {
                     G_UPGRADE_STATUS.stage = 'failed';
-                    G_UPGRADE_STATUS.error = e.message;
+                    G_UPGRADE_STATUS.error = upErr.message;
                     G_UPGRADE_STATUS.inProgress = false;
+                    G_UPGRADE_STATUS.logs.push(`[ERROR] ${upErr.message}`);
                 }
             }, 2000);
 
@@ -9089,72 +9175,37 @@ app.post('/api/admin/maintenance/restart', authenticateToken, async (req, res) =
         startTime: Date.now()
     };
 
-
     const rootDir = PROJECT_ROOT;
 
     res.json({ success: true, message: 'Restart sequence initiated' });
 
     const runRestart = async () => {
         try {
-            // First check if /app/docker-compose.yml exists (mounted in prod)
             const hasAppCompose = fs.existsSync('/app/docker-compose.yml');
             const hasRootCompose = fs.existsSync(path.join(rootDir, 'docker-compose.yml'));
             const composeFile = hasAppCompose ? '/app/docker-compose.yml' : (hasRootCompose ? path.join(rootDir, 'docker-compose.yml') : null);
+            const workingDir = hasAppCompose ? '/app' : rootDir;
 
             let cmd = '';
 
             if (type === 'restart') {
-                // Internal soft restart via supervisor - fast and secure
                 cmd = 'supervisorctl restart all';
             } else if (composeFile) {
-                // Try 'docker compose' first, then 'docker-compose'
                 let baseCmd = 'docker compose';
-                
-                // Diagnostic: Check for binaries in common paths
-                const dockerPath = '/usr/local/bin/docker';
-                const dockerComposePath = '/usr/local/bin/docker-compose';
-                const hasDocker = fs.existsSync(dockerPath) || fs.existsSync('/usr/bin/docker');
-                const hasCompose = fs.existsSync(dockerComposePath) || fs.existsSync('/usr/bin/docker-compose');
-
-                console.log(`[MAINTENANCE-INIT] Type: ${type}, Compose: ${composeFile}, hasDocker: ${hasDocker}, hasCompose: ${hasCompose}`);
-                G_UPGRADE_STATUS.logs.push(`[DIAGNOSTIC] PATH: ${process.env.PATH}`);
-                G_UPGRADE_STATUS.logs.push(`[DIAGNOSTIC] Docker: ${hasDocker ? 'PRESENT' : 'MISSING'}, Compose: ${hasCompose ? 'PRESENT' : 'MISSING'}`);
-
                 try {
-                    // Force full path if exists to avoid PATH issues in supervisor environment
-                    const resolvedDocker = fs.existsSync(dockerPath) ? dockerPath : 'docker';
-                    const resolvedCompose = fs.existsSync(dockerComposePath) ? dockerComposePath : 'docker-compose';
-
-                    // Try to detect what works
-                    try {
-                        await promisify(exec)(`${resolvedCompose} version`);
-                        baseCmd = resolvedCompose;
-                    } catch (e) {
-                        try {
-                            await promisify(exec)(`${resolvedDocker} compose version`);
-                            baseCmd = `${resolvedDocker} compose`;
-                        } catch (e2) {
-                            try {
-                                await promisify(exec)(`${resolvedDocker} --version`);
-                                baseCmd = resolvedDocker;
-                            } catch (e3) {
-                                throw new Error(`Neither "docker-compose" nor "docker compose" found. (Checked ${resolvedDocker}, ${resolvedCompose}, and PATH)`);
-                            }
-                        }
-                    }
+                    baseCmd = await detectDockerComposeCmd();
                 } catch (err: any) {
-                    throw new Error(`Docker detection failed: ${err.message}`);
+                    G_UPGRADE_STATUS.logs.push(`[WARN] Docker compose detection failed: ${err.message}. Defaulting to 'docker compose'`);
                 }
                 
                 if (baseCmd === 'docker') {
                     cmd = 'docker restart stigix';
                 } else {
                     cmd = type === 'redeploy'
-                        ? `${baseCmd} -f ${composeFile} up -d`
+                        ? `${baseCmd} -f ${composeFile} up -d --force-recreate`
                         : `${baseCmd} -f ${composeFile} restart`;
                 }
             } else {
-                // Fallback to pure docker commands
                 cmd = 'docker restart stigix';
             }
 
@@ -9168,42 +9219,16 @@ app.post('/api/admin/maintenance/restart', authenticateToken, async (req, res) =
                 }
             }
 
-            G_UPGRADE_STATUS.logs.push(`[${new Date().toISOString()}] Executing: ${cmd}`);
-
-            const restartProcess = spawn('sh', ['-c', cmd], { cwd: rootDir });
-
-            restartProcess.stdout.on('data', (data: any) => {
-                const line = data.toString().trim();
-                if (line) G_UPGRADE_STATUS.logs.push(line);
-            });
-
-            restartProcess.stderr.on('data', (data: any) => {
-                const line = data.toString().trim();
-                if (line) {
-                    G_UPGRADE_STATUS.logs.push(`[INFO] ${line}`);
-                    console.log(`[MAINTENANCE-INFO] ${line}`);
-                }
-            });
-
-            const exitCode = await new Promise((resolve) => {
-                restartProcess.on('close', resolve);
-            });
-
+            const exitCode = await runCommandAndLog(cmd, workingDir, 'restarting');
             if (exitCode !== 0) {
                 throw new Error(`Command failed with exit code ${exitCode}. Check logs for details.`);
             }
 
             G_UPGRADE_STATUS.logs.push(`[${new Date().toISOString()}] ✅ Sequence complete.`);
+            G_UPGRADE_STATUS.stage = 'complete';
 
             if (type === 'redeploy') {
-                // If we redeployed, we might need to kill ourselves to ensure we pick up changes if our own container was recreated (it will kill us anyway)
-                G_UPGRADE_STATUS.stage = 'complete';
-                // Wait a moment for logs to flush then exit if we are still alive
                 setTimeout(() => process.exit(0), 1000);
-            } else {
-                G_UPGRADE_STATUS.stage = 'complete';
-                // For simple restart, we might wait for services to come back. 
-                // If 'docker compose restart' restarts US, we die here.
             }
 
         } catch (e: any) {
@@ -9215,7 +9240,6 @@ app.post('/api/admin/maintenance/restart', authenticateToken, async (req, res) =
         }
     };
 
-    // Run slightly delayed to allow response to flush
     setTimeout(runRestart, 500);
 });
 

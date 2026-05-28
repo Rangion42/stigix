@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.68] - 2026-05-28
+### Added
+- **maintenance** 🐳 Improved container upgrade flow by adding automatic docker system pruning (`docker system prune -a -f`) to purge unused image layers.
+- **maintenance** 📊 Added real-time step-by-step progress logging of prune, pull, and recreate processes into the upgrade status view.
+- **maintenance** ⚙️ Implemented dynamic recreate using `--force-recreate` with graceful fallback logic if the option is not supported.
+- **maintenance** 🔌 Consolidated docker compose executable command detection into a shared utility to handle both `docker compose` and `docker-compose` layouts consistently.
+
 ## [v1.4.0-patch.67] - 2026-05-28
 ### Fixed
 - **maintenance** 🐳 Fixed the system container upgrade workflow by dynamically interpolating the version tag (`TAG=${version}`) when pulling and recreating the Docker container.
