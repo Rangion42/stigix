@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [v1.4.0-patch.57] - 2026-05-28
+### Added
+- **stigix-cli** 🔌 Added support for a custom `timeout` parameter in API request helpers (`api_get`, `api_post`, `api_put`, and `api_delete`).
+- **stigix-cli** 🧠 Enabled dynamic version loading in the interactive CLI start header, automatically reading from `/app/VERSION` or the root `VERSION` file, with a fallback default.
+### Changed
+- **stigix-cli** ⏳ Increased the `experience probe` timeout limit to 90 seconds to handle sequential testing of multiple synthetic endpoints without timing out.
+
 ## [v1.4.0-patch.56] - 2026-05-28
 ### Added
 - **stigix-cli** 📈 Implemented the `experience stats` command to display digital experience connectivity performance statistics. Draws a global experience summary banner and outputs a detailed table listing synthetic probe name, target URL/IP, type, last score (along with historical average), average latency, and reliability (uptime %).

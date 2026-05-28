@@ -60,7 +60,19 @@ STIGIX_URL   = DEFAULT_URL
 PROFILES     = {}          # {name: {"url": ..., "token": ...}}
 INSTANCE_TOKENS = {}       # {url: token}
 
-VERSION      = "1.1.0"
+VERSION      = "1.4.0-patch.57"
+try:
+    version_file = Path("/app/VERSION")
+    if version_file.exists():
+        VERSION = version_file.read_text().strip()
+    else:
+        # Check relative to script (root of the repo)
+        rel_version = Path(__file__).parent.parent / "VERSION"
+        if rel_version.exists():
+            VERSION = rel_version.read_text().strip()
+except Exception:
+    pass
+
 TIMEOUT      = 10
 
 # ─── Session persistence ──────────────────────────────────────────────────────
@@ -256,9 +268,9 @@ def _headers():
         h["Authorization"] = f"Bearer {JWT_TOKEN}"
     return h
 
-def api_get(path):
+def api_get(path, timeout=TIMEOUT):
     try:
-        r = requests.get(f"{STIGIX_URL}{path}", headers=_headers(), timeout=TIMEOUT)
+        r = requests.get(f"{STIGIX_URL}{path}", headers=_headers(), timeout=timeout)
         r.raise_for_status()
         return r.json()
     except requests.exceptions.ConnectionError:
@@ -274,7 +286,7 @@ def api_get(path):
         err(str(e))
         return None
 
-def api_post(path, body=None, method="POST"):
+def api_post(path, body=None, method="POST", timeout=TIMEOUT):
     try:
         if method == "POST":
             fn = requests.post
@@ -282,7 +294,7 @@ def api_post(path, body=None, method="POST"):
             fn = requests.put
         else:
             fn = requests.delete
-        r  = fn(f"{STIGIX_URL}{path}", json=body or {}, headers=_headers(), timeout=TIMEOUT)
+        r  = fn(f"{STIGIX_URL}{path}", json=body or {}, headers=_headers(), timeout=timeout)
         r.raise_for_status()
         return r.json()
     except requests.exceptions.ConnectionError:
@@ -298,11 +310,11 @@ def api_post(path, body=None, method="POST"):
         err(str(e))
         return None
 
-def api_put(path, body=None):
-    return api_post(path, body, method="PUT")
+def api_put(path, body=None, timeout=TIMEOUT):
+    return api_post(path, body, method="PUT", timeout=timeout)
 
-def api_delete(path, body=None):
-    return api_post(path, body, method="DELETE")
+def api_delete(path, body=None, timeout=TIMEOUT):
+    return api_post(path, body, method="DELETE", timeout=timeout)
 
 def require_auth():
     if not JWT_TOKEN:
@@ -1069,7 +1081,7 @@ def cmd_experience(args):
             ok(f"Experience target '{removed_probe.get('name')}' removed")
 
     elif sub == "probe":
-        r = api_get("/api/connectivity/test")
+        r = api_get("/api/connectivity/test", timeout=90)
         if r:
             hdr("━━ Connectivity Probes ━━━━━━━━━━━━━━━━━━━")
             results = r if isinstance(r, list) else r.get("results", [r])
