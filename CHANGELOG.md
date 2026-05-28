@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [v1.4.0-patch.54] - 2026-05-28
+### Added
+- **stigix-cli** 🔑 Upgraded session persistence to support multi-instance token storage. The CLI now stores tokens in a URL-indexed mapping (`instance_tokens` in `~/.stigix-cli.json`), automatically restoring and preserving credentials when connecting to or switching between multiple Stigix instances.
+
 ## [v1.4.0-patch.53] - 2026-05-28
 ### Added
 - **stigix-cli** 📁 Improved CLI import/export features (`experience`, `peer`, `traffic`) by supporting standard input (passing `-` as filepath) and automatically falling back to / routing relative paths to the host-mounted `config/` directory. Added a clear instructions note about Docker environment limitations on file not found.

@@ -58,6 +58,7 @@ DEFAULT_URL  = os.environ.get("STIGIX_URL", "http://localhost:8080")
 JWT_TOKEN    = None
 STIGIX_URL   = DEFAULT_URL
 PROFILES     = {}          # {name: {"url": ..., "token": ...}}
+INSTANCE_TOKENS = {}       # {url: token}
 
 VERSION      = "1.1.0"
 TIMEOUT      = 10
@@ -66,23 +67,50 @@ TIMEOUT      = 10
 
 def load_session():
     """Load saved token, URL and profiles from ~/.stigix-cli.json"""
-    global JWT_TOKEN, STIGIX_URL, PROFILES
+    global JWT_TOKEN, STIGIX_URL, PROFILES, INSTANCE_TOKENS
     if CONFIG_FILE.exists():
         try:
             data = json.loads(CONFIG_FILE.read_text())
-            JWT_TOKEN = data.get("token")
+            PROFILES = data.get("profiles", {})
+            INSTANCE_TOKENS = data.get("instance_tokens", {})
+            
             saved_url = data.get("url")
             if saved_url and STIGIX_URL == DEFAULT_URL:
                 STIGIX_URL = saved_url
-            PROFILES = data.get("profiles", {})
+                
+            # Restore token specific to current STIGIX_URL, or fall back to legacy 'token'
+            if STIGIX_URL in INSTANCE_TOKENS:
+                JWT_TOKEN = INSTANCE_TOKENS[STIGIX_URL]
+            else:
+                JWT_TOKEN = data.get("token")
         except Exception:
             pass
 
 def save_session():
     """Persist token, URL and profiles to ~/.stigix-cli.json (chmod 600)"""
+    global JWT_TOKEN, STIGIX_URL, PROFILES, INSTANCE_TOKENS
     try:
+        if STIGIX_URL:
+            if JWT_TOKEN:
+                INSTANCE_TOKENS[STIGIX_URL] = JWT_TOKEN
+            else:
+                INSTANCE_TOKENS.pop(STIGIX_URL, None)
+                
+        # Sync profile tokens
+        for name, prof in PROFILES.items():
+            prof_url = prof.get("url")
+            if prof_url == STIGIX_URL:
+                prof["token"] = JWT_TOKEN
+            elif prof_url in INSTANCE_TOKENS:
+                prof["token"] = INSTANCE_TOKENS[prof_url]
+
         CONFIG_FILE.write_text(json.dumps(
-            {"token": JWT_TOKEN, "url": STIGIX_URL, "profiles": PROFILES}, indent=2
+            {
+                "token": JWT_TOKEN, 
+                "url": STIGIX_URL, 
+                "profiles": PROFILES,
+                "instance_tokens": INSTANCE_TOKENS
+            }, indent=2
         ))
         CONFIG_FILE.chmod(0o600)
     except Exception:
@@ -2261,7 +2289,7 @@ def cmd_connect(args):
     connect forget <name>         — delete a saved profile
     connect list                  — list all saved profiles
     """
-    global STIGIX_URL, JWT_TOKEN, PROFILES
+    global STIGIX_URL, JWT_TOKEN, PROFILES, INSTANCE_TOKENS
 
     sub = args[0] if args else None
 
@@ -2331,13 +2359,13 @@ def cmd_connect(args):
         info(f"Connecting to profile '{sub}' → {url}")
     else:
         url = sub
-        tok = None
         if not url.startswith("http"):
             # Bare IP or hostname — add port 8080 if no port given
             if ":" not in url.split("/")[-1]:
                 url = f"http://{url}:8080"
             else:
                 url = f"http://{url}"
+        tok = INSTANCE_TOKENS.get(url)
 
     old_url = STIGIX_URL
     old_tok = JWT_TOKEN
