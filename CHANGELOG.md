@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.62] - 2026-05-28
+### Added
+- **stigix-cli** ⚙️ Added `iot import` subcommand supporting JSON configs, Prisma IoT Security Assets Inventory CSV reports, and Palo Alto CVE/Vulnerability Report CSV exports.
+- **stigix-cli** 📥 Added `iot export` subcommand to export simulated IoT device profiles into standard JSON configurations.
+- **stigix-cli** 🧠 Enabled autocomplete file suggestions of `.csv` files alongside `.json` files when writing path inputs for the `import` commands.
+
 ## [v1.4.0-patch.61] - 2026-05-28
 ### Added
 - **stigix-cli** 🛡️ Added `select-all` subcommand to toggle enabling/disabling all URL filtering categories or DNS tests at once.

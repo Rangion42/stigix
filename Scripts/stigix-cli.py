@@ -2822,6 +2822,342 @@ def cmd_iot(args):
                 ])
             table(["Device", "Severity", "CVE", "Description"], rows)
 
+    elif sub == "import":
+        file_path = None
+        for arg in args[1:]:
+            if not arg.startswith("--"):
+                file_path = arg
+                break
+        
+        if not file_path:
+            if sys.stdin.isatty():
+                try:
+                    file_path = input("Enter path to JSON or CSV file to import: ").strip()
+                except (KeyboardInterrupt, EOFError):
+                    print("\nAborted.")
+                    return
+            if not file_path:
+                err("Usage: iot import <file_path> [--merge] [--max-devices <N>] [--only-iot] [--enable-security] [--security-percentage <pct>]")
+                return
+
+        if not os.path.exists(file_path):
+            err(f"File not found: {file_path}")
+            return
+
+        ext = os.path.splitext(file_path)[1].lower()
+        import_type = None
+        
+        try:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                first_line = f.readline().strip()
+                f.seek(0)
+                file_content = f.read()
+        except Exception as e:
+            err(f"Failed to read file: {e}")
+            return
+
+        if ext == ".json":
+            import_type = "json"
+        elif ext == ".csv":
+            headers = [h.strip().replace('"', '').lower() for h in first_line.split(',')]
+            if any(col in headers for col in ['hostname', 'mac address', 'category', 'profile_vertical']):
+                import_type = "prisma"
+            elif any(col in headers for col in ['device name', 'ip address', 'mac address', 'cve', 'cvss', 'severity']):
+                import_type = "vuln"
+            else:
+                if sys.stdin.isatty():
+                    print("\nSelect CSV Import Type:")
+                    print("  1: Prisma IoT Security Assets Inventory CSV")
+                    print("  2: Palo Alto CVE Vulnerability Report CSV")
+                    print()
+                    try:
+                        choice = input("Select type [1]: ").strip()
+                        import_type = "vuln" if choice == "2" else "prisma"
+                    except (KeyboardInterrupt, EOFError):
+                        print("\nAborted.")
+                        return
+                else:
+                    err("Unknown CSV format. Please ensure CSV headers match expected formats.")
+                    return
+        else:
+            if sys.stdin.isatty():
+                print("\nSelect Import File Type:")
+                print("  1: Stigix JSON Config")
+                print("  2: Prisma IoT Security Assets Inventory CSV")
+                print("  3: Palo Alto CVE Vulnerability Report CSV")
+                print()
+                try:
+                    choice = input("Select type [1]: ").strip()
+                    import_type = {"1": "json", "2": "prisma", "3": "vuln"}.get(choice or "1", "json")
+                except (KeyboardInterrupt, EOFError):
+                    print("\nAborted.")
+                    return
+            else:
+                err("Cannot determine file type. Use .json or .csv extensions.")
+                return
+
+        parsed_flags = parse_flags(args[1:], ["merge", "max-devices", "only-iot", "enable-security", "security-percentage"])
+        
+        merge_choice = "merge" in args or parsed_flags.get("merge")
+        if merge_choice is None or (not merge_choice and "merge" not in args):
+            merge_choice = False
+            for arg in args[1:]:
+                if arg.lower() == "--merge":
+                    merge_choice = True
+                    break
+            if not merge_choice and sys.stdin.isatty() and import_type in ("prisma", "vuln"):
+                try:
+                    c_merge = input("Merge with existing simulated devices? [y/N]: ").strip().lower()
+                    merge_choice = (c_merge == "y")
+                except (KeyboardInterrupt, EOFError):
+                    print("\nAborted.")
+                    return
+
+        if not merge_choice:
+            if sys.stdin.isatty():
+                try:
+                    c_confirm = input("Warning: This will overwrite/replace your current IoT simulation setup. Proceed? [y/N]: ").strip().lower()
+                    if c_confirm != "y":
+                        print("Aborted.")
+                        return
+                except (KeyboardInterrupt, EOFError):
+                    print("\nAborted.")
+                    return
+
+        if import_type == "json":
+            info(f"Importing Stigix IoT JSON configuration from {file_path}...")
+            r = api_post("/api/iot/config/import", {"content": file_content})
+            if r and r.get("success"):
+                ok("IoT configuration imported successfully!")
+            else:
+                err(f"Import failed: {r.get('error') if r else 'Unknown error'}")
+
+        elif import_type == "prisma":
+            max_dev = parsed_flags.get("max-devices")
+            if max_dev is None:
+                for i, arg in enumerate(args):
+                    if arg in ("--max", "--max-devices") and i + 1 < len(args):
+                        max_dev = args[i+1]
+                        break
+            if max_dev is None:
+                if sys.stdin.isatty():
+                    try:
+                        max_dev_input = input("Max devices to import [100]: ").strip()
+                        max_dev = int(max_dev_input) if max_dev_input else 100
+                    except (ValueError, KeyboardInterrupt, EOFError):
+                        max_dev = 100
+                else:
+                    max_dev = 100
+            else:
+                try:
+                    max_dev = int(max_dev)
+                except ValueError:
+                    max_dev = 100
+
+            only_iot = "only-iot" in args or parsed_flags.get("only-iot")
+            if only_iot is None or (not only_iot and "only-iot" not in args):
+                only_iot = False
+                for arg in args:
+                    if arg == "--only-iot":
+                        only_iot = True
+                        break
+                if not only_iot and sys.stdin.isatty():
+                    try:
+                        only_iot_input = input("Only import IoT category devices? [Y/n]: ").strip().lower()
+                        only_iot = (only_iot_input != "n")
+                    except (KeyboardInterrupt, EOFError):
+                        only_iot = True
+
+            bad_behavior = "auto"
+            sec_pct = 30
+            enable_security = False
+            
+            for arg in args:
+                if arg == "--enable-security":
+                    enable_security = True
+                    bad_behavior = "all"
+            if "security-percentage" in parsed_flags:
+                bad_behavior = "percentage"
+                try:
+                    sec_pct = int(parsed_flags["security-percentage"])
+                except ValueError:
+                    sec_pct = 30
+            for i, arg in enumerate(args):
+                if arg in ("--security-pct", "--security-percentage") and i + 1 < len(args):
+                    bad_behavior = "percentage"
+                    try:
+                        sec_pct = int(args[i+1])
+                    except ValueError:
+                        sec_pct = 30
+
+            if sys.stdin.isatty() and bad_behavior == "auto" and not enable_security:
+                print("\nSelect Security / Bad Behavior configuration:")
+                print("  1: Auto (Enable based on risk level in CSV)")
+                print("  2: All (Enable attacks on all imported devices)")
+                print("  3: None (Disable attacks on all imported devices)")
+                print("  4: Percentage (Specify custom percentage of devices to be malicious)")
+                print()
+                try:
+                    sec_choice = input("Select option [1]: ").strip()
+                    if sec_choice == "2":
+                        bad_behavior = "all"
+                        enable_security = True
+                    elif sec_choice == "3":
+                        bad_behavior = "none"
+                        sec_pct = 0
+                    elif sec_choice == "4":
+                        bad_behavior = "percentage"
+                        pct_input = input("Percentage of devices [30]: ").strip()
+                        sec_pct = int(pct_input) if pct_input else 30
+                    else:
+                        bad_behavior = "auto"
+                except (ValueError, KeyboardInterrupt, EOFError):
+                    bad_behavior = "auto"
+
+            payload = {
+                "csv_content": file_content,
+                "merge": merge_choice,
+                "max_devices": max_dev,
+                "only_iot": only_iot,
+            }
+            if bad_behavior == "all":
+                payload["enable_security"] = True
+            elif bad_behavior == "none":
+                payload["security_percentage"] = 0
+            elif bad_behavior == "percentage":
+                payload["security_percentage"] = sec_pct
+
+            info(f"Importing Prisma IoT CSV from {file_path}...")
+            r = api_post("/api/iot/import-prisma-csv", payload)
+            if r and r.get("success"):
+                ok(f"Prisma CSV imported: {r.get('imported')} devices ({r.get('bad_behavior')} bad behavior)")
+            else:
+                err(f"Import failed: {r.get('detail', r.get('error', 'Unknown error')) if r else 'Unknown error'}")
+
+        elif import_type == "vuln":
+            max_dev = parsed_flags.get("max-devices")
+            if max_dev is None:
+                for i, arg in enumerate(args):
+                    if arg in ("--max", "--max-devices") and i + 1 < len(args):
+                        max_dev = args[i+1]
+                        break
+            if max_dev is None:
+                if sys.stdin.isatty():
+                    try:
+                        max_dev_input = input("Max devices to import [50]: ").strip()
+                        max_dev = int(max_dev_input) if max_dev_input else 50
+                    except (ValueError, KeyboardInterrupt, EOFError):
+                        max_dev = 50
+                else:
+                    max_dev = 50
+            else:
+                try:
+                    max_dev = int(max_dev)
+                except ValueError:
+                    max_dev = 50
+
+            only_iot = "only-iot" in args or parsed_flags.get("only-iot")
+            if only_iot is None or (not only_iot and "only-iot" not in args):
+                only_iot = False
+                for arg in args:
+                    if arg == "--only-iot":
+                        only_iot = True
+                        break
+                if not only_iot and sys.stdin.isatty():
+                    try:
+                        only_iot_input = input("Only import IoT category devices? [Y/n]: ").strip().lower()
+                        only_iot = (only_iot_input != "n")
+                    except (KeyboardInterrupt, EOFError):
+                        only_iot = True
+
+            bad_behavior = "auto"
+            sec_pct = 80
+            enable_security = False
+            
+            for arg in args:
+                if arg == "--enable-security":
+                    enable_security = True
+                    bad_behavior = "all"
+            if "security-percentage" in parsed_flags:
+                bad_behavior = "percentage"
+                try:
+                    sec_pct = int(parsed_flags["security-percentage"])
+                except ValueError:
+                    sec_pct = 80
+            for i, arg in enumerate(args):
+                if arg in ("--security-pct", "--security-percentage") and i + 1 < len(args):
+                    bad_behavior = "percentage"
+                    try:
+                        sec_pct = int(args[i+1])
+                    except ValueError:
+                        sec_pct = 80
+
+            if sys.stdin.isatty() and bad_behavior == "auto" and not enable_security:
+                print("\nSelect Security / Bad Behavior configuration:")
+                print("  1: Auto (Enable based on risk level in CSV)")
+                print("  2: All (Enable attacks on all imported devices)")
+                print("  3: None (Disable attacks on all imported devices)")
+                print("  4: Percentage (Specify custom percentage of devices to be malicious)")
+                print()
+                try:
+                    sec_choice = input("Select option [1]: ").strip()
+                    if sec_choice == "2":
+                        bad_behavior = "all"
+                        enable_security = True
+                    elif sec_choice == "3":
+                        bad_behavior = "none"
+                        sec_pct = 0
+                    elif sec_choice == "4":
+                        bad_behavior = "percentage"
+                        pct_input = input("Percentage of devices [80]: ").strip()
+                        sec_pct = int(pct_input) if pct_input else 80
+                    else:
+                        bad_behavior = "auto"
+                except (ValueError, KeyboardInterrupt, EOFError):
+                    bad_behavior = "auto"
+
+            payload = {
+                "csv_content": file_content,
+                "merge": merge_choice,
+                "max_devices": max_dev,
+                "only_iot": only_iot,
+            }
+            if bad_behavior == "all":
+                payload["enable_security"] = True
+            elif bad_behavior == "none":
+                payload["security_percentage"] = 0
+            elif bad_behavior == "percentage":
+                payload["security_percentage"] = sec_pct
+
+            info(f"Importing Vulnerability CSV from {file_path}...")
+            r = api_post("/api/iot/import-vuln-csv", payload)
+            if r and r.get("success"):
+                ok(f"Vulnerability CSV imported: {r.get('imported')} devices ({r.get('bad_behavior')} bad behavior, {r.get('ics_cert_devices', 0)} ICS-CERT)")
+            else:
+                err(f"Import failed: {r.get('detail', r.get('error', 'Unknown error')) if r else 'Unknown error'}")
+
+    elif sub == "export":
+        file_path = args[1] if len(args) > 1 else None
+        if not file_path:
+            if sys.stdin.isatty():
+                try:
+                    file_path = input("Enter path to save JSON file [iot-devices.json]: ").strip()
+                except (KeyboardInterrupt, EOFError):
+                    print("\nAborted.")
+                    return
+            if not file_path:
+                file_path = "iot-devices.json"
+
+        info(f"Exporting IoT simulation configuration to {file_path}...")
+        r = api_get("/api/iot/config/export")
+        if r:
+            try:
+                with open(file_path, "w", encoding="utf-8") as f:
+                    json.dump(r, f, indent=2)
+                ok(f"IoT configuration exported to {file_path}")
+            except Exception as e:
+                err(f"Failed to write export file: {e}")
+
     else:
         _help_section("IoT SIMULATION", [
             ("iot list",          "List simulated devices"),
@@ -2829,6 +3165,8 @@ def cmd_iot(args):
             ("iot stop [id]",     "Stop one or all devices"),
             ("iot stats",         "Show simulation stats"),
             ("iot vulns [n]",     "Show vulnerability findings"),
+            ("iot import <file>", "Import JSON config or CSV report"),
+            ("iot export [file]", "Export devices to JSON file"),
         ])
 
 
@@ -3090,6 +3428,8 @@ def cmd_help(args):
     iot stop [id]          Stop one or all
     iot stats              Simulation stats
     iot vulns [n]          Vulnerability findings
+    iot import <file>      Import config/CSV
+    iot export [file]      Export config to JSON
 
   {c('1','SYSTEM')}
     system info            Health, memory, disk
@@ -3181,22 +3521,27 @@ class StigixCompleter(Completer):
         if not isinstance(subcmds, dict) or subcmd not in subcmds:
             return
 
-        # Special case: suggest local JSON files for import / export
+        # Special case: suggest local JSON or CSV files for import / export
         if subcmd in ("import", "export"):
             import glob
             files = set()
-            # 1. Current working directory
-            for f in glob.glob("*.json"):
-                files.add(f)
-            # 2. config/
-            if os.path.exists("config"):
-                for f in glob.glob("config/*.json"):
+            patterns = ["*.json"]
+            if subcmd == "import":
+                patterns.append("*.csv")
+                
+            for pattern in patterns:
+                # 1. Current working directory
+                for f in glob.glob(pattern):
                     files.add(f)
-            # 3. /app/config/
-            if os.path.exists("/app/config"):
-                for f in glob.glob("/app/config/*.json"):
-                    files.add(f"/app/config/{os.path.basename(f)}")
-                    files.add(os.path.basename(f))
+                # 2. config/
+                if os.path.exists("config"):
+                    for f in glob.glob(f"config/{pattern}"):
+                        files.add(f)
+                # 3. /app/config/
+                if os.path.exists("/app/config"):
+                    for f in glob.glob(f"/app/config/{pattern}"):
+                        files.add(f"/app/config/{os.path.basename(f)}")
+                        files.add(os.path.basename(f))
             
             for f in sorted(files):
                 if f.startswith(current_word):
@@ -3310,7 +3655,7 @@ COMPLETER_TREE = {
     "voice":       {
         "status": None, "stop": None, "stats": None, "start": None,
     },
-    "iot":         {"list": None, "start": None, "stop": None, "stats": None, "vulns": None},
+    "iot":         {"list": None, "start": None, "stop": None, "stats": None, "vulns": None, "import": None, "export": None},
     "system":      {"info": None, "interfaces": None, "logs": None, "restart": None, "upgrade": None},
     "help":        None,
     "?":           None,
