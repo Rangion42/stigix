@@ -9,9 +9,9 @@ Use this skill to diagnose why instances are not discovering each other.
 
 ## 1 — Check Registry Status API
 
-Run this command on the local instance:
+Run this command on the local instance (replace JWT_TOKEN with a valid session token, or check status via the CLI connect command):
 ```bash
-curl -s http://localhost:5000/api/registry/status | jq .
+curl -s -H "Authorization: Bearer $JWT_TOKEN" http://localhost:8080/api/registry/status | jq .
 ```
 Verify:
 - `is_registered`: must be `true`.
@@ -41,4 +41,4 @@ If you have access to the Cloudflare dashboard:
 
 - **Mismatching Hash**: If a PoC was registered with a wrong `CLIENT_ID`, you must wait for the 48h expiration or manually flush the KV key `auth:poc:<TSG_ID>`.
 - **Environment Incomplete**: Ensure `STIGIX_REGISTRY_ENABLED=true` is set.
-- **Port 5000**: Ensure the backend is running and listening for discovery updates.
+- **Port 8080**: Ensure the backend is running and listening for discovery updates.
