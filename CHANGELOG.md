@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.63] - 2026-05-28
+### Fixed
+- **stigix-cli** 🔑 Fixed a session token restoring bug when switching profiles or connecting directly by URL. Prevents falling back to the wrong active token from a different instance/URL.
+
 ## [v1.4.0-patch.62] - 2026-05-28
 ### Added
 - **stigix-cli** ⚙️ Added `iot import` subcommand supporting JSON configs, Prisma IoT Security Assets Inventory CSV reports, and Palo Alto CVE/Vulnerability Report CSV exports.

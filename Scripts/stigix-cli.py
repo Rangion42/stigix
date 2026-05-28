@@ -94,8 +94,16 @@ def load_session():
             # Restore token specific to current STIGIX_URL, or fall back to legacy 'token'
             if STIGIX_URL in INSTANCE_TOKENS:
                 JWT_TOKEN = INSTANCE_TOKENS[STIGIX_URL]
-            else:
+            elif STIGIX_URL == saved_url or not saved_url:
                 JWT_TOKEN = data.get("token")
+            else:
+                # Check if any profile matches the current STIGIX_URL and has a token
+                for name, prof in PROFILES.items():
+                    if prof.get("url") == STIGIX_URL and prof.get("token"):
+                        JWT_TOKEN = prof.get("token")
+                        break
+                else:
+                    JWT_TOKEN = None
         except Exception:
             pass
 
@@ -3317,6 +3325,11 @@ def cmd_connect(args):
             else:
                 url = f"http://{url}"
         tok = INSTANCE_TOKENS.get(url)
+        if not tok:
+            for name, prof in PROFILES.items():
+                if prof.get("url") == url and prof.get("token"):
+                    tok = prof.get("token")
+                    break
 
     old_url = STIGIX_URL
     old_tok = JWT_TOKEN
