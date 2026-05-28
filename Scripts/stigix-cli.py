@@ -1245,7 +1245,7 @@ def cmd_experience(args):
         if r:
             targets = r if isinstance(r, list) else r.get("targets", [])
             if not targets:
-                dim("  No custom digital experience targets configured")
+                dim("  No custom target probes configured")
                 return
             rows = []
             for idx, t in enumerate(targets, 1):
@@ -1314,7 +1314,7 @@ def cmd_experience(args):
                     print()
                     return
             if not target:
-                err("Target is required. Usage: experience add --target <host_or_url>")
+                err("Target is required. Usage: probes add --target <host_or_url>")
                 return
         
         # 3. Port (optional helper, mostly for TCP/UDP if not in target)
@@ -1586,14 +1586,14 @@ def cmd_experience(args):
         table(["Probe Name", "Target/URL", "Type", "Status", "Score", "Latency (avg)", "Reliability"], rows)
 
     else:
-        _help_section("DIGITAL EXPERIENCE", [
-            ("experience list",           "List connectivity probe targets"),
-            ("experience add",            "Add a new target (interactive or --flags)"),
-            ("experience remove <id>",    "Remove a target"),
-            ("experience probe",          "Run all probes now"),
-            ("experience stats",          "Show historical scores, latency, and reliability"),
-            ("experience export [file]",  "Export custom probes to JSON"),
-            ("experience import <file>",  "Import custom probes from JSON"),
+        _help_section("TARGET PROBES", [
+            ("probes list",           "List connectivity probe targets"),
+            ("probes add",            "Add a new target (interactive or --flags)"),
+            ("probes remove <id>",    "Remove a target"),
+            ("probes probe",          "Run all probes now"),
+            ("probes stats",          "Show historical scores, latency, and reliability"),
+            ("probes export [file]",  "Export custom probes to JSON"),
+            ("probes import <file>",  "Import custom probes from JSON"),
         ])
         dim("  Flags for add: --name  --host  --type {http,ping,dns}  --port  --timeout")
 
@@ -1607,7 +1607,7 @@ def cmd_peer(args):
         if r:
             peers = r if isinstance(r, list) else r.get("targets", [])
             if not peers:
-                dim("  No Stigix peers configured")
+                dim("  No Stigix targets configured")
                 return
             rows = []
             for p in peers:
@@ -1665,12 +1665,12 @@ def cmd_peer(args):
         }
         r = api_post("/api/targets", body)
         if r:
-            ok(f"Peer '{name}' added successfully")
+            ok(f"Stigix target '{name}' added successfully")
 
     elif sub in ("remove", "enable", "disable"):
         pid = args[1] if len(args) > 1 else None
         if not pid:
-            err(f"Usage: peer {sub} <name/id/host>")
+            err(f"Usage: target {sub} <name/id/host>")
             return
 
         # Fetch targets from server to find match
@@ -1695,10 +1695,10 @@ def cmd_peer(args):
                 matches.append(p)
 
         if not matches:
-            err(f"Peer target '{pid}' not found")
+            err(f"Stigix target '{pid}' not found")
             return
         elif len(matches) > 1:
-            err(f"Multiple peers matched '{pid}':")
+            err(f"Multiple targets matched '{pid}':")
             for m in matches:
                 info(f"  - {m.get('id')[:12]} | {m.get('name')} | {m.get('host')}")
             return
@@ -1711,7 +1711,7 @@ def cmd_peer(args):
         if sub == "remove":
             if sys.stdin.isatty():
                 try:
-                    confirm = input(f"Are you sure you want to delete peer '{name}' ({host})? [y/N]: ").strip().lower()
+                    confirm = input(f"Are you sure you want to delete Stigix target '{name}' ({host})? [y/N]: ").strip().lower()
                     if confirm != 'y':
                         return
                 except (KeyboardInterrupt, EOFError):
@@ -1719,15 +1719,15 @@ def cmd_peer(args):
                     return
             r = api_delete(f"/api/targets/{full_id}")
             if r:
-                ok(f"Peer target '{name}' ({host}) removed")
+                ok(f"Stigix target '{name}' ({host}) removed")
         else:
             body = {"enabled": sub == "enable"}
             r = api_put(f"/api/targets/{full_id}", body)
             if r:
-                ok(f"Peer target '{name}' ({host}) {'enabled' if sub == 'enable' else 'disabled'}")
+                ok(f"Stigix target '{name}' ({host}) {'enabled' if sub == 'enable' else 'disabled'}")
 
     elif sub == "export":
-        filepath = args[1] if len(args) > 1 else "stigix-peers-export.json"
+        filepath = args[1] if len(args) > 1 else "stigix-targets-export.json"
         targets = api_get("/api/targets")
         if targets is None:
             return
@@ -1744,7 +1744,7 @@ def cmd_peer(args):
     elif sub == "import":
         filepath = args[1] if len(args) > 1 else None
         if not filepath:
-            err("Usage: peer import <filepath>")
+            err("Usage: target import <filepath>")
             return
         data = read_json_file(filepath)
         if data is None:
@@ -1757,7 +1757,7 @@ def cmd_peer(args):
         # Warning confirmation to avoid accidental override
         if sys.stdin.isatty():
             try:
-                confirm = input(c("33", "⚠ Warning: Importing will completely OVERWRITE the peer targets on the remote instance. Proceed? [y/N]: ")).strip().lower()
+                confirm = input(c("33", "⚠ Warning: Importing will completely OVERWRITE the Stigix targets on the remote instance. Proceed? [y/N]: ")).strip().lower()
                 if confirm != 'y':
                     print("Aborted.")
                     return
@@ -1767,17 +1767,17 @@ def cmd_peer(args):
 
         r = api_post("/api/targets/import", {"targets": targets_to_import})
         if r:
-            ok("Peer targets imported successfully")
+            ok("Stigix targets imported successfully")
 
     else:
-        _help_section("PEER TARGETS", [
-            ("peer list",             "List configured Stigix targets/peers"),
-            ("peer add",              "Add a new Stigix target manually"),
-            ("peer remove <id>",      "Remove a Stigix target"),
-            ("peer enable <id>",      "Enable a Stigix target"),
-            ("peer disable <id>",     "Disable a Stigix target"),
-            ("peer export [file]",    "Export peer targets to JSON"),
-            ("peer import <file>",    "Import peer targets from JSON"),
+        _help_section("STIGIX TARGETS", [
+            ("target list",             "List configured Stigix targets"),
+            ("target add",              "Add a new Stigix target manually"),
+            ("target remove <id>",      "Remove a Stigix target"),
+            ("target enable <id>",      "Enable a Stigix target"),
+            ("target disable <id>",     "Disable a Stigix target"),
+            ("target export [file]",    "Export targets to JSON"),
+            ("target import <file>",    "Import targets from JSON"),
         ])
         dim("  Flags for add: --name  --host  --voice {true,false}  --failover {true,false}")
         dim("                 --xfr {true,false}  --security {true,false}  --connectivity {true,false}")
@@ -2842,8 +2842,16 @@ def cmd_iot(args):
     elif sub == "start":
         did = args[1] if len(args) > 1 else None
         if not did:
-            r = api_post("/api/iot/start-batch")
-            if r: ok("All IoT devices started")
+            devices_res = api_get("/api/iot/devices")
+            if devices_res is None:
+                return
+            devices = devices_res if isinstance(devices_res, list) else devices_res.get("devices", [])
+            ids = [d["id"] for d in devices if "id" in d]
+            if not ids:
+                info("No IoT devices configured.")
+                return
+            r = api_post("/api/iot/start-batch", {"ids": ids})
+            if r: ok(f"Started {len(ids)} IoT devices")
         else:
             r = api_post(f"/api/iot/start/{did}")
             if r: ok(f"Device {did} started")
@@ -2851,8 +2859,16 @@ def cmd_iot(args):
     elif sub == "stop":
         did = args[1] if len(args) > 1 else None
         if not did:
-            r = api_post("/api/iot/stop-batch")
-            if r: ok("All IoT devices stopped")
+            devices_res = api_get("/api/iot/devices")
+            if devices_res is None:
+                return
+            devices = devices_res if isinstance(devices_res, list) else devices_res.get("devices", [])
+            ids = [d["id"] for d in devices if "id" in d]
+            if not ids:
+                info("No IoT devices configured.")
+                return
+            r = api_post("/api/iot/stop-batch", {"ids": ids})
+            if r: ok(f"Stopped {len(ids)} IoT devices")
         else:
             r = api_post(f"/api/iot/stop/{did}")
             if r: ok(f"Device {did} stopped")
@@ -3442,23 +3458,23 @@ def cmd_help(args):
     security results [n]   Last N results (default 20)
     security clear         Clear history
 
-  {c('1','DIGITAL EXPERIENCE')}
-    experience list        List connectivity probe targets
-    experience stats       Show historical scores, latency, and reliability
-    experience add         Add a new target (--name --host --type --port)
-    experience remove <id> Remove a target
-    experience probe       Run all probes now
-    experience export [f]  Export custom probes to JSON
-    experience import <f>  Import custom probes from JSON
+  {c('1','TARGET PROBES')}
+    probes list            List connectivity probe targets
+    probes stats           Show historical scores, latency, and reliability
+    probes add             Add a new probe (--name --host --type --port)
+    probes remove <id>     Remove a probe
+    probes probe           Run all probes now
+    probes export [file]   Export custom probes to JSON
+    probes import <file>   Import custom probes from JSON
 
-  {c('1','PEER TARGETS')}
-    peer list              List configured Stigix targets/peers
-    peer add               Add a Stigix target manually (--name --host)
-    peer remove <id>       Remove a Stigix target
-    peer enable <id>       Enable a Stigix target
-    peer disable <id>      Disable a Stigix target
-    peer export [file]     Export peer targets to JSON
-    peer import <file>     Import peer targets from JSON
+  {c('1','STIGIX TARGETS')}
+    target list            List configured Stigix targets
+    target add             Add a target manually (--name --host)
+    target remove <id>     Remove a target
+    target enable <id>     Enable a target
+    target disable <id>    Disable a target
+    target export [file]   Export targets to JSON
+    target import <file>   Import targets from JSON
 
   {c('1','SPEEDTEST / XFR BANDWIDTH')}
     speedtest list         Show past speedtest jobs
@@ -3638,7 +3654,9 @@ DISPATCH = {
     "traffic":     cmd_traffic,
     "security":    cmd_security,
     "experience":  cmd_experience,
-    "target":      cmd_experience,
+    "probes":      cmd_experience,
+    "probe":       cmd_experience,
+    "target":      cmd_peer,
     "peer":        cmd_peer,
     "speedtest":   cmd_speedtest,
     "failover":    cmd_failover,
@@ -3681,12 +3699,30 @@ COMPLETER_TREE = {
                  "--type": {"http", "https", "ping", "icmp", "tcp", "udp", "dns"},
                  "--port": None, "--timeout": None},
     },
-    "target":      {
+    "probes":      {
         "list": None, "probe": None, "remove": None, "stats": None,
         "import": None, "export": None,
         "add":  {"--name": None, "--target": None, "--host": None, "--url": None,
                  "--type": {"http", "https", "ping", "icmp", "tcp", "udp", "dns"},
                  "--port": None, "--timeout": None},
+    },
+    "probe":       {
+        "list": None, "probe": None, "remove": None, "stats": None,
+        "import": None, "export": None,
+        "add":  {"--name": None, "--target": None, "--host": None, "--url": None,
+                 "--type": {"http", "https", "ping", "icmp", "tcp", "udp", "dns"},
+                 "--port": None, "--timeout": None},
+    },
+    "target":      {
+        "list": None, "remove": None, "enable": None, "disable": None,
+        "import": None, "export": None,
+        "add":  {"--name": None, "--host": None,
+                 "--voice": {"true", "false"},
+                 "--convergence": {"true", "false"},
+                 "--failover": {"true", "false"},
+                 "--xfr": {"true", "false"},
+                 "--security": {"true", "false"},
+                 "--connectivity": {"true", "false"}},
     },
     "peer":        {
         "list": None, "remove": None, "enable": None, "disable": None,

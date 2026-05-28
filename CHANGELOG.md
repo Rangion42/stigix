@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.66] - 2026-05-28
+### Added
+- **stigix-cli** 🏷️ Renamed CLI command `peer` to `target` to match the Stigix Targets UI dashboard. A backward-compatible `peer` alias is preserved.
+- **stigix-cli** 📡 Renamed CLI command `experience` (and its previous alias `target`) to `probes` (with `probe` and `experience` preserved as aliases) to match the Synthetic Probes UI dashboard.
+- **docs** 📘 Updated `docs/STIGIX_CLI.md` with latest command definitions and documented new VyOS/IoT config import/export capabilities.
+### Fixed
+- **stigix-cli** ⚙️ Fixed `iot start` and `iot stop` batch commands (run without argument) by dynamically querying active device IDs and sending them in the POST body to resolve the `IDs array required` backend error.
+
 ## [v1.4.0-patch.65] - 2026-05-28
 ### Added
 - **stigix-cli** 📥 Added `vyos import <file>` subcommand to import VyOS routers and sequences unified configuration from a local JSON file.

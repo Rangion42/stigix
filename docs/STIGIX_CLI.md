@@ -157,6 +157,8 @@ Control and trigger sequence configurations on VyOS routers.
 *   `vyos run <sequence-id>` — Trigger a sequence (e.g., block/unblock WAN links).
 *   `vyos stop <sequence-id>` — Terminate a running sequence.
 *   `vyos history [n]` — Show past command sequence execution history.
+*   `vyos export [file]` — Export current router and sequence configuration to a local JSON file (defaults to `vyos-config.json`).
+*   `vyos import <file>` — Overwrite the current VyOS configuration from a local JSON file.
 
 ---
 
@@ -168,6 +170,8 @@ Manage simulated IoT devices and view vulnerability findings.
 *   `iot stop [device-id]` — Stop simulation for one or all IoT devices.
 *   `iot stats` — Show total sent packages and simulation bandwidth.
 *   `iot vulns [n]` — View vulnerability scan logs (CVE findings, severity, and device mappings).
+*   `iot export [file]` — Export simulated IoT device profiles into standard JSON configurations (defaults to `iot-devices.json`).
+*   `iot import <file> [flags]` — Import device setups from a file. Auto-detects Stigix JSON configurations, Prisma IoT Assets Inventory CSV, and Palo Alto CVE Report CSV, supporting flags like `--merge`, `--max-devices <N>`, `--only-iot`, and `--enable-security`.
 
 ---
 
@@ -195,28 +199,36 @@ Stigix simulates voice traffic in the background using a multi-stream daemon. Ca
 
 ---
 
-### 8. Digital Experience Management (`experience`)
-*   `experience list` — List targets configured for connectivity/DEM probes.
-*   `experience add --name <name> --host <ip/domain> --type <http/ping/dns>` — Add a new probe target.
-*   `experience remove <id>` — Remove a probe target.
-*   `experience probe` — Force execute a connectivity probe against all targets.
-*(Note: the `target` command is supported as a backward-compatible alias for `experience`)*
+### 8. Target Probes (`probes`)
+Configure and run active latency, availability, and score probes.
+
+*   `probes list` — List targets configured for connectivity/DEM probes.
+*   `probes stats` — Show global scores, latency averages, and packet reliability statistics.
+*   `probes add --name <name> --host <ip/domain> --type <http/https/ping/dns>` — Add a new probe target.
+*   `probes remove <id>` — Remove a probe target.
+*   `probes probe` — Force execute a connectivity probe against all targets.
+*   `probes export [file]` — Export custom probes configuration to JSON.
+*   `probes import <file>` — Import custom probes configuration from JSON.
+*(Note: the `experience` and `probe` commands are supported as backward-compatible aliases for `probes`)*
 
 ---
 
-### 9. Peer Targets (`peer`)
-Manually manage Stigix peer nodes (which host echo responders, VoIP targets, and speedtest servers).
+### 9. Stigix Targets (`target`)
+Manually manage Stigix target nodes (which host echo responders, VoIP targets, and speedtest servers).
 
-*   `peer list` — List all configured Stigix peer targets, their capabilities, and online status.
-*   `peer add` — Add a new peer target manually using **Interactive Mode**. If you run `peer add` without any flags, the console will prompt you for the target parameters step-by-step:
+*   `target list` — List all configured Stigix targets, their capabilities, and online status.
+*   `target add` — Add a new target manually using **Interactive Mode**. If you run `target add` without any flags, the console will prompt you for the target parameters step-by-step:
     ```text
     Name (e.g. Branch-1): Branch-1
     Host (IP or FQDN): 192.168.1.120
     ```
     *By default, interactive mode will enable all capabilities (`voice`, `convergence`, `xfr`, `security`, `connectivity`) on the new target.*
-*   `peer add --name <name> --host <ip/domain>` — Add a new peer target using explicit flags. Optional flags can be used to disable specific capabilities: `--voice {true|false}`, `--convergence {true|false}`, `--xfr {true|false}`, `--security {true|false}`, `--connectivity {true|false}`.
-*   `peer remove <name/id/host>` — Delete a peer target by name, host IP, or truncated 12-character ID. In interactive mode, it will prompt for confirmation (`Are you sure...`).
-*   `peer enable <name/id/host>` / `peer disable <name/id/host>` — Enable or disable a peer target by name, host IP, or truncated 12-character ID.
+*   `target add --name <name> --host <ip/domain>` — Add a new target using explicit flags. Optional flags can be used to disable specific capabilities: `--voice {true|false}`, `--convergence {true|false}`, `--xfr {true|false}`, `--security {true|false}`, `--connectivity {true|false}`.
+*   `target remove <name/id/host>` — Delete a target by name, host IP, or truncated 12-character ID. In interactive mode, it will prompt for confirmation (`Are you sure...`).
+*   target enable <name/id/host> / target disable <name/id/host> — Enable or disable a target by name, host IP, or truncated 12-character ID.
+*   `target export [file]` — Export targets to JSON.
+*   `target import <file>` — Import targets from JSON.
+*(Note: the `peer` command is supported as a backward-compatible alias for `target`)*
 
 ---
 
@@ -259,7 +271,7 @@ Traffic    [RUNNING]
 
 ### 2. List Connectivity/DEM Probes
 ```bash
-docker exec -it stigix stigix-cli --exec "experience list"
+docker exec -it stigix stigix-cli --exec "probes list"
 ```
 **Output:**
 ```text
@@ -278,7 +290,7 @@ docker exec -it stigix stigix-cli --exec "experience list"
 
 ### 3. List Configured Stigix Peer Nodes
 ```bash
-docker exec -it stigix stigix-cli --exec "peer list"
+docker exec -it stigix stigix-cli --exec "target list"
 ```
 **Output:**
 ```text
