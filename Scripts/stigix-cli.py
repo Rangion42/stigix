@@ -433,8 +433,45 @@ def cmd_traffic(args):
             print()
             ok("Watch stopped")
 
+    elif sub == "export":
+        filepath = args[1] if len(args) > 1 else "stigix-traffic-export.json"
+        r = api_get("/api/config/applications/export?format=json")
+        if r is None:
+            return
+        try:
+            with open(filepath, "w") as f:
+                json.dump(r, f, indent=2)
+            ok(f"Exported traffic applications config to {filepath}")
+        except Exception as e:
+            err(f"Failed to write file: {e}")
+
+    elif sub == "import":
+        filepath = args[1] if len(args) > 1 else None
+        if not filepath:
+            err("Usage: traffic import <filepath>")
+            return
+        try:
+            with open(filepath, "r") as f:
+                content = json.dumps(json.load(f))
+        except Exception as e:
+            err(f"Failed to read/parse file: {e}")
+            return
+        r = api_post("/api/config/applications/import", {"content": content})
+        if r:
+            ok("Traffic applications config imported successfully")
+
     else:
-        print("Usage: traffic start | stop | status | stats | logs | reset | watch [interval_sec]")
+        _help_section("TRAFFIC CONTROL / STATS", [
+            ("traffic start",          "Start traffic generation"),
+            ("traffic stop",           "Stop traffic generation"),
+            ("traffic status",         "Show current traffic state"),
+            ("traffic stats",          "Show traffic statistics"),
+            ("traffic logs",           "Show last 30 backend log lines"),
+            ("traffic reset",          "Reset traffic statistics"),
+            ("traffic watch [sec]",    "Live poll traffic stats"),
+            ("traffic export [file]",  "Export traffic configuration to JSON"),
+            ("traffic import <file>",  "Import traffic configuration from JSON"),
+        ])
 
 
 def cmd_security(args):
@@ -640,12 +677,45 @@ def cmd_experience(args):
                              status_badge(probe.get("status","?"))])
             table(["Target", "Type", "RTT", "Status"], rows)
 
+    elif sub == "export":
+        filepath = args[1] if len(args) > 1 else "stigix-probes-export.json"
+        r = api_get("/api/connectivity/custom/export")
+        if r is None:
+            return
+        try:
+            with open(filepath, "w") as f:
+                json.dump(r, f, indent=2)
+            ok(f"Exported custom experience probes to {filepath}")
+        except Exception as e:
+            err(f"Failed to write file: {e}")
+
+    elif sub == "import":
+        filepath = args[1] if len(args) > 1 else None
+        if not filepath:
+            err("Usage: experience import <filepath>")
+            return
+        try:
+            with open(filepath, "r") as f:
+                data = json.load(f)
+        except Exception as e:
+            err(f"Failed to read/parse file: {e}")
+            return
+        endpoints = data if isinstance(data, list) else data.get("endpoints")
+        if not endpoints:
+            err("Invalid format: expected a JSON array or an object containing an 'endpoints' array")
+            return
+        r = api_post("/api/connectivity/custom", {"endpoints": endpoints})
+        if r:
+            ok("Experience probes imported successfully")
+
     else:
         _help_section("DIGITAL EXPERIENCE", [
             ("experience list",           "List connectivity probe targets"),
             ("experience add",            "Add a new target (interactive or --flags)"),
             ("experience remove <id>",    "Remove a target"),
             ("experience probe",          "Run all probes now"),
+            ("experience export [file]",  "Export custom probes to JSON"),
+            ("experience import <file>",  "Import custom probes from JSON"),
         ])
         dim("  Flags for add: --name  --host  --type {http,ping,dns}  --port  --timeout")
 
@@ -778,6 +848,45 @@ def cmd_peer(args):
             if r:
                 ok(f"Peer target '{name}' ({host}) {'enabled' if sub == 'enable' else 'disabled'}")
 
+    elif sub == "export":
+        filepath = args[1] if len(args) > 1 else "stigix-peers-export.json"
+        targets = api_get("/api/targets")
+        if targets is None:
+            return
+        targets_list = targets if isinstance(targets, list) else targets.get("targets", [])
+        data_to_export = [{
+            "name": t.get("name"),
+            "host": t.get("host"),
+            "enabled": t.get("enabled"),
+            "capabilities": t.get("capabilities"),
+            "ports": t.get("ports")
+        } for t in targets_list]
+        try:
+            with open(filepath, "w") as f:
+                json.dump(data_to_export, f, indent=2)
+            ok(f"Exported peer targets to {filepath}")
+        except Exception as e:
+            err(f"Failed to write file: {e}")
+
+    elif sub == "import":
+        filepath = args[1] if len(args) > 1 else None
+        if not filepath:
+            err("Usage: peer import <filepath>")
+            return
+        try:
+            with open(filepath, "r") as f:
+                data = json.load(f)
+        except Exception as e:
+            err(f"Failed to read/parse file: {e}")
+            return
+        targets_to_import = data if isinstance(data, list) else data.get("targets")
+        if not targets_to_import:
+            err("Invalid format: expected a JSON array or an object containing a 'targets' array")
+            return
+        r = api_post("/api/targets/import", {"targets": targets_to_import})
+        if r:
+            ok("Peer targets imported successfully")
+
     else:
         _help_section("PEER TARGETS", [
             ("peer list",             "List configured Stigix targets/peers"),
@@ -785,6 +894,8 @@ def cmd_peer(args):
             ("peer remove <id>",      "Remove a Stigix target"),
             ("peer enable <id>",      "Enable a Stigix target"),
             ("peer disable <id>",     "Disable a Stigix target"),
+            ("peer export [file]",    "Export peer targets to JSON"),
+            ("peer import <file>",    "Import peer targets from JSON"),
         ])
         dim("  Flags for add: --name  --host  --voice {true,false}  --failover {true,false}")
         dim("                 --xfr {true,false}  --security {true,false}  --connectivity {true,false}")
@@ -2056,6 +2167,8 @@ def cmd_help(args):
     traffic logs           Show last log lines
     traffic reset          Reset statistics
     traffic watch [sec]    {c('36','Live watch — refreshes every N seconds')}
+    traffic export [file]  Export traffic configuration to JSON
+    traffic import <file>  Import traffic configuration from JSON
 
   {c('1','SECURITY')}
     security status        Blocked / allowed aggregate stats
@@ -2073,6 +2186,8 @@ def cmd_help(args):
     experience add         Add a new target (--name --host --type --port)
     experience remove <id> Remove a target
     experience probe       Run all probes now
+    experience export [f]  Export custom probes to JSON
+    experience import <f>  Import custom probes from JSON
 
   {c('1','PEER TARGETS')}
     peer list              List configured Stigix targets/peers
@@ -2080,6 +2195,8 @@ def cmd_help(args):
     peer remove <id>       Remove a Stigix target
     peer enable <id>       Enable a Stigix target
     peer disable <id>      Disable a Stigix target
+    peer export [file]     Export peer targets to JSON
+    peer import <file>     Import peer targets from JSON
 
   {c('1','SPEEDTEST / XFR BANDWIDTH')}
     speedtest list         Show past speedtest jobs
@@ -2249,6 +2366,7 @@ COMPLETER_TREE = {
     "traffic":     {
         "start": None, "stop": None, "status": None,
         "stats": None, "logs": None, "reset": None, "watch": None,
+        "import": None, "export": None,
     },
     "security":    {
         "status": None, "url": None, "url-batch": None,
@@ -2257,18 +2375,21 @@ COMPLETER_TREE = {
     },
     "experience":  {
         "list": None, "probe": None, "remove": None,
+        "import": None, "export": None,
         "add":  {"--name": None, "--host": None,
                  "--type": {"http", "ping", "dns"},
                  "--port": None, "--timeout": None},
     },
     "target":      {
         "list": None, "probe": None, "remove": None,
+        "import": None, "export": None,
         "add":  {"--name": None, "--host": None,
                  "--type": {"http", "ping", "dns"},
                  "--port": None, "--timeout": None},
     },
     "peer":        {
         "list": None, "remove": None, "enable": None, "disable": None,
+        "import": None, "export": None,
         "add":  {"--name": None, "--host": None,
                  "--voice": {"true", "false"},
                  "--convergence": {"true", "false"},

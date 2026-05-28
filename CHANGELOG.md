@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [v1.4.0-patch.50] - 2026-05-28
+### Added
+- **stigix-cli** 🔌 Implemented `peer export [file]` and `peer import <file>` commands to import/export peer targets from/to JSON files.
+- **stigix-cli** 🧪 Implemented `experience export [file]` and `experience import <file>` commands to import/export custom digital experience probes from/to JSON files.
+- **stigix-cli** ⚡ Implemented `traffic export [file]` and `traffic import <file>` commands to import/export traffic applications/distribution configuration from/to JSON files.
+- **stigix-cli** 🧠 Added tab autocomplete completions and help screen definitions for the new configuration import/export commands.
+
 ## [v1.4.0-patch.49] - 2026-05-28
 ### Refactored
 - **stigix-cli** 🔀 Renamed the `convergence` command group to `failover` to align with the UX, while maintaining `convergence` as a backward-compatible alias.
