@@ -187,3 +187,78 @@ Run iPerf3/XFR speedtests to evaluate path bandwidth, latency, and packet loss.
 *   `system logs` — Print the last 30 lines of general backend logs.
 *   `system restart` — Restart the Stigix containers.
 *   `system upgrade` — Pull the latest Docker images and upgrade Stigix.
+
+---
+
+## 📊 Command Output Examples
+
+Here are some examples of CLI commands run via Docker against a live Stigix instance:
+
+### 1. Check Global Instance Status
+```bash
+docker exec -it stigix stigix-cli --exec "status"
+```
+**Output:**
+```text
+━━ Stigix Status ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ Backend    [READY]  uptime ?s
+→ Version    v1.4.0-patch.36
+Traffic    [RUNNING]
+→ Public IP  2.13.195.58
+```
+
+### 2. List Connectivity/DEM Probes
+```bash
+docker exec -it stigix stigix-cli --exec "experience list"
+```
+**Output:**
+```text
+  ID  Name                  Host/URL  Type   On
+  ──  ────────────────────  ────────  ─────  ──
+  ?   Cloudflare ICMP       ?         PING   ✓ 
+  ?   Google ICMP           ?         PING   ✓ 
+  ?   Google DNS Res        ?         DNS    ✓ 
+  ?   Google Search         ?         HTTP   ✓ 
+  ?   Hetzner ICMP          ?         PING   ✓ 
+  ?   Hetzner Slow          ?         HTTP   ✓ 
+  ?   Info / Egress         ?         CLOUD  ✓ 
+  ?   Slow SaaS             ?         CLOUD  ✓ 
+  ...
+```
+
+### 3. List Configured Stigix Peer Nodes
+```bash
+docker exec -it stigix stigix-cli --exec "peer list"
+```
+**Output:**
+```text
+  ID            Name        Host             Capabilities                                     On  Source     
+  ────────────  ──────────  ───────────────  ───────────────────────────────────────────────  ──  ───────────
+  30dbb12a-c6e  Hetzner     142.132.193.157  voice, convergence, xfr, security, connectivity  ✓   managed    
+  syn-security  DC1-Ubuntu  192.168.203.100  voice, convergence, xfr, security, connectivity  ✓   synthesized
+  reg-DC7-Ubun  DC7-Ubuntu  192.168.205.10   voice, convergence, xfr, security, connectivity  ✓   synthesized
+  reg-BR8-Ubun  BR8-Ubuntu  192.168.219.1    voice, convergence, xfr, security, connectivity  ✓   synthesized
+```
+
+### 4. Run an Interactive Speedtest with Real-time Streaming
+```bash
+docker exec -it stigix stigix-cli --exec "speedtest run 142.132.193.157 --duration 10"
+```
+**Output:**
+```text
+→ Starting speedtest to 142.132.193.157:9000 (TCP / client-to-server)...
+✓ Speedtest job XFR-0022 accepted.
+→ Streaming real-time performance metrics (Ctrl+C to stop)...
+  Tx: 0.0 Mbps   Rx: 0.0 Mbps   RTT: 0.0ms   Loss: 0.0%
+  Tx: 0.7 Mbps   Rx: 0.0 Mbps   RTT: 230.5ms   Loss: 0.0%
+  Tx: 1.3 Mbps   Rx: 0.0 Mbps   RTT: 234.7ms   Loss: 0.0%
+  Tx: 1.7 Mbps   Rx: 0.0 Mbps   RTT: 231.5ms   Loss: 0.0%
+  Tx: 1.6 Mbps   Rx: 0.0 Mbps   RTT: 235.4ms   Loss: 0.0%
+  Tx: 1.1 Mbps   Rx: 0.0 Mbps   RTT: 230.9ms   Loss: 0.0%
+  Tx: 1.3 Mbps   Rx: 0.0 Mbps   RTT: 229.5ms   Loss: 0.0%
+  Tx: 0.9 Mbps   Rx: 0.0 Mbps   RTT: 234.1ms   Loss: 0.0%
+  Tx: 1.2 Mbps   Rx: 0.0 Mbps   RTT: 233.0ms   Loss: 0.0%
+  Tx: 1.0 Mbps   Rx: 0.0 Mbps   RTT: 235.4ms   Loss: 0.0%
+
+✓ Speedtest COMPLETED successfully!
+```
