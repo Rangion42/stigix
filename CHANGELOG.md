@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.80] - 2026-05-28
+### Fixed
+- **stigix-cli** ⚙️ Suppressed display of HTTP 500 error messages when the public IP address cannot be retrieved (e.g. in offline environments).
+
 ## [v1.4.0-patch.79] - 2026-05-28
 ### Fixed
 - **web-dashboard** ⚙️ Resolved Docker-in-Docker relative path resolution issues during upgrade/redeploy by auto-detecting host project directory and passing it via the `--project-directory` flag in Docker Compose commands.

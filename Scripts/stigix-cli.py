@@ -280,22 +280,25 @@ def _headers():
         h["Authorization"] = f"Bearer {JWT_TOKEN}"
     return h
 
-def api_get(path, timeout=TIMEOUT):
+def api_get(path, timeout=TIMEOUT, suppress_err=False):
     try:
         r = HTTP_SESSION.get(f"{STIGIX_URL}{path}", headers=_headers(), timeout=timeout)
         r.raise_for_status()
         return r.json()
     except requests.exceptions.ConnectionError:
-        err(f"Cannot reach Stigix at {STIGIX_URL} — is the container running?")
+        if not suppress_err:
+            err(f"Cannot reach Stigix at {STIGIX_URL} — is the container running?")
         return None
     except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 401:
-            err("Unauthorized — run: auth login")
-        else:
-            err(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
+        if not suppress_err:
+            if e.response.status_code == 401:
+                err("Unauthorized — run: auth login")
+            else:
+                err(f"HTTP {e.response.status_code}: {e.response.text[:200]}")
         return None
     except Exception as e:
-        err(str(e))
+        if not suppress_err:
+            err(str(e))
         return None
 
 def api_post(path, body=None, method="POST", timeout=TIMEOUT):
@@ -536,7 +539,7 @@ def cmd_status(args):
     if traffic_ifaces:
         info(f"Traffic If  {traffic_ifaces}")
 
-    ip = api_get("/api/connectivity/public-ip")
+    ip = api_get("/api/connectivity/public-ip", suppress_err=True)
     if ip:
         info(f"Public IP   {ip.get('ip', ip)}")
 
