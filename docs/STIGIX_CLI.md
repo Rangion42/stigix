@@ -37,6 +37,8 @@ python Scripts/stigix-cli.py
 
 When running the interactive console, the CLI features auto-completion, command history, and a status toolbar at the bottom.
 
+![Stigix CLI Interactive Console](/Users/jsuzanne/Github/stigix/docs/assets/stigix-cli-interactive.png)
+
 | Shortcut | Action |
 |---|---|
 | **`F1`** | Instantly displays the main help screen |
