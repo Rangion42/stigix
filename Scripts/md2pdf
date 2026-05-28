@@ -1,0 +1,16 @@
+#!/bin/bash
+# Stigix Markdown to PDF converter wrapper script
+# Uses the project's virtual environment python
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Ensure virtual environment python exists
+if [ ! -f "$PROJECT_ROOT/.venv/bin/python3" ]; then
+    echo "❌ Error: Virtual environment python not found at $PROJECT_ROOT/.venv/bin/python3"
+    echo "Please run: python3 -m venv .venv && .venv/bin/pip install markdown-pdf"
+    exit 1
+fi
+
+# Run the python script with the venv python interpreter
+"$PROJECT_ROOT/.venv/bin/python3" "$SCRIPT_DIR/md2pdf.py" "$@"
