@@ -101,6 +101,11 @@ def convert_md_to_pdf(md_path, pdf_path, css_content=None):
         with open(md_path, "r", encoding="utf-8") as f:
             md_content = f.read()
 
+        # Remove local/internal markdown anchor links (e.g. [Text](#anchor-name)) 
+        # to prevent PyMuPDF layout engine failures on missing targets.
+        import re
+        md_content = re.sub(r'\[([^\]]+)\]\(\s*#[^)]+\)', r'\1', md_content)
+
         pdf = MarkdownPdf(toc_level=2)
         pdf.add_section(Section(md_content), user_css=css_content or DEFAULT_CSS)
         pdf.save(pdf_path)
