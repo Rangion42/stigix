@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [v1.4.0-patch.43] - 2026-05-28
+### Added
+- **stigix-cli** 🎙️ Enhanced `voice stats` command to output a beautiful metrics dashboard consisting of an Overall QoS Summary, a Per-Target QoS Statistics table (with site mapping and quality ratings), and a detailed Call History table of recent events.
+- **stigix-cli** 🎨 Refactored the `table()` utility function to be ANSI escape-aware, ensuring perfect column alignments when using color badges in table rows.
 
 ## [v1.4.0-patch.42] - 2026-05-28
 ### Added

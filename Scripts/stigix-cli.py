@@ -94,15 +94,31 @@ def table(headers, rows):
     if not rows:
         dim("  (empty)")
         return
-    widths = [
-        max(len(str(h)), max((len(str(r[i])) for r in rows), default=0))
-        for i, h in enumerate(headers)
-    ]
-    fmt = "  " + "  ".join(f"{{:<{w}}}" for w in widths)
-    print(c("1", fmt.format(*headers)))
+    import re
+    def clean_ansi(s):
+        return re.sub(r'\033\[[0-9;]*m', '', str(s))
+    
+    widths = []
+    for i, h in enumerate(headers):
+        w = len(clean_ansi(h))
+        for r in rows:
+            if i < len(r):
+                w = max(w, len(clean_ansi(r[i])))
+        widths.append(w)
+        
+    def format_row(row):
+        cols = []
+        for i in range(len(widths)):
+            val = row[i] if i < len(row) else ""
+            w = widths[i]
+            s_str = str(val)
+            cols.append(s_str + (" " * max(0, w - len(clean_ansi(s_str)))))
+        return "  " + "  ".join(cols)
+
+    print(c("1", format_row(headers)))
     print("  " + "  ".join("─" * w for w in widths))
     for row in rows:
-        print(fmt.format(*[str(v) for v in row]))
+        print(format_row(row))
 
 def status_badge(s):
     s = str(s).lower()
@@ -1188,21 +1204,186 @@ def cmd_voice(args):
 
     elif sub == "stats":
         r = api_get("/api/voice/stats")
-        if r:
-            hdr("━━ Voice / MOS Stats ━━━━━━━━━━━━━━━━━━━")
-            mos    = r.get("mos") or r.get("mosScore","?")
-            jitter = r.get("jitter","?")
-            loss   = r.get("packetLoss","?")
-            rtt    = r.get("rtt") or r.get("latency","?")
-            try:
-                mos_val = float(mos)
-            except Exception:
-                mos_val = 0.0
-            color = "1;32" if mos_val > 3.5 else "1;31"
-            print(f"  MOS Score   : {c(color, str(mos))}")
-            print(f"  Jitter      : {jitter}ms")
-            print(f"  Packet Loss : {loss}%")
-            print(f"  RTT         : {rtt}ms")
+        if r and isinstance(r, dict) and r.get("success"):
+            stats_list = r.get("stats", [])
+            
+            # Fetch targets from registry to map host/IP to site name
+            targets = api_get("/api/targets")
+            targets_list = []
+            if targets:
+                targets_list = targets if isinstance(targets, list) else targets.get("targets", [])
+                
+            # Map host:port -> friendly site name
+            target_names = {}
+            for t in targets_list:
+                name = t.get("name")
+                host = t.get("host")
+                vport = t.get("ports", {}).get("voice") or 6100
+                if name and host:
+                    target_names[f"{host}:{vport}"] = name
+
+            def get_target_name(target_str):
+                if target_str in target_names:
+                    return target_names[target_str]
+                # Fallback: matching IP only
+                ip = target_str.split(":")[0] if ":" in target_str else target_str
+                for t in targets_list:
+                    if t.get("host") == ip:
+                        return t.get("name")
+                return "Manual"
+
+            def derive_source_port(call_id):
+                if call_id and call_id.startswith('CALL-'):
+                    try:
+                        num = int(call_id[5:])
+                        return str(30000 + (num % 10000))
+                    except ValueError:
+                        pass
+                return '?'
+
+            def format_time(ts_str):
+                if not ts_str:
+                    return "?"
+                try:
+                    if "T" in ts_str:
+                        return ts_str.split("T")[1][:8]
+                    return ts_str[:8]
+                except Exception:
+                    return ts_str
+
+            def quality_badge(q):
+                if q == "EXCELLENT":
+                    return c("32", "● EXCELLENT")
+                elif q == "FAIR":
+                    return c("33", "● FAIR")
+                else:
+                    return c("31", "● POOR")
+
+            # Filter ended calls with valid QoS metrics
+            fin = [c_obj for c_obj in stats_list if c_obj.get("event") == "end" and c_obj.get("loss_pct") is not None]
+
+            # 1. Render Overall QoS Summary
+            hdr("━━ Voice / VoIP QoS Summary ━━━━━━━━━━━━━━━━━━")
+            if not fin:
+                print("  Total Calls : 0")
+                print("  Avg MOS     : ?")
+                print("  Avg Jitter  : ?ms")
+                print("  Packet Loss : ?%")
+                print("  Avg RTT     : ?ms")
+            else:
+                avg_loss = sum(c_obj.get("loss_pct", 0) for c_obj in fin) / len(fin)
+                rtts = [c_obj.get("avg_rtt_ms", 0) for c_obj in fin if c_obj.get("avg_rtt_ms")]
+                avg_rtt = sum(rtts) / len(rtts) if rtts else 0.0
+                jitters = [c_obj.get("jitter_ms", 0) for c_obj in fin if c_obj.get("jitter_ms")]
+                avg_jitter = sum(jitters) / len(jitters) if jitters else 0.0
+                mos_scores = [c_obj.get("mos_score", 0) for c_obj in fin if c_obj.get("mos_score")]
+                avg_mos = sum(mos_scores) / len(mos_scores) if mos_scores else 0.0
+                
+                overall_q = "EXCELLENT" if avg_loss < 1 and avg_rtt < 100 else "FAIR" if avg_loss < 5 and avg_rtt < 200 else "POOR"
+                mos_color = "32" if avg_mos >= 4.0 else "33" if avg_mos >= 3.0 else "31"
+                
+                print(f"  Total Calls : {len(fin)}")
+                print(f"  Avg MOS     : {c(mos_color, f'{avg_mos:.2f}')} ({overall_q})")
+                print(f"  Avg Jitter  : {avg_jitter:.1f}ms")
+                print(f"  Packet Loss : {avg_loss:.1f}%")
+                print(f"  Avg RTT     : {avg_rtt:.1f}ms")
+            print()
+
+            # 2. Render Per-Target QoS Statistics Table
+            hdr("━━ Per-Target QoS Statistics ━━━━━━━━━━━━━━━━━━")
+            if not fin:
+                dim("  (no stats data available)")
+            else:
+                grouped = {}
+                for call_obj in fin:
+                    tgt = call_obj.get("target")
+                    if not tgt:
+                        continue
+                    if tgt not in grouped:
+                        grouped[tgt] = []
+                    grouped[tgt].append(call_obj)
+
+                pt_rows = []
+                for tgt, t_calls in sorted(grouped.items(), key=lambda x: len(x[1]), reverse=True):
+                    calls_count = len(t_calls)
+                    t_loss = sum(c_obj.get("loss_pct", 0) for c_obj in t_calls) / calls_count
+                    t_rtts = [c_obj.get("avg_rtt_ms", 0) for c_obj in t_calls if c_obj.get("avg_rtt_ms")]
+                    t_avg_rtt = sum(t_rtts) / len(t_rtts) if t_rtts else 0.0
+                    t_jitters = [c_obj.get("jitter_ms", 0) for c_obj in t_calls if c_obj.get("jitter_ms")]
+                    t_avg_jitter = sum(t_jitters) / len(t_jitters) if t_jitters else 0.0
+                    t_mos_scores = [c_obj.get("mos_score", 0) for c_obj in t_calls if c_obj.get("mos_score")]
+                    t_avg_mos = sum(t_mos_scores) / len(t_mos_scores) if t_mos_scores else 0.0
+                    
+                    t_q = "EXCELLENT" if t_loss < 1 and t_avg_rtt < 100 else "FAIR" if t_loss < 5 and t_avg_rtt < 200 else "POOR"
+                    t_name = get_target_name(tgt)
+                    
+                    pt_rows.append([
+                        t_name,
+                        tgt,
+                        str(calls_count),
+                        f"{t_loss:.1f}%",
+                        f"{t_avg_rtt:.1f}ms",
+                        f"{t_avg_mos:.2f}" if t_avg_mos else "N/A",
+                        f"{t_avg_jitter:.1f}ms",
+                        quality_badge(t_q)
+                    ])
+                table(["Site", "Endpoint", "Calls", "Avg Loss", "Avg RTT", "Avg MOS", "Avg Jitter", "Quality"], pt_rows)
+            print()
+
+            # 3. Render Call History Table
+            hdr("━━ Call History (Recent Events) ━━━━━━━━━━━━━━━━━━")
+            history_events = [c_obj for c_obj in stats_list if c_obj.get("event") in ("start", "end", "skipped")]
+            if not history_events:
+                dim("  (no history events available)")
+            else:
+                history_rows = []
+                for item in history_events[:15]:
+                    t_str = format_time(item.get("timestamp"))
+                    call_id = item.get("call_id", "?")
+                    disp = f"#{call_id}"
+                    evt = item.get("event")
+                    if evt == "start":
+                        status = c("36", "RUNNING")
+                    elif evt == "skipped":
+                        status = c("33", "SKIPPED")
+                    else:
+                        status = c("32", "COMPLETED")
+                    
+                    tgt = item.get("target", "?")
+                    site = get_target_name(tgt)
+                    sp = derive_source_port(call_id)
+                    
+                    if evt == "end" and item.get("loss_pct") is not None:
+                        loss_val = item.get("loss_pct", 0)
+                        loss_color = "32" if loss_val < 1 else "33" if loss_val < 5 else "31"
+                        loss_mos = f"{c(loss_color, f'{loss_val:.1f}%')}"
+                        if item.get("mos_score") is not None:
+                            mos_val = item.get("mos_score")
+                            mos_color = "32" if mos_val >= 4 else "33" if mos_val >= 3 else "31"
+                            loss_mos += f" (MOS: {c(mos_color, f'{mos_val:.2f}')})"
+                    else:
+                        loss_mos = "─"
+                    
+                    if evt == "end" and item.get("avg_rtt_ms") is not None:
+                        rtt_val = item.get("avg_rtt_ms", 0)
+                        rtt_color = "32" if rtt_val < 100 else "33" if rtt_val < 200 else "31"
+                        rtt_jitter = c(rtt_color, f"{rtt_val:.1f}ms")
+                        if item.get("jitter_ms") is not None:
+                            rtt_jitter += f" (Jitter: {item.get('jitter_ms'):.1f}ms)"
+                    else:
+                        rtt_jitter = "─"
+                    
+                    history_rows.append([
+                        t_str,
+                        disp,
+                        status,
+                        site,
+                        tgt,
+                        sp,
+                        loss_mos,
+                        rtt_jitter
+                    ])
+                table(["Time", "Call ID", "Status", "Site", "Endpoint", "Src Port", "Loss / MOS", "RTT / Jitter"], history_rows)
 
     else:
         _help_section("VOICE / VoIP", [
