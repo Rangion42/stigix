@@ -58,6 +58,7 @@ services:
       - PORT=8080
       - JWT_SECRET=${JWT_SECRET:-your-secure-secret-here}
       - DEBUG=${DEBUG:-false}
+      - BETA=${BETA:-false}
 
       # --- Prisma SD-WAN API Credentials ---
       - PRISMA_SDWAN_REGION=${PRISMA_SDWAN_REGION:-}

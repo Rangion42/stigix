@@ -105,6 +105,7 @@ JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || cat /proc/sys/kernel/random/uui
 
 echo "STIGIX_ROLE=$INSTALL_MODE" > .env
 echo "JWT_SECRET=$JWT_SECRET" >> .env
+echo "BETA=false" >> .env
 echo "" >> .env
 echo "# --- Docker Image Tag (Uncomment to lock version/tag) ---" >> .env
 echo "# TAG=stable" >> .env
