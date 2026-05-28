@@ -28,7 +28,7 @@ except ImportError:
 
 try:
     from prompt_toolkit import PromptSession
-    from prompt_toolkit.completion import NestedCompleter
+    from prompt_toolkit.completion import Completer, Completion, NestedCompleter
     from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
     from prompt_toolkit.styles import Style
     from prompt_toolkit.formatted_text import HTML
@@ -143,7 +143,12 @@ def api_get(path):
 
 def api_post(path, body=None, method="POST"):
     try:
-        fn = requests.post if method == "POST" else requests.delete
+        if method == "POST":
+            fn = requests.post
+        elif method == "PUT":
+            fn = requests.put
+        else:
+            fn = requests.delete
         r  = fn(f"{STIGIX_URL}{path}", json=body or {}, headers=_headers(), timeout=TIMEOUT)
         r.raise_for_status()
         return r.json()
@@ -159,6 +164,9 @@ def api_post(path, body=None, method="POST"):
     except Exception as e:
         err(str(e))
         return None
+
+def api_put(path, body=None):
+    return api_post(path, body, method="PUT")
 
 def api_delete(path, body=None):
     return api_post(path, body, method="DELETE")
@@ -559,7 +567,7 @@ def cmd_security(args):
         ])
 
 
-def cmd_target(args):
+def cmd_experience(args):
     if not require_auth(): return
     sub = args[0] if args else "list"
 
@@ -568,7 +576,7 @@ def cmd_target(args):
         if r:
             targets = r if isinstance(r, list) else r.get("targets", [])
             if not targets:
-                dim("  No custom targets configured")
+                dim("  No custom digital experience targets configured")
                 return
             rows = []
             for t in targets:
@@ -591,13 +599,13 @@ def cmd_target(args):
         timeout = int(parsed.get("timeout", 5))
         body    = {"name": name, "host": host, "type": ttype, "port": port, "timeout": timeout, "enabled": True}
         r = api_post("/api/connectivity/custom", body)
-        if r: ok(f"Target '{name}' added")
+        if r: ok(f"Experience target '{name}' added")
 
     elif sub == "remove":
         tid = args[1] if len(args) > 1 else None
-        if not tid: err("Usage: target remove <id>"); return
+        if not tid: err("Usage: experience remove <id>"); return
         r = api_delete(f"/api/connectivity/custom/{tid}")
-        if r: ok(f"Target {tid} removed")
+        if r: ok(f"Experience target {tid} removed")
 
     elif sub == "probe":
         r = api_get("/api/connectivity/test")
@@ -614,13 +622,240 @@ def cmd_target(args):
             table(["Target", "Type", "RTT", "Status"], rows)
 
     else:
-        _help_section("TARGETS", [
-            ("target list",           "List connectivity probe targets"),
-            ("target add",            "Add a new target (interactive or --flags)"),
-            ("target remove <id>",    "Remove a target"),
-            ("target probe",          "Run all probes now"),
+        _help_section("DIGITAL EXPERIENCE", [
+            ("experience list",           "List connectivity probe targets"),
+            ("experience add",            "Add a new target (interactive or --flags)"),
+            ("experience remove <id>",    "Remove a target"),
+            ("experience probe",          "Run all probes now"),
         ])
         dim("  Flags for add: --name  --host  --type {http,ping,dns}  --port  --timeout")
+
+
+def cmd_peer(args):
+    if not require_auth(): return
+    sub = args[0] if args else "list"
+
+    if sub == "list":
+        r = api_get("/api/targets")
+        if r:
+            peers = r if isinstance(r, list) else r.get("targets", [])
+            if not peers:
+                dim("  No Stigix peers configured")
+                return
+            rows = []
+            for p in peers:
+                enabled = "✓" if p.get("enabled", True) else "✗"
+                caps = p.get("capabilities", {})
+                caps_list = []
+                for k, v in caps.items():
+                    if v:
+                        caps_list.append(k)
+                caps_str = ", ".join(caps_list) if caps_list else "none"
+                source = p.get("source", "managed")
+                rows.append([
+                    p.get("id", "")[:12],
+                    p.get("name", "")[:20],
+                    p.get("host", ""),
+                    caps_str,
+                    enabled,
+                    source
+                ])
+            table(["ID", "Name", "Host", "Capabilities", "On", "Source"], rows)
+
+    elif sub == "add":
+        parsed = parse_flags(args[1:], ["name", "host", "voice", "convergence", "xfr", "security", "connectivity"])
+        name = parsed.get("name") or input("Name (e.g. Branch-1): ").strip()
+        host = parsed.get("host") or input("Host (IP or FQDN): ").strip()
+        
+        voice = str(parsed.get("voice", "true")).lower() == "true"
+        convergence = str(parsed.get("convergence", "true")).lower() == "true"
+        xfr = str(parsed.get("xfr", "true")).lower() == "true"
+        security = str(parsed.get("security", "true")).lower() == "true"
+        connectivity = str(parsed.get("connectivity", "true")).lower() == "true"
+
+        if not name or not host:
+            err("Name and host are required.")
+            return
+
+        body = {
+            "name": name,
+            "host": host,
+            "enabled": True,
+            "capabilities": {
+                "voice": voice,
+                "convergence": convergence,
+                "xfr": xfr,
+                "security": security,
+                "connectivity": connectivity
+            }
+        }
+        r = api_post("/api/targets", body)
+        if r:
+            ok(f"Peer '{name}' added successfully")
+
+    elif sub == "remove":
+        pid = args[1] if len(args) > 1 else None
+        if not pid:
+            err("Usage: peer remove <id>")
+            return
+        r = api_delete(f"/api/targets/{pid}")
+        if r:
+            ok(f"Peer target {pid} removed")
+
+    elif sub in ("enable", "disable"):
+        pid = args[1] if len(args) > 1 else None
+        if not pid:
+            err(f"Usage: peer {sub} <id>")
+            return
+        body = {"enabled": sub == "enable"}
+        r = api_put(f"/api/targets/{pid}", body)
+        if r:
+            ok(f"Peer target {pid} {'enabled' if sub == 'enable' else 'disabled'}")
+
+    else:
+        _help_section("PEER TARGETS", [
+            ("peer list",             "List configured Stigix targets/peers"),
+            ("peer add",              "Add a new Stigix target manually"),
+            ("peer remove <id>",      "Remove a Stigix target"),
+            ("peer enable <id>",      "Enable a Stigix target"),
+            ("peer disable <id>",     "Disable a Stigix target"),
+        ])
+        dim("  Flags for add: --name  --host  --voice {true,false}  --convergence {true,false}")
+        dim("                 --xfr {true,false}  --security {true,false}  --connectivity {true,false}")
+
+
+def cmd_speedtest(args):
+    if not require_auth(): return
+    sub = args[0] if args else "help"
+
+    if sub in ("list", "history"):
+        r = api_get("/api/tests/xfr")
+        if r:
+            jobs = r if isinstance(r, list) else r.get("jobs", [])
+            if not jobs:
+                dim("  No speedtest history found")
+                return
+            rows = []
+            for j in jobs[:20]:
+                started = j.get("started_at")
+                if started:
+                    try:
+                        ts = started.split("T")[1][:8]
+                    except Exception:
+                        ts = started
+                else:
+                    ts = "?"
+                params = j.get("params", {})
+                target = params.get("target", {})
+                host = target.get("host", "?")
+                proto = params.get("protocol", "tcp")
+                status = j.get("status", "?")
+                
+                summary = j.get("summary") or {}
+                sent = summary.get("sent_mbps", 0)
+                recv = summary.get("received_mbps", 0)
+                rtt = summary.get("rtt_ms_avg", 0)
+                
+                rows.append([
+                    j.get("sequence_id", j.get("id", ""))[:12],
+                    ts,
+                    host,
+                    proto.upper(),
+                    f"{sent:.1f} Tx / {recv:.1f} Rx" if summary else "-",
+                    f"{rtt:.1f}ms" if summary else "-",
+                    status_badge(status)
+                ])
+            table(["ID", "Time", "Target", "Proto", "Speed (Mbps)", "RTT", "Status"], rows)
+
+    elif sub == "run":
+        if len(args) < 2:
+            err("Usage: speedtest run <target-host> [options]")
+            return
+        target_host = args[1]
+        
+        parsed = parse_flags(args[2:], ["port", "protocol", "direction", "duration", "bitrate", "streams", "psk"])
+        
+        has_custom = len(parsed) > 0
+        
+        port = int(parsed.get("port", 9000))
+        protocol = parsed.get("protocol", "tcp")
+        direction = parsed.get("direction", "client-to-server")
+        duration = int(parsed.get("duration", 10))
+        bitrate = parsed.get("bitrate", "200M")
+        streams = int(parsed.get("streams", 4))
+        psk = parsed.get("psk", "")
+
+        if has_custom:
+            body = {
+                "mode": "custom",
+                "target": {"host": target_host, "port": port, "psk": psk},
+                "protocol": protocol,
+                "direction": direction,
+                "duration_sec": duration,
+                "bitrate": bitrate,
+                "parallel_streams": streams
+            }
+        else:
+            body = {
+                "mode": "default",
+                "target": {"host": target_host, "port": 9000}
+            }
+
+        info(f"Starting speedtest to {target_host}:{port} ({protocol.upper()} / {direction})...")
+        r = api_post("/api/tests/xfr", body)
+        if not r:
+            return
+            
+        job_id = r.get("id")
+        seq_id = r.get("sequence_id", job_id)
+        ok(f"Speedtest job {seq_id} accepted.")
+        
+        stream_url = f"/api/tests/xfr/{job_id}/stream?token={JWT_TOKEN}"
+        info("Streaming real-time performance metrics (Ctrl+C to stop)...")
+        
+        try:
+            resp = requests.get(f"{STIGIX_URL}{stream_url}", stream=True, timeout=90)
+            current_event = None
+            for line in resp.iter_lines():
+                if not line:
+                    continue
+                line_str = line.decode('utf-8')
+                if line_str.startswith("event:"):
+                    current_event = line_str[6:].strip()
+                elif line_str.startswith("data:"):
+                    data_str = line_str[5:].strip()
+                    try:
+                        data = json.loads(data_str)
+                        if current_event == "interval":
+                            sent = data.get("sent_mbps", 0)
+                            recv = data.get("received_mbps", 0)
+                            rtt = data.get("rtt_ms", 0)
+                            loss = data.get("loss_percent", 0)
+                            print(f"  Tx: {sent:.1f} Mbps   Rx: {recv:.1f} Mbps   RTT: {rtt:.1f}ms   Loss: {loss:.1f}%")
+                        elif current_event == "done":
+                            print()
+                            status = data.get("status", "completed").upper()
+                            if status == "COMPLETED":
+                                ok("Speedtest COMPLETED successfully!")
+                            else:
+                                err(f"Speedtest finished with status: {status}")
+                            break
+                    except Exception:
+                        pass
+        except KeyboardInterrupt:
+            print()
+            warn("Stopped watching speedtest stream.")
+        except Exception as e:
+            err(f"Stream error: {e}")
+
+    else:
+        _help_section("SPEEDTEST / XFR BANDWIDTH", [
+            ("speedtest list / history",   "Show past bandwidth test jobs"),
+            ("speedtest run <host>",       "Run default speedtest to target host"),
+            ("speedtest run <host> [opts]","Run custom speedtest to target host"),
+        ])
+        dim("  Flags for run: --port  --protocol {tcp,udp,quic}  --direction {client-to-server,")
+        dim("                 server-to-client,bidirectional}  --duration  --bitrate  --streams  --psk")
 
 
 def cmd_convergence(args):
@@ -1099,11 +1334,22 @@ def cmd_help(args):
     security results [n]   Last N results (default 20)
     security clear         Clear history
 
-  {c('1','TARGETS')}
-    target list            List connectivity probe targets
-    target add             Add a new target  (--name --host --type --port)
-    target remove <id>     Remove a target
-    target probe           Run all probes now
+  {c('1','DIGITAL EXPERIENCE')}
+    experience list        List connectivity probe targets
+    experience add         Add a new target (--name --host --type --port)
+    experience remove <id> Remove a target
+    experience probe       Run all probes now
+
+  {c('1','PEER TARGETS')}
+    peer list              List configured Stigix targets/peers
+    peer add               Add a Stigix target manually (--name --host)
+    peer remove <id>       Remove a Stigix target
+    peer enable <id>       Enable a Stigix target
+    peer disable <id>      Disable a Stigix target
+
+  {c('1','SPEEDTEST / XFR BANDWIDTH')}
+    speedtest list         Show past speedtest jobs
+    speedtest run <host>   Run speedtest (--port --protocol --direction)
 
   {c('1','CONVERGENCE / FAILOVER')}
     convergence start      Start failover test  (--target --pps --label)
@@ -1184,12 +1430,73 @@ def parse_flags(args, keys):
     return result
 
 
+class StigixCompleter(Completer):
+    def __init__(self, tree):
+        self.tree = tree
+
+    def get_completions(self, document, complete_event):
+        text = document.text_before_cursor
+        words = text.split()
+        if not text:
+            for cmd in self.tree.keys():
+                yield Completion(cmd, start_position=0)
+            return
+
+        in_space = text.endswith(' ')
+        current_word = words[-1] if not in_space else ""
+        prefix_words = words[:-1] if not in_space else words
+
+        if len(prefix_words) == 0:
+            for cmd in self.tree.keys():
+                if cmd.startswith(current_word):
+                    yield Completion(cmd, start_position=-len(current_word))
+            return
+
+        cmd = prefix_words[0].lower()
+        if cmd not in self.tree or self.tree[cmd] is None:
+            return
+
+        if len(prefix_words) == 1:
+            subcmds = self.tree[cmd]
+            if isinstance(subcmds, dict):
+                for sub in subcmds.keys():
+                    if sub.startswith(current_word):
+                        yield Completion(sub, start_position=-len(current_word))
+            return
+
+        subcmd = prefix_words[1].lower()
+        subcmds = self.tree[cmd]
+        if not isinstance(subcmds, dict) or subcmd not in subcmds:
+            return
+
+        options = subcmds[subcmd]
+        if not isinstance(options, dict):
+            return
+
+        last_word = prefix_words[-1] if len(prefix_words) > 0 else ""
+        if last_word in options and isinstance(options[last_word], (set, list, dict)):
+            choices = options[last_word]
+            for choice in choices:
+                if choice.startswith(current_word):
+                    yield Completion(choice, start_position=-len(current_word))
+            return
+
+        typed_flags = set(w for w in prefix_words if w.startswith('--'))
+        for flag in options.keys():
+            if flag.startswith('--') and flag not in typed_flags:
+                if flag.startswith(current_word):
+                    yield Completion(flag, start_position=-len(current_word))
+
+
 DISPATCH = {
     "auth":        cmd_auth,
     "status":      cmd_status,
     "traffic":     cmd_traffic,
     "security":    cmd_security,
-    "target":      cmd_target,
+    "experience":  cmd_experience,
+    "target":      cmd_experience,
+    "peer":        cmd_peer,
+    "speedtest":   cmd_speedtest,
     "convergence": cmd_convergence,
     "vyos":        cmd_vyos,
     "voice":       cmd_voice,
@@ -1213,11 +1520,33 @@ COMPLETER_TREE = {
         "dns": None, "dns-batch": None, "eicar": None,
         "suite": None, "results": None, "clear": None,
     },
+    "experience":  {
+        "list": None, "probe": None, "remove": None,
+        "add":  {"--name": None, "--host": None,
+                 "--type": {"http", "ping", "dns"},
+                 "--port": None, "--timeout": None},
+    },
     "target":      {
         "list": None, "probe": None, "remove": None,
         "add":  {"--name": None, "--host": None,
                  "--type": {"http", "ping", "dns"},
                  "--port": None, "--timeout": None},
+    },
+    "peer":        {
+        "list": None, "remove": None, "enable": None, "disable": None,
+        "add":  {"--name": None, "--host": None,
+                 "--voice": {"true", "false"},
+                 "--convergence": {"true", "false"},
+                 "--xfr": {"true", "false"},
+                 "--security": {"true", "false"},
+                 "--connectivity": {"true", "false"}},
+    },
+    "speedtest":   {
+        "list": None, "history": None,
+        "run":  {"--port": None,
+                 "--protocol": {"tcp", "udp", "quic"},
+                 "--direction": {"client-to-server", "server-to-client", "bidirectional"},
+                 "--duration": None, "--bitrate": None, "--streams": None, "--psk": None},
     },
     "convergence": {
         "status": None, "stop": None, "history": None,
@@ -1307,7 +1636,7 @@ def run_interactive():
         "b":       "bold",
     })
 
-    completer = NestedCompleter.from_nested_dict(COMPLETER_TREE)
+    completer = StigixCompleter(COMPLETER_TREE)
     history   = FileHistory(str(HISTORY_FILE))
     bindings  = _make_bindings()
 

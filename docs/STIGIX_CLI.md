@@ -151,15 +151,37 @@ Measure VoIP link quality using Mean Opinion Score (MOS).
 
 ---
 
-### 8. Target Management (`target`)
-*   `target list` — List targets configured for connectivity probes.
-*   `target add --name <name> --host <ip/domain> --type <http/ping/dns>` — Add a new custom target.
-*   `target remove <id>` — Remove a custom target.
-*   `target probe` — Force execute a connectivity probe against all targets.
+### 8. Digital Experience Management (`experience`)
+*   `experience list` — List targets configured for connectivity/DEM probes.
+*   `experience add --name <name> --host <ip/domain> --type <http/ping/dns>` — Add a new probe target.
+*   `experience remove <id>` — Remove a probe target.
+*   `experience probe` — Force execute a connectivity probe against all targets.
+*(Note: the `target` command is supported as a backward-compatible alias for `experience`)*
 
 ---
 
-### 9. System Administration (`system`)
+### 9. Peer Targets (`peer`)
+Manually manage Stigix peer nodes (which host echo responders, VoIP targets, and speedtest servers).
+
+*   `peer list` — List all configured Stigix peer targets, their capabilities, and online status.
+*   `peer add --name <name> --host <ip/domain>` — Add a new peer target manually. Optional flags: `--voice {true|false}`, `--convergence {true|false}`, `--xfr {true|false}`, `--security {true|false}`, `--connectivity {true|false}`.
+*   `peer remove <id>` — Delete a peer target by ID.
+*   `peer enable <id>` / `peer disable <id>` — Toggle a peer target's status.
+
+---
+
+### 10. Bandwidth Speedtests (`speedtest`)
+Run iPerf3/XFR speedtests to evaluate path bandwidth, latency, and packet loss.
+
+*   `speedtest list` or `speedtest history` — View the history of speedtest jobs and their results.
+*   `speedtest run <host>` — Launch a default speedtest to a target peer host.
+*   `speedtest run <host> [options]` — Launch a custom speedtest to a target host.
+    *   **Options**: `--port <9000>`, `--protocol {tcp|udp|quic}`, `--direction {client-to-server|server-to-client|bidirectional}`, `--duration <sec>`, `--bitrate <rate>`, `--streams <num>`, `--psk <pwd>`.
+    *   This command streams real-time performance updates (Tx/Rx throughput, RTT, and loss) directly in the console.
+
+---
+
+### 11. System Administration (`system`)
 *   `system info` — Show backend CPU, memory, disk utilization, and uptime.
 *   `system interfaces` — List network interfaces on the Stigix host.
 *   `system logs` — Print the last 30 lines of general backend logs.
