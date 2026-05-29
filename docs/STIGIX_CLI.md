@@ -97,7 +97,7 @@ Upon success, the session token is saved automatically to your profile config. T
 
 ## 📚 Command Reference
 
-### 1. Connection & Session (`connect`, `auth`)
+### 1. Connection, Session & History (`connect`, `auth`, `history`)
 The CLI automatically saves your active connection URL and authenticated JWT token in `~/.stigix-cli.json` for future sessions.
 
 *   `status` — Show overall Stigix instance status (backend readiness, version, traffic engine state, and public IP).
@@ -110,6 +110,9 @@ The CLI automatically saves your active connection URL and authenticated JWT tok
 *   `connect list` — List all saved profiles.
 *   `connect forget <profile-name>` — Remove a saved profile.
 *   `autocomplete <on|off|status>` — Enable, disable, or query tab autocompletion status (saves state in configuration).
+*   `history` / `history list` — View commands run in the current session.
+*   `history save <filename>` — Export successfully executed session commands to a script file (excluding sensitive operations like logins).
+*   `history clear` — Reset the current session's command history.
 
 ---
 

@@ -61,6 +61,7 @@ PROFILES     = {}          # {name: {"url": ..., "token": ...}}
 INSTANCE_TOKENS = {}       # {url: token}
 HTTP_SESSION = requests.Session()
 AUTOCOMPLETE_ENABLED = True
+SESSION_HISTORY = []
 
 VERSION      = "1.4.0-patch.57"
 try:
@@ -3802,6 +3803,54 @@ def cmd_autocomplete(args):
         err("Usage: autocomplete on | off | status")
 
 
+def cmd_history(args):
+    """Manage session command history.
+
+    history                       — show commands run in this session
+    history save <filename>       — save session commands to a local script file
+    history clear                 — clear the session history in memory
+    """
+    global SESSION_HISTORY
+    sub = args[0].lower() if args else "list"
+    
+    if sub in ("--help", "-h", "help"):
+        _help_section("HISTORY", [
+            ("history",                   "Show commands run in the current session"),
+            ("history save <filename>",   "Save session commands to a script file"),
+            ("history clear",             "Clear current session history"),
+        ])
+        return
+
+    if sub == "list":
+        if not SESSION_HISTORY:
+            dim("  (session history is empty)")
+            return
+        hdr("━━ Session Command History ━━━━━━━━━━━━━━━━━")
+        for i, cmd in enumerate(SESSION_HISTORY, 1):
+            print(f"  {i:>3}  {cmd}")
+            
+    elif sub == "clear":
+        SESSION_HISTORY = []
+        ok("Session command history cleared.")
+        
+    elif sub == "save":
+        if len(args) < 2:
+            err("Usage: history save <filename>")
+            return
+        filename = args[1]
+        try:
+            with open(filename, "w") as f:
+                f.write("# Stigix CLI Auto-Generated Script\n")
+                f.write("# Generated on " + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n\n")
+                for cmd in SESSION_HISTORY:
+                    f.write(cmd + "\n")
+            ok(f"Saved {len(SESSION_HISTORY)} commands to {filename}")
+        except Exception as e:
+            err(f"Failed to save history: {e}")
+    else:
+        err("Usage: history [list | save <filename> | clear]")
+
+
 def cmd_help(args):
     """Full help screen."""
     do_clear()
@@ -3819,6 +3868,9 @@ def cmd_help(args):
     status                 Global overview: backend, traffic, public IP
     auth login|logout      Authenticate / clear session
     autocomplete on|off    Enable / disable tab autocompletion
+    history                Show commands run in current session
+    history save <file>    Save session commands to a script file
+    history clear          Clear current session command history
 
   {c('1','TRAFFIC')}
     traffic start|stop     Enable / disable traffic generation
@@ -4063,6 +4115,7 @@ DISPATCH = {
     "iot":         cmd_iot,
     "system":      cmd_system,
     "connect":     cmd_connect,
+    "history":     cmd_history,
     "autocomplete": cmd_autocomplete,
     "autocompletion": cmd_autocomplete,
     "help":        cmd_help,
@@ -4073,6 +4126,7 @@ COMPLETER_TREE = {
     "auth":        {"login": None, "logout": None, "status": None},
     "status":      None,
     "connect":     {"list": None, "save": None, "forget": None},
+    "history":     {"list": None, "save": None, "clear": None},
     "autocomplete": {"on": None, "off": None, "status": None},
     "autocompletion": {"on": None, "off": None, "status": None},
     "traffic":     {
@@ -4185,6 +4239,10 @@ def run_command(line):
         sys.exit(0)
     handler = DISPATCH.get(cmd)
     if handler:
+        # Record command in session history (excluding history management and sensitive logins)
+        is_sensitive = (cmd == "auth" and any(x.lower() == "login" for x in rest))
+        if cmd != "history" and not is_sensitive:
+            SESSION_HISTORY.append(line)
         try:
             handler(rest)
         except KeyboardInterrupt:
