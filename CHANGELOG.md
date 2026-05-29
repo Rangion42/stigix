@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.87] - 2026-05-29
+### Added
+- **install** ⚙️ Added `docker exec -it stigix stigix-cli` hint to installer success message to guide users operating in headless environments or preferring terminal-based control.
+
 ## [v1.4.0-patch.86] - 2026-05-29
 ### Added
 - **install** ⚙️ Added note in installer success message instructing the user how to modify the Web UI port later (editing `PORT` in `stigix/.env` and restarting via `docker compose up -d`).

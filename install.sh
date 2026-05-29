@@ -350,6 +350,7 @@ if [ "$INSTALL_MODE" == "target" ]; then
 else
     echo "📊 Dashboard: http://localhost:$PORT"
     echo "🔑 Login: admin / admin"
+    echo "💻 Console CLI (for headless/terminal control): docker exec -it stigix stigix-cli"
     echo "💡 Note: To change the Web UI port later, edit 'PORT' in stigix/.env and run: cd stigix && docker compose up -d"
 fi
 echo "📝 Check logs: cd stigix && docker compose logs -f"
