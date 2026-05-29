@@ -55,42 +55,70 @@ Starting with **v1.2.1-patch.204**, Stigix uses a fully distributed "Any-Node Co
 ### 1. Deployment
 The MCP server is included by default in the Stigix `docker-compose.yml`. It starts automatically on port **3100** using the **SSE** transport.
 
-### 2. Remote Access
-Ensure port **3100** is reachable from your machine (or use an SSH tunnel).
-
-### 3. Automated Local Setup (One-Liner)
-If you already have the repository cloned, run this command in your terminal to initialize the bridge environment automatically:
-```bash
-/Users/jsuzanne/Github/stigix/mcp-server/setup-bridge.sh
-```
-This script will create a virtual environment (`.venv`) and install all necessary dependencies for you.
+### 2. Prerequisites
+Depending on the setup method you choose below, you will need:
+* **Option A (Node/npx Method - Recommended):** Node.js installed on your machine (provides the `npx` command).
+* **Option B (Python Bridge Method):** Python 3 installed on your machine.
 
 ---
 
 ## 🚦 Claude Desktop Configuration
 
-Stigix uses **Server-Sent Events (SSE)** for remote connectivity. Since Claude Desktop primarily supports **STDIO**, we use a lightweight **Bridge** script included in the repository.
+Stigix uses **Server-Sent Events (SSE)** for remote connectivity. Since Claude Desktop primarily supports **STDIO**, you can connect to it using one of the following two options:
 
 ### 1. Locate your Configuration File
 Open the `claude_desktop_config.json` file on your machine:
 - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
-### 2. Configure the Stigix Bridge
-Add a new entry under `mcpServers`. You can add multiple instances (e.g., Local, BR5, Orchestrator). 
+---
 
-**Example configuration for a remote node (BR5):**
+### Option A: Zero-Setup (Node/npx Method) — Recommended
+If you have **Node.js** installed, this is the easiest option because it does not require cloning this repository, setting up Python, or configuring virtual environments.
+
+Add this entry under `mcpServers` (replace the URL with the IP/port of your Stigix instance):
+
 ```json
 {
   "mcpServers": {
-    "stigix-br5": {
-      "command": "/Users/jsuzanne/Github/stigix/mcp-server/.venv/bin/python3",
+    "stigix-cloud": {
+      "command": "npx",
       "args": [
-        "/Users/jsuzanne/Github/stigix/mcp-server/bridge.py",
-        "http://192.168.123.101:3100/sse"
+        "-y",
+        "@modelcontextprotocol/inspector",
+        "http://<STIGIX_NODE_IP>:3100/sse"
+      ]
+    }
+  }
+}
+```
+
+---
+
+### Option B: Local Python Bridge Method
+Use this option if you do not have Node.js installed, or if you prefer running the Python bridge script locally.
+
+#### Step 1: Initialize the local python environment
+Go to your cloned `stigix` repository directory and run the initialization script:
+```bash
+./mcp-server/setup-bridge.sh
+```
+This script automatically creates a virtual environment (`.venv`) and installs the required Python dependencies in `mcp-server/`.
+
+#### Step 2: Configure Claude Desktop
+Add this entry under `mcpServers` in your configuration file:
+
+```json
+{
+  "mcpServers": {
+    "stigix-bridge": {
+      "command": "<PATH_TO_STIGIX_REPOSITORY>/mcp-server/.venv/bin/python3",
+      "args": [
+        "<PATH_TO_STIGIX_REPOSITORY>/mcp-server/bridge.py",
+        "http://<STIGIX_NODE_IP>:3100/sse"
       ],
       "env": {
-        "PYTHONPATH": "/Users/jsuzanne/Github/stigix/mcp-server"
+        "PYTHONPATH": "<PATH_TO_STIGIX_REPOSITORY>/mcp-server"
       }
     }
   }
@@ -98,23 +126,24 @@ Add a new entry under `mcpServers`. You can add multiple instances (e.g., Local,
 ```
 
 > [!IMPORTANT]
-> - **Paths**: You **MUST** use absolute paths for the python executable and the `bridge.py` script.
-> - **URL**: Replace `192.168.123.101` with the IP of the Stigix instance you want to pilot.
-> - **Virtualenv**: Ensure the `.venv` in `mcp-server/` is initialized (`pip install -r requirements.txt`).
+> - **Paths**: You **MUST** replace `<PATH_TO_STIGIX_REPOSITORY>` with the actual absolute path to where you cloned the repository (e.g. `/Users/yourname/Github/stigix`).
+> - **URL**: Replace `<STIGIX_NODE_IP>` with the IP of the Stigix instance you want to pilot.
+
+---
 
 ### 3. Verify Connection
-1. **Restart Claude Desktop** completely.
+1. **Restart Claude Desktop** completely (Cmd+Q, then reopen).
 2. Click the 🔨 **hammer icon** (bottom right of the prompt box).
-3. If everything is correct, you should see **stigix-br5** with a green status and the full list of tools (e.g., `list_endpoints`, `run_test`).
+3. If everything is correct, you should see your configured server with a green status and the full list of tools (e.g., `list_endpoints`, `run_test`).
 
 ### 4. Troubleshooting
 If the server doesn't appear or shows a red error:
-- Check the bridge logs on macOS: `tail -f ~/Library/Logs/Claude/mcp-server-stigix-br5.log`
-- Manually test the bridge: 
+- Check the bridge logs on macOS: `tail -f ~/Library/Logs/Claude/mcp.log`
+- Manually test the Python bridge (if using Option B):
   ```bash
-  /Users/jsuzanne/Github/stigix/mcp-server/.venv/bin/python3 /Users/jsuzanne/Github/stigix/mcp-server/bridge.py http://<IP>:3100/sse
+  <PATH_TO_STIGIX_REPOSITORY>/mcp-server/.venv/bin/python3 <PATH_TO_STIGIX_REPOSITORY>/mcp-server/bridge.py http://<STIGIX_NODE_IP>:3100/sse
   ```
-  If it says "Bridge initialized. Ready for Claude", the python setup is correct.
+  If it says `"Bridge initialized. Ready for Claude"`, the python setup is correct.
 
 ---
 

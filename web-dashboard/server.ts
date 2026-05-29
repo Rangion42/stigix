@@ -9179,14 +9179,24 @@ app.post('/api/admin/maintenance/upgrade', authenticateToken, async (req, res) =
                 try {
                     if (composeFile) {
                         const tagPrefix = version ? `TAG=${version} ` : '';
-                        // First try with --force-recreate
-                        const upCmd = `${tagPrefix}${baseCmd} ${projDirFlag} -f ${composeFile} up -d --force-recreate`.replace(/\s+/g, ' ').trim();
+                        let upCmd = '';
+                        if (hostDir) {
+                            const hostComposeFile = path.join(hostDir, 'docker-compose.yml');
+                            const runImage = version ? `jsuzanne/stigix:${version}` : 'jsuzanne/stigix:latest';
+                            // Run the compose up command inside a detached helper container so it survives the restart
+                            upCmd = `docker run -d --name stigix-upgrader --rm -v /var/run/docker.sock:/var/run/docker.sock -v ${hostDir}:${hostDir} -w ${hostDir} ${runImage} sh -c "sleep 2 && ${tagPrefix}docker compose -f ${hostComposeFile} up -d --force-recreate || ${tagPrefix}docker-compose -f ${hostComposeFile} up -d --force-recreate"`;
+                        } else {
+                            // Fallback to direct execution if hostDir is not resolved
+                            upCmd = `${tagPrefix}${baseCmd} ${projDirFlag} -f ${composeFile} up -d --force-recreate`.replace(/\s+/g, ' ').trim();
+                        }
                         
                         const upExit = await runCommandAndLog(upCmd, workingDir, 'restarting');
                         if (upExit !== 0) {
-                            G_UPGRADE_STATUS.logs.push(`[WARN] Up with --force-recreate failed (exit ${upExit}). Falling back to simple up...`);
+                            G_UPGRADE_STATUS.logs.push(`[WARN] Up command invocation failed (exit ${upExit}). Falling back to simple up...`);
                             // Fallback to simple up without force-recreate
-                            const fallbackUpCmd = `${tagPrefix}${baseCmd} ${projDirFlag} -f ${composeFile} up -d`.replace(/\s+/g, ' ').trim();
+                            const fallbackUpCmd = hostDir
+                                ? `docker run -d --name stigix-upgrader --rm -v /var/run/docker.sock:/var/run/docker.sock -v ${hostDir}:${hostDir} -w ${hostDir} ${version ? `jsuzanne/stigix:${version}` : 'jsuzanne/stigix:latest'} sh -c "sleep 2 && ${tagPrefix}docker compose -f ${path.join(hostDir, 'docker-compose.yml')} up -d || ${tagPrefix}docker-compose -f ${path.join(hostDir, 'docker-compose.yml')} up -d"`
+                                : `${tagPrefix}${baseCmd} ${projDirFlag} -f ${composeFile} up -d`.replace(/\s+/g, ' ').trim();
                             
                             const fallbackExit = await runCommandAndLog(fallbackUpCmd, workingDir, 'restarting');
                             if (fallbackExit !== 0) {
@@ -9272,9 +9282,16 @@ app.post('/api/admin/maintenance/restart', authenticateToken, async (req, res) =
                 if (baseCmd === 'docker') {
                     cmd = 'docker restart stigix';
                 } else {
-                    cmd = type === 'redeploy'
-                        ? `${baseCmd} ${projDirFlag} -f ${composeFile} up -d --force-recreate`.replace(/\s+/g, ' ').trim()
-                        : `${baseCmd} ${projDirFlag} -f ${composeFile} restart`.replace(/\s+/g, ' ').trim();
+                    if (type === 'redeploy' && hostDir) {
+                        const runImage = process.env.TAG ? `jsuzanne/stigix:${process.env.TAG}` : 'jsuzanne/stigix:latest';
+                        const hostComposeFile = path.join(hostDir, 'docker-compose.yml');
+                        // Run the redeploy up command inside a detached helper container so it survives the restart
+                        cmd = `docker run -d --name stigix-upgrader --rm -v /var/run/docker.sock:/var/run/docker.sock -v ${hostDir}:${hostDir} -w ${hostDir} ${runImage} sh -c "sleep 2 && docker compose -f ${hostComposeFile} up -d --force-recreate || docker-compose -f ${hostComposeFile} up -d --force-recreate"`;
+                    } else {
+                        cmd = type === 'redeploy'
+                            ? `${baseCmd} ${projDirFlag} -f ${composeFile} up -d --force-recreate`.replace(/\s+/g, ' ').trim()
+                            : `${baseCmd} ${projDirFlag} -f ${composeFile} restart`.replace(/\s+/g, ' ').trim();
+                    }
                 }
             } else {
                 cmd = 'docker restart stigix';
