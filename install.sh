@@ -58,6 +58,23 @@ find_free_port() {
     return 1
 }
 
+print_progress_bar() {
+    local val=$1
+    local max=$2
+    local text=$3
+    local width=30
+    local pct=$(( val * 100 / max ))
+    local num_filled=$(( val * width / max ))
+    local num_empty=$(( width - num_filled ))
+    
+    local bar=""
+    local k
+    for ((k=0; k<num_filled; k++)); do bar="${bar}█"; done
+    for ((k=0; k<num_empty; k++)); do bar="${bar}░"; done
+    
+    printf "\r   [%s] %3d%% - %s" "$bar" "$pct" "$text"
+}
+
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -247,18 +264,20 @@ fi
 if [ "$INSTALL_MODE" != "target" ]; then
     echo "🔍 Checking HTTP responsiveness at http://localhost:$PORT..."
     HTTP_OK=false
-    for i in {1..5}; do
+    MAX_ATTEMPTS=15
+    for ((i=1; i<=MAX_ATTEMPTS; i++)); do
         if curl -sfI "http://localhost:$PORT" > /dev/null 2>&1; then
             HTTP_OK=true
+            print_progress_bar $MAX_ATTEMPTS $MAX_ATTEMPTS "Web Dashboard is fully responsive! "
+            echo ""
             break
         fi
-        echo "   Waiting for Web Dashboard to initialize (attempt $i/5)..."
+        print_progress_bar $i $MAX_ATTEMPTS "Waiting for Dashboard (attempt $i/$MAX_ATTEMPTS)..."
         sleep 2
     done
 
-    if [ "$HTTP_OK" = true ]; then
-        echo "✓ Web Dashboard is fully responsive."
-    else
+    if [ "$HTTP_OK" = false ]; then
+        echo ""
         echo "⚠️  Warning: Web Dashboard is not responding yet."
         echo "💡 Diagnostics: The server might still be initializing. Run 'docker logs stigix' to verify."
     fi

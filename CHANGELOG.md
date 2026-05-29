@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.83] - 2026-05-29
+### Added
+- **install** ⚙️ Added an interactive, real-time CLI progress bar during the post-deployment Web Dashboard connectivity check loop (using `\r` carriage return to draw visual blocks on a single line).
+
 ## [v1.4.0-patch.82] - 2026-05-29
 ### Added
 - **install** ⚙️ Implemented dynamic port auto-selection in `install.sh` and `install-latest-beta.sh` (scanning the `8080-8090` range if `8080` is in use) and writing the chosen port to the generated `.env` file.
