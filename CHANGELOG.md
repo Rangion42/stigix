@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.94] - 2026-05-29
+### Added
+- **stigix-cli** ⏰ Idle timeout: CLI automatically exits after N seconds of inactivity. Default: **300s** (5 min). Set `--idle-timeout 0` to disable entirely.
+  - prompt_toolkit path: uses `session.prompt(timeout=N)`, catches `TimeoutError`
+  - Fallback plain-input path: uses `signal.SIGALRM` (Unix only)
+  - Startup banner shows active timeout value
+  - `--idle-timeout SECONDS` CLI argument added (e.g. `stigix-cli --idle-timeout 600`)
+
 ## [v1.4.0-patch.93] - 2026-05-29
 ### Fixed
 - **stigix-cli** ⏱️ `security url-batch` and `security dns-batch` were timing out at 10s when running 66 URL + 24 DNS tests. Timeout raised to **180s** per batch call.

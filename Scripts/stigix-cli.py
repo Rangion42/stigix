@@ -62,6 +62,7 @@ INSTANCE_TOKENS = {}       # {url: token}
 HTTP_SESSION = requests.Session()
 AUTOCOMPLETE_ENABLED = True
 SESSION_HISTORY = []
+IDLE_TIMEOUT = 300         # seconds of inactivity before auto-exit (0 = no limit)
 
 VERSION      = "1.4.0-patch.57"
 try:
@@ -4314,7 +4315,7 @@ def _prompt_text():
         return HTML(f"<warn>stigix</warn><b>@</b><warn>{host}</warn><b> ! </b>")
 
 
-def run_interactive():
+def run_interactive(idle_timeout=0):
     do_clear()
     display_ver = VERSION if VERSION.startswith("v") else f"v{VERSION}"
     content = f"  stigix-cli {display_ver} (Beta) local console  "
@@ -4327,6 +4328,8 @@ def run_interactive():
         ok(f"Session : token loaded from {CONFIG_FILE}")
     else:
         warn("Not authenticated — run: auth login")
+    if idle_timeout > 0:
+        dim(f"Idle timeout: {idle_timeout}s — CLI exits after {idle_timeout}s of inactivity (use --idle-timeout 0 to disable)")
     dim("Type 'help' for commands, F1 for help, F5 for status")
     print()
 
@@ -4336,12 +4339,25 @@ def run_interactive():
 
     if not HAS_PROMPT_TOOLKIT:
         # ── Fallback: plain input() ───────────────────────────────────────────
+        import signal
+
+        def _timeout_handler(signum, frame):
+            print(f"\n⏰ Idle timeout ({idle_timeout}s) — no activity detected. Exiting.")
+            sys.exit(0)
+
         while True:
             try:
+                if idle_timeout > 0 and hasattr(signal, "SIGALRM"):
+                    signal.signal(signal.SIGALRM, _timeout_handler)
+                    signal.alarm(idle_timeout)
                 line = input(f"stigix@{STIGIX_URL}{'!' if not JWT_TOKEN else ''} > ")
+                if idle_timeout > 0 and hasattr(signal, "SIGALRM"):
+                    signal.alarm(0)  # reset timer after input received
                 run_command(line)
             except KeyboardInterrupt:
                 print()
+                if idle_timeout > 0 and hasattr(signal, "SIGALRM"):
+                    signal.alarm(0)
                 continue
             except EOFError:
                 print("\nGoodbye.")
@@ -4371,15 +4387,21 @@ def run_interactive():
         mouse_support=False,
     )
 
+    pt_timeout = float(idle_timeout) if idle_timeout > 0 else None
+
     while True:
         try:
-            line = session.prompt(_prompt_text)
+            line = session.prompt(_prompt_text, default="", timeout=pt_timeout)
             run_command(line)
         except KeyboardInterrupt:
             print()
             continue
         except EOFError:
             print("\nGoodbye.")
+            break
+        except TimeoutError:
+            # prompt_toolkit raises TimeoutError when timeout= expires with no input
+            print(f"\n⏰ Idle timeout ({idle_timeout}s) — no activity detected. Exiting.")
             break
 
 
@@ -4396,6 +4418,8 @@ Examples:
   stigix-cli --exec "auth login"          # Run single command and exit
   stigix-cli --exec "security suite"      # Run full security suite headless
   stigix-cli --script run.txt             # Execute commands from a file
+  stigix-cli --idle-timeout 600           # Exit after 10 min of inactivity
+  stigix-cli --idle-timeout 0             # No idle timeout (run indefinitely)
         """,
     )
     parser.add_argument("--url",    default=None, metavar="URL",
@@ -4406,6 +4430,9 @@ Examples:
                         help="Execute commands from a file, one per line")
     parser.add_argument("--autocomplete", metavar="TEXT", nargs="?", const="",
                         help="Generate autocomplete suggestions for the given input text")
+    parser.add_argument("--idle-timeout", type=int, default=300, metavar="SECONDS",
+                        dest="idle_timeout",
+                        help="Exit after N seconds of inactivity (default: 300, 0 = no limit)")
     args = parser.parse_args()
 
     # Load saved session first, then override with --url if given
@@ -4439,7 +4466,7 @@ Examples:
             info(f"[{lineno}] {line}")
             run_command(line)
     else:
-        run_interactive()
+        run_interactive(idle_timeout=args.idle_timeout)
 
 
 if __name__ == "__main__":
