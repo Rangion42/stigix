@@ -270,11 +270,19 @@ docker exec -it stigix stigix-cli --exec "status"
 ```
 **Output:**
 ```text
-━━ Stigix Status ━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✓ Backend    [READY]  uptime ?s
-→ Version    v1.4.0-patch.36
-Traffic    [RUNNING]
-→ Public IP  2.13.195.58
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                    Stigix Status Overview                    ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃  Backend     : [READY]  uptime: 1h 24m 5s                    ┃
+┃  Version     : v1.4.0-patch.88                               ┃
+┃  Traffic Gen : [RUNNING]                                     ┃
+┃  Prisma Site : BR8                                           ┃
+┣──────────────────────────────────────────────────────────────┫
+┃  Local IP    : 192.168.219.1 (enp2s0)                        ┃
+┃  Gateway     : 192.168.219.254                               ┃
+┃  Traffic If  : enp2s0                                        ┃
+┃  Public IP   : 2.13.195.58                                   ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 ```
 
 ### 2. List Connectivity/DEM Probes
