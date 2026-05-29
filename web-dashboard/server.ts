@@ -4667,6 +4667,7 @@ app.get('/api/system/health', authenticateToken, async (req, res) => {
         timestamp: new Date().toISOString(),
         platform: PLATFORM,
         ready: true,
+        uptime: Math.round(process.uptime()),
         commands: {
             dns: {
                 available: true,

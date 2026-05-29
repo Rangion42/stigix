@@ -483,6 +483,25 @@ def cmd_auth(args):
         ])
 
 
+def format_uptime(secs):
+    if secs is None or secs == '?':
+        return '?'
+    try:
+        s = int(secs)
+        h = s // 3600
+        m = (s % 3600) // 60
+        r = s % 60
+        parts = []
+        if h > 0:
+            parts.append(f"{h}h")
+        if m > 0 or h > 0:
+            parts.append(f"{m}m")
+        parts.append(f"{r}s")
+        return " ".join(parts)
+    except:
+        return str(secs)
+
+
 def cmd_status(args):
     if not require_auth(): return
     if any(x in args for x in ("--help", "-h", "help")):
@@ -491,24 +510,43 @@ def cmd_status(args):
         ])
         return
 
-    hdr("━━ Stigix Status ━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    import re
+    def clean_ansi(s):
+        return re.sub(r'\033\[[0-9;]*m', '', str(s))
 
+    rows = []
+
+    # 1. Backend Health
     health = api_get("/api/system/health")
     if health:
         s = health.get("status", "?")
-        ok(f"Backend     {status_badge(s)}  uptime {health.get('uptime','?')}s")
+        upt = health.get("uptime", "?")
+        upt_str = format_uptime(upt)
+        rows.append(("Backend", f"{status_badge(s)}  uptime: {upt_str}"))
 
+    # 2. Version
     v = api_get("/api/version")
     if v:
-        info(f"Version     {v.get('version', v)}")
+        rows.append(("Version", f"{v.get('version', v)}"))
 
+    # 3. Traffic Generator Status
     t = api_get("/api/traffic/status")
     if t:
         state = "running" if (t.get("enabled") or t.get("running")) else "stopped"
-        print(f"Traffic     {status_badge(state)}")
+        rows.append(("Traffic Gen", status_badge(state)))
         STATUS.traffic = "▶ RUNNING" if state == "running" else "■ STOPPED"
 
-    # Fetch local IP and default interface
+    # 4. Prisma Site
+    site = api_get("/api/siteinfo")
+    if site:
+        site_name = site.get("detected_site_name") or site.get("siteName")
+        if site_name:
+            rows.append(("Prisma Site", site_name))
+
+    # Section separator
+    rows.append(None)
+
+    # 5. Interfaces & Default IP
     ifaces_data = api_get("/api/system/interfaces")
     local_ip = None
     default_iface = None
@@ -522,33 +560,54 @@ def cmd_status(args):
         if not local_ip and iface_list:
             local_ip = iface_list[0].get("ip")
 
-    # Fetch gateway IP
+    if local_ip:
+        rows.append(("Local IP", f"{local_ip}" + (f" ({default_iface})" if default_iface else "")))
+
+    # 6. Gateway
     gw_data = api_get("/api/system/gateway-ip")
     gw_ip = gw_data.get("ip") if gw_data else None
+    if gw_ip and gw_ip != "Unknown OS":
+        rows.append(("Gateway", gw_ip))
 
-    # Fetch configured traffic interfaces
+    # 7. Traffic Interface
     traffic_ifaces_data = api_get("/api/config/interfaces")
     traffic_ifaces = None
     if traffic_ifaces_data and isinstance(traffic_ifaces_data, list):
         traffic_ifaces = ", ".join(traffic_ifaces_data)
-
-    if local_ip:
-        info(f"Local IP    {local_ip}" + (f" ({default_iface})" if default_iface else ""))
-    if gw_ip and gw_ip != "Unknown OS":
-        info(f"Gateway     {gw_ip}")
     if traffic_ifaces:
-        info(f"Traffic If  {traffic_ifaces}")
+        rows.append(("Traffic If", traffic_ifaces))
 
+    # 8. Public IP
     ip = api_get("/api/connectivity/public-ip", suppress_err=True)
     if ip:
-        info(f"Public IP   {ip.get('ip', ip)}")
+        rows.append(("Public IP", f"{ip.get('ip', ip)}"))
 
-    site = api_get("/api/siteinfo")
-    if site:
-        site_name = site.get("detected_site_name") or site.get("siteName")
-        if site_name:
-            info(f"Prisma Site {site_name}")
+    # Print the beautiful card
+    max_label_len = max(len(r[0]) for r in rows if r is not None)
+    card_width = 64
+    inner_width = card_width - 4
 
+    print(c("2;34", "┏" + "━" * (card_width - 2) + "┓"))
+    title_str = " Stigix Status Overview "
+    title_pad = (inner_width - len(title_str)) // 2
+    title_line = " " * title_pad + title_str + " " * (inner_width - len(title_str) - title_pad)
+    print(c("2;34", "┃") + c("1;34", title_line) + c("2;34", "┃"))
+    print(c("2;34", "┣" + "━" * (card_width - 2) + "┫"))
+
+    for r in rows:
+        if r is None:
+            print(c("2;34", "┣" + "─" * (card_width - 2) + "┫"))
+        else:
+            label, val = r
+            label_formatted = c("1;36", f"  {label:<{max_label_len}} : ")
+            val_clean = clean_ansi(val)
+            pad_len = inner_width - (max_label_len + 5) - len(val_clean)
+            print(c("2;34", "┃") + label_formatted + val + (" " * pad_len) + c("2;34", "┃"))
+
+    print(c("2;34", "┗" + "━" * (card_width - 2) + "┛"))
+    print()
+
+    # Dynamic failover convergence info
     conv = api_get("/api/convergence/status")
     if conv and isinstance(conv, list):
         running = [t for t in conv if t.get("running")]
@@ -613,23 +672,23 @@ def render_traffic_dashboard(stats, status_str, app_to_group, truncated_to_group
     success_val = f"{success_rate:>5.1f}%"
     col2_row1 = " Success Rate: " + c(success_color, success_val) + " "
     
-    col3_row1 = " Rate:   " + c("36", rpm_str.ljust(26)) + " "
+    col3_row1 = " Rate: " + c("36", rpm_str.ljust(14)) + " "
     
     col1_row2 = f" Active Apps: {active_apps:>3} "
     col2_row2 = f" Total Requests: {total_req:>5} "
     
     errors_color = "31" if total_errors > 0 else "32"
-    col3_row2 = " Errors: " + c(errors_color, f"{total_errors}".ljust(26)) + " "
+    col3_row2 = " Errors: " + c(errors_color, f"{total_errors}".ljust(12)) + " "
     
     row1 = f"║{col1_row1}║{col2_row1}║{col3_row1}║"
     row2 = f"║{col1_row2}║{col2_row2}║{col3_row2}║"
     
-    hdr("╔══════════════════╦══════════════════════╦════════════════════════════════════╗")
-    hdr("║" + "TRAFFIC DASHBOARD".center(78) + "║")
-    hdr("╠══════════════════╬══════════════════════╬════════════════════════════════════╣")
+    hdr("╔══════════════════╦══════════════════════╦══════════════════════╗")
+    hdr("║" + "TRAFFIC DASHBOARD".center(64) + "║")
+    hdr("╠══════════════════╬══════════════════════╬══════════════════════╣")
     hdr(row1)
     hdr(row2)
-    hdr("╚══════════════════╩══════════════════════╩════════════════════════════════════╝")
+    hdr("╚══════════════════╩══════════════════════╩══════════════════════╝")
     print()
     
     # Print App Table
@@ -1604,18 +1663,18 @@ def cmd_experience(args):
         global_health = stats_data.get("globalHealth", 0) if stats_data else 0
         health_color = "32" if global_health >= 80 else ("33" if global_health >= 50 else "31")
         
-        score_text = f"Global Score: {global_health:>3}/100"
-        padding_total = 78 - len(score_text)
+        score_text = f"Global Score: {global_health}/100"
+        padding_total = 64 - len(score_text)
         left_pad = padding_total // 2
         right_pad = padding_total - left_pad
         score_part = c(health_color, f"{global_health}/100")
         row_content = " " * left_pad + "Global Score: " + score_part + " " * right_pad
         
-        hdr("╔══════════════════════════════════════════════════════════════════════════════╗")
-        hdr("║" + "DIGITAL EXPERIENCE GLOBAL SUMMARY".center(78) + "║")
-        hdr("╠══════════════════════════════════════════════════════════════════════════════╣")
+        hdr("╔══════════════════════════════════════════════════════════════╗")
+        hdr("║" + "DIGITAL EXPERIENCE GLOBAL SUMMARY".center(64) + "║")
+        hdr("╠══════════════════════════════════════════════════════════════╣")
         hdr(f"║{row_content}║")
-        hdr("╚══════════════════════════════════════════════════════════════════════════════╝")
+        hdr("╚══════════════════════════════════════════════════════════════╝")
         print()
         
         # Group results by endpointId
@@ -4134,9 +4193,12 @@ def _prompt_text():
 
 def run_interactive():
     do_clear()
-    hdr("╔══════════════════════════════════════════════╗")
-    hdr(f"║  stigix-cli v{VERSION:<8} (Beta) local console   ║")
-    hdr("╚══════════════════════════════════════════════╝")
+    display_ver = VERSION if VERSION.startswith("v") else f"v{VERSION}"
+    content = f"  stigix-cli {display_ver} (Beta) local console  "
+    w = len(content)
+    hdr("╔" + "═" * w + "╗")
+    hdr(f"║{content}║")
+    hdr("╚" + "═" * w + "╝")
     info(f"Target  : {STIGIX_URL}")
     if JWT_TOKEN:
         ok(f"Session : token loaded from {CONFIG_FILE}")

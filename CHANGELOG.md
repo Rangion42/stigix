@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.88] - 2026-05-29
+### Refactored / Fixed
+- **cli** 💻 Revamped the CLI status overview screen (`status` command) into a clean, card-based aligned panel layout.
+- **cli** 💻 Added real uptime calculations fetched directly from the backend API health check.
+- **cli** 💻 Corrected double `v` version prefix bug in startup header.
+- **cli** 💻 Restructured and compacted console stats grids (traffic and digital experience dashboard cards) to fit perfectly within 64-column widths, avoiding line wraps on smaller terminals.
+
 ## [v1.4.0-patch.87] - 2026-05-29
 ### Added
 - **install** ⚙️ Added `docker exec -it stigix stigix-cli` hint to installer success message to guide users operating in headless environments or preferring terminal-based control.
