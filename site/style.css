@@ -18,9 +18,9 @@
   --teal-dim:     #128f7c;
   --teal-glow:    rgba(24, 201, 174, 0.12);
   --teal-bg:      rgba(24, 201, 174, 0.07);
-  --white:        #f0f4f8;
-  --mid:          #7f8ea3;
-  --muted:        #48566a;
+  --white:        #ffffff;
+  --mid:          #cbd5e1;
+  --muted:        #94a3b8;
   --mono:         'JetBrains Mono', monospace;
   --sans:         'Inter', system-ui, sans-serif;
   --r:            5px;
