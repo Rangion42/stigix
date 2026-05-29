@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.82] - 2026-05-29
+### Added
+- **install** ⚙️ Implemented dynamic port auto-selection in `install.sh` and `install-latest-beta.sh` (scanning the `8080-8090` range if `8080` is in use) and writing the chosen port to the generated `.env` file.
+- **install** ⚙️ Added automated post-deployment diagnostic connectivity assessment checks to confirm container state and HTTP responsiveness of the dashboard at the end of the installation.
+
 ## [v1.4.0-patch.81] - 2026-05-28
 ### Fixed
 - **web-dashboard** ⚙️ Implemented robust fallbacks (by querying container name `stigix` or scanning running images) in the host project directory detection module to support Docker hosts configured with `network_mode: host` (where `os.hostname()` returns the host's hostname rather than the container ID).

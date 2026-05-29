@@ -26,7 +26,7 @@ services:
     container_name: stigix
     # Bridge mode: required on macOS / Windows (host mode not supported)
     ports:
-      - "8080:8080"      # Web Dashboard
+      - "${PORT:-8080}:${PORT:-8080}"      # Web Dashboard
       - "8082:8082"      # HTTP Echo Target
       - "9000:9000"      # XFR Bandwidth Target
       - "5201:5201/tcp"  # iPerf TCP
@@ -55,7 +55,7 @@ services:
 
     environment:
       # --- General & Web UI ---
-      - PORT=8080
+      - PORT=${PORT:-8080}
       - JWT_SECRET=${JWT_SECRET:-your-secure-secret-here}
       - DEBUG=${DEBUG:-false}
       - BETA=${BETA:-false}

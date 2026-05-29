@@ -25,6 +25,39 @@ show_help() {
     exit 0
 }
 
+find_free_port() {
+    local port=$1
+    local max_port=$2
+    while [ "$port" -le "$max_port" ]; do
+        local in_use=false
+        if command -v lsof &> /dev/null; then
+            if lsof -i :$port > /dev/null 2>&1; then
+                in_use=true
+            fi
+        elif command -v ss &> /dev/null; then
+            if ss -tln | grep -q -E "(^|:)$port($|[^0-9])"; then
+                in_use=true
+            fi
+        elif command -v netstat &> /dev/null; then
+            if netstat -an | grep -E "(^|[^0-9])$port($|[^0-9])" | grep -q -i listen; then
+                in_use=true
+            fi
+        else
+            # Fallback: check if we can open a socket
+            if (timeout 1 bash -c "cat < /dev/null > /dev/tcp/127.0.0.1/$port") >/dev/null 2>&1; then
+                in_use=true
+            fi
+        fi
+        
+        if [ "$in_use" = false ]; then
+            echo "$port"
+            return 0
+        fi
+        port=$((port+1))
+    done
+    return 1
+}
+
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -103,8 +136,26 @@ fi
 # Generate a unique JWT secret for this installation
 JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null | tr -d '-' || date +%s%N | sha256sum | head -c 64)
 
+PORT=8080
+if [ "$INSTALL_MODE" != "target" ]; then
+    echo "🔍 Checking for a free port for the Web Dashboard (range 8080-8090)..."
+    FREE_PORT=$(find_free_port 8080 8090)
+    if [ -n "$FREE_PORT" ]; then
+        PORT=$FREE_PORT
+        if [ "$PORT" -ne 8080 ]; then
+            echo "⚠️  Port 8080 is in use. Auto-selected alternative port: $PORT"
+        else
+            echo "✅ Port 8080 is free."
+        fi
+    else
+        echo "❌ Error: All ports in the range 8080-8090 are in use."
+        exit 1
+    fi
+fi
+
 echo "STIGIX_ROLE=$INSTALL_MODE" > .env
 echo "JWT_SECRET=$JWT_SECRET" >> .env
+echo "PORT=$PORT" >> .env
 echo "BETA=true" >> .env
 echo "" >> .env
 echo "# --- Docker Image Tag (Uncomment to lock version/tag) ---" >> .env
@@ -177,18 +228,41 @@ fi
 echo "🔧 Pulling images and starting Stigix All-in-One..."
 docker compose pull || echo "⚠️  Pull failed, trying to start anyway..."
 
-# Pre-flight port check for dashboard
-if [ "$INSTALL_MODE" != "target" ]; then
-    echo "🔍 Checking if port 8080 is available..."
-    if command -v lsof &> /dev/null; then
-        if lsof -i :8080 > /dev/null 2>&1; then
-            echo "❌ Error: Port 8080 is already in use by another application on your host."
-            exit 1
-        fi
-    fi
+docker compose up -d
+
+echo ""
+echo "🔍 Running post-installation diagnostics..."
+sleep 5
+
+CONTAINER_RUNNING=false
+if [ "$(docker inspect -f '{{.State.Running}}' stigix 2>/dev/null)" = "true" ]; then
+    CONTAINER_RUNNING=true
+    echo "✓ Container 'stigix' is running."
+else
+    echo "❌ Error: Container 'stigix' is not running."
+    echo "💡 Diagnostics: Check container logs by running 'docker logs stigix'"
+    exit 1
 fi
 
-docker compose up -d
+if [ "$INSTALL_MODE" != "target" ]; then
+    echo "🔍 Checking HTTP responsiveness at http://localhost:$PORT..."
+    HTTP_OK=false
+    for i in {1..5}; do
+        if curl -sfI "http://localhost:$PORT" > /dev/null 2>&1; then
+            HTTP_OK=true
+            break
+        fi
+        echo "   Waiting for Web Dashboard to initialize (attempt $i/5)..."
+        sleep 2
+    done
+
+    if [ "$HTTP_OK" = true ]; then
+        echo "✓ Web Dashboard is fully responsive."
+    else
+        echo "⚠️  Warning: Web Dashboard is not responding yet."
+        echo "💡 Diagnostics: The server might still be initializing. Run 'docker logs stigix' to verify."
+    fi
+fi
 
 echo ""
 echo "=========================================="
@@ -198,7 +272,7 @@ echo ""
 if [ "$INSTALL_MODE" == "target" ]; then
     echo "🎯 Target Site is active (XFR: 9000, Voice: 6100, Probes: 6200, iPerf: 5201)."
 else
-    echo "📊 Dashboard: http://localhost:8080"
+    echo "📊 Dashboard: http://localhost:$PORT"
     echo "🔑 Login: admin / admin"
 fi
 echo "📝 Check logs: cd stigix && docker compose logs -f"
