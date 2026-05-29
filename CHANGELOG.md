@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.93] - 2026-05-29
+### Fixed
+- **stigix-cli** ⏱️ `security url-batch` and `security dns-batch` were timing out at 10s when running 66 URL + 24 DNS tests. Timeout raised to **180s** per batch call.
+- **stigix-cli** 🔧 `security suite` EICAR step was triggering an interactive endpoint prompt (blocking in headless/exec mode) and could return a 400 error. Suite now auto-selects the Cloud EICAR URL without user interaction.
+### Added
+- **stigix-cli** ⠹ Live spinner with elapsed-time counter shown during long-running batch security tests (`url-batch`, `dns-batch`): `⠙ Testing 66 URL categories  [12s]` — updates every 100ms and shows total elapsed on completion.
+
 ## [v1.4.0-patch.92] - 2026-05-29
 ### Fixed
 - **stigix-cli** 🔧 Fixed status card table alignment — ANSI escape codes in label column were inflating visible width, causing right border to overflow. Now uses correct visible-length calculation for padding.

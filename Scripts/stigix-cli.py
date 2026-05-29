@@ -232,6 +232,35 @@ def hdr(msg):   print(c("1;34", msg))
 def dim(msg):   print(c("2",    msg))
 def sep():      print(c("2", "  " + "─" * 50))
 
+def _spin_while(label, fn):
+    """Run fn() in a background thread and show a spinner + elapsed time until it returns."""
+    result = [None]
+    exc    = [None]
+
+    def worker():
+        try:
+            result[0] = fn()
+        except Exception as e:
+            exc[0] = e
+
+    t = threading.Thread(target=worker, daemon=True)
+    t.start()
+    frames = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"]
+    start = time.time()
+    i = 0
+    while t.is_alive():
+        elapsed = int(time.time() - start)
+        if sys.stdout.isatty():
+            print(f"\r  {c('36', frames[i % len(frames)])} {label}  [{elapsed}s]", end="", flush=True)
+        time.sleep(0.1)
+        i += 1
+    t.join()
+    if sys.stdout.isatty():
+        print(f"\r  {c('32','✓')} {label}  [{int(time.time()-start)}s]")
+    if exc[0]:
+        raise exc[0]
+    return result[0]
+
 def table(headers, rows):
     if not rows:
         dim("  (empty)")
@@ -1029,7 +1058,6 @@ def cmd_security(args):
             print(f"Result: {status_badge(status)}  (HTTP {r.get('httpCode','?')})")
 
     elif sub == "url-batch":
-        info("Running batch URL filter test (all enabled categories)...")
         r = api_get("/api/security/config")
         if not r: return
         cats = r.get("url_filtering", {}).get("enabled_categories", [])
@@ -1046,7 +1074,11 @@ def cmd_security(args):
             warn("No enabled URL categories found in profile")
             return
         tests = [{"url": item["url"], "category": item["name"]} for item in enabled_items]
-        result = api_post("/api/security/url-test-batch", {"tests": tests})
+        info(f"Running batch URL filter test ({len(tests)} categories, timeout 180s)...")
+        result = _spin_while(
+            f"Testing {len(tests)} URL categories",
+            lambda: api_post("/api/security/url-test-batch", {"tests": tests}, timeout=180)
+        )
         if result:
             rows = []
             for res in result.get("results", []):
@@ -1110,7 +1142,6 @@ def cmd_security(args):
             print(f"Result: {status_badge(status)}  resolved={resolved}")
 
     elif sub == "dns-batch":
-        info("Running batch DNS security test (all enabled domains)...")
         r = api_get("/api/security/config")
         if not r: return
         tests_conf = r.get("dns_security", {}).get("enabled_tests", [])
@@ -1127,7 +1158,11 @@ def cmd_security(args):
             warn("No enabled DNS tests found in profile")
             return
         tests = [{"domain": item["domain"], "testName": item["name"]} for item in enabled_items]
-        result = api_post("/api/security/dns-test-batch", {"tests": tests})
+        info(f"Running batch DNS security test ({len(tests)} domains, timeout 180s)...")
+        result = _spin_while(
+            f"Testing {len(tests)} DNS categories",
+            lambda: api_post("/api/security/dns-test-batch", {"tests": tests}, timeout=180)
+        )
         if result:
             rows = []
             for res in result.get("results", []):
@@ -1202,7 +1237,7 @@ def cmd_security(args):
                 endpoints = [target]
 
         info(f"Running EICAR threat prevention test ({len(endpoints)} endpoint(s))...")
-        r = api_post("/api/security/threat-test", {"endpoints": endpoints})
+        r = api_post("/api/security/threat-test", {"endpoints": endpoints}, timeout=30)
         if r:
             rows = []
             for res in r.get("results", []):
@@ -1372,8 +1407,20 @@ def cmd_security(args):
         info("2/3 — DNS Security batch test")
         cmd_security(["dns-batch"])
         print()
-        info("3/3 — EICAR Threat Prevention")
-        cmd_security(["eicar"])
+        info("3/3 — EICAR Threat Prevention (auto: Cloud EICAR URL)")
+        # In suite mode always use cloud EICAR URL, no interactive prompt
+        r_cloud = api_get("/api/security/cloud-eicar-url")
+        eicar_url = (r_cloud.get("url") if r_cloud and r_cloud.get("url")
+                     else "https://secure.eicar.org/eicar.com.txt")
+        info(f"EICAR target: {eicar_url}")
+        r = api_post("/api/security/threat-test", {"endpoints": [eicar_url]}, timeout=30)
+        if r:
+            rows = []
+            for res in r.get("results", []):
+                s  = res.get("status", "?")
+                ep = res.get("endpoint", "?")
+                rows.append([ep[:70], status_badge(s), res.get("message","")[:40]])
+            table(["Endpoint", "Result", "Message"], rows)
         print()
         info("Done. Run 'security status' for aggregate stats.")
 
