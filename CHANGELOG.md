@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.100] - 2026-05-29
+### Added
+- **mcp-server** 🚀 Phase 3 MCP tool expansion — 6 new tools completing the CLI feature parity:
+  - `run_full_security_audit`: Complete security suite (URL batch + DNS batch + EICAR) in one command with global summary — mirrors CLI `security suite`
+  - `run_eicar_test`: Standalone EICAR threat prevention test with optional custom URL; auto-fetches cloud EICAR URL from node
+  - `get_public_ip`: Fetch the WAN exit IP of a node to verify SD-WAN routing/VPN path
+  - `list_apps`: List all apps configured in the traffic simulation profile
+  - `export_app_config`: Export full app config as JSON for backup or cross-node cloning
+  - `import_app_config`: Import app config JSON to a node (overwrites current config)
+- **mcp-server** 🔧 Added 6 corresponding orchestrator methods; `run_full_security_audit` reuses Phase 2 batch methods internally for consistency
+- **mcp-server** 📊 MCP server now has **44 tools** total (was 18 before Phase 1), covering ~95% of stigix-cli capabilities
+
 ## [v1.4.0-patch.99] - 2026-05-29
 ### Added
 - **mcp-server** 🚀 Phase 2 MCP tool expansion — 8 new tools for batch security audits, DEM probe management, fabric target management, and traffic density control:

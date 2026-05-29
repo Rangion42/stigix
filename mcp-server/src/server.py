@@ -697,6 +697,94 @@ async def set_traffic_client_count(agent_id: str, client_count: int) -> dict:
 
 
 # -----------------------------------------------------------------------------
+# Phase 3 Tool Additions
+# -----------------------------------------------------------------------------
+
+@mcp.tool()
+async def run_full_security_audit(agent_id: str) -> dict:
+    """
+    Run the COMPLETE security suite on a specific node in one command.
+    Executes 3 phases sequentially:
+      1. URL Filtering batch (all enabled categories)
+      2. DNS Security batch (all enabled domains)
+      3. EICAR Threat Prevention (cloud EICAR URL)
+    Returns detailed results for each phase plus a global summary.
+    Note: This test can take up to 7-10 minutes to complete.
+    Use this when you want a comprehensive security posture report for a node.
+
+    Args:
+        agent_id: ID of the Stigix node to audit.
+    """
+    return await orchestrator.run_full_security_audit(agent_id)
+
+
+@mcp.tool()
+async def run_eicar_test(agent_id: str, custom_url: Optional[str] = None) -> dict:
+    """
+    Run an EICAR malware/threat prevention test on a specific node.
+    By default, uses the cloud EICAR URL fetched from the node itself.
+    Optionally, supply a custom URL to test a specific threat vector.
+
+    Args:
+        agent_id: ID of the Stigix node.
+        custom_url: Optional custom threat URL to test (e.g. a direct EICAR file URL).
+                    If not provided, the node's configured cloud EICAR URL is used.
+    """
+    return await orchestrator.run_eicar_test(agent_id, custom_url)
+
+
+@mcp.tool()
+async def get_public_ip(agent_id: str) -> dict:
+    """
+    Get the public (WAN) exit IP address of a specific node.
+    Useful to verify which internet path a node is using or confirm VPN/SD-WAN routing.
+
+    Args:
+        agent_id: ID of the Stigix node.
+    """
+    return await orchestrator.get_public_ip(agent_id)
+
+
+@mcp.tool()
+async def list_apps(agent_id: str) -> dict:
+    """
+    List all applications configured in the traffic simulation profile of a specific node.
+    Shows which apps (Teams, Zoom, Salesforce, etc.) are being simulated.
+
+    Args:
+        agent_id: ID of the Stigix node.
+    """
+    return await orchestrator.list_apps(agent_id)
+
+
+@mcp.tool()
+async def export_app_config(agent_id: str) -> dict:
+    """
+    Export the full application traffic configuration from a specific node as JSON.
+    Use this to backup a node's app profile before making changes,
+    or to copy the config to another node via import_app_config.
+
+    Args:
+        agent_id: ID of the Stigix node to export from.
+    """
+    return await orchestrator.export_app_config(agent_id)
+
+
+@mcp.tool()
+async def import_app_config(agent_id: str, config: dict) -> dict:
+    """
+    Import an application traffic configuration to a specific node.
+    WARNING: This OVERWRITES the current app config on the node.
+    Use export_app_config first to get the config from another node, then pass it here.
+
+    Args:
+        agent_id: ID of the Stigix node to import to.
+        config: The application config JSON object (obtained from export_app_config).
+    """
+    return await orchestrator.import_app_config(agent_id, config)
+
+
+# -----------------------------------------------------------------------------
 # Main Entry Point
 # -----------------------------------------------------------------------------
 

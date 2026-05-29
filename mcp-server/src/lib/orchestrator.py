@@ -1183,3 +1183,189 @@ class TestOrchestrator:
                 logger.error(f"Failed to set client count on {agent_id}: {e}")
                 return {"error": str(e)}
 
+    # -------------------------------------------------------------------------
+    # Phase 3 Additions
+    # -------------------------------------------------------------------------
+
+    async def run_full_security_audit(self, agent_id: str) -> Dict[str, Any]:
+        """
+        Run the full security suite on a node: URL batch + DNS batch + EICAR threat test.
+        Mirrors the CLI 'security suite' command. Returns aggregated results from all 3 tests.
+        """
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        base = agent.api_base_url
+        audit: Dict[str, Any] = {"agent_id": agent_id, "phases": {}}
+
+        # --- Phase 1: URL batch ---
+        logger.info(f"[{agent_id}] Full audit: starting URL batch")
+        url_result = await self.run_security_url_batch(agent_id)
+        audit["phases"]["url_filtering"] = url_result
+
+        # --- Phase 2: DNS batch ---
+        logger.info(f"[{agent_id}] Full audit: starting DNS batch")
+        dns_result = await self.run_security_dns_batch(agent_id)
+        audit["phases"]["dns_security"] = dns_result
+
+        # --- Phase 3: EICAR threat test (cloud URL) ---
+        logger.info(f"[{agent_id}] Full audit: starting EICAR threat test")
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                # Try to get the cloud EICAR URL from the node itself
+                cloud_r = await client.get(f"{base}/api/security/cloud-eicar-url", headers=headers)
+                if cloud_r.status_code == 200:
+                    eicar_url = cloud_r.json().get("url", "https://secure.eicar.org/eicar.com.txt")
+                else:
+                    eicar_url = "https://secure.eicar.org/eicar.com.txt"
+
+                threat_r = await client.post(
+                    f"{base}/api/security/threat-test",
+                    json={"endpoints": [eicar_url]},
+                    headers=headers
+                )
+                threat_r.raise_for_status()
+                threat_data = threat_r.json()
+                results = threat_data.get("results", [threat_data])
+                blocked = sum(1 for r in results if r.get("status", "").lower() in ["blocked", "denied"])
+                audit["phases"]["threat_prevention"] = {
+                    "eicar_url": eicar_url,
+                    "total": len(results),
+                    "blocked": blocked,
+                    "results": results
+                }
+            except Exception as e:
+                logger.error(f"EICAR test failed for {agent_id}: {e}")
+                audit["phases"]["threat_prevention"] = {"error": str(e)}
+
+        # --- Global summary ---
+        url_blocked = url_result.get("blocked", 0) if "error" not in url_result else 0
+        url_total = url_result.get("total", 0) if "error" not in url_result else 0
+        dns_blocked = dns_result.get("blocked", 0) if "error" not in dns_result else 0
+        dns_total = dns_result.get("total", 0) if "error" not in dns_result else 0
+        threat_phase = audit["phases"].get("threat_prevention", {})
+        eicar_blocked = threat_phase.get("blocked", 0)
+        eicar_total = threat_phase.get("total", 0)
+
+        audit["summary"] = {
+            "url_filtering": f"{url_blocked}/{url_total} blocked",
+            "dns_security": f"{dns_blocked}/{dns_total} blocked",
+            "threat_prevention": f"{eicar_blocked}/{eicar_total} blocked",
+            "overall_score": f"{url_blocked + dns_blocked + eicar_blocked}/{url_total + dns_total + eicar_total} tests blocked"
+        }
+        return audit
+
+    async def run_eicar_test(self, agent_id: str, custom_url: Optional[str] = None) -> Dict[str, Any]:
+        """Run an EICAR threat prevention test. Uses cloud EICAR URL by default."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        base = agent.api_base_url
+
+        async with httpx.AsyncClient(timeout=35.0) as client:
+            try:
+                # Resolve EICAR URL
+                if custom_url:
+                    eicar_url = custom_url
+                else:
+                    cloud_r = await client.get(f"{base}/api/security/cloud-eicar-url", headers=headers)
+                    if cloud_r.status_code == 200:
+                        eicar_url = cloud_r.json().get("url", "https://secure.eicar.org/eicar.com.txt")
+                    else:
+                        eicar_url = "https://secure.eicar.org/eicar.com.txt"
+
+                logger.info(f"Running EICAR test on {agent_id} with URL: {eicar_url}")
+                r = await client.post(
+                    f"{base}/api/security/threat-test",
+                    json={"endpoints": [eicar_url]},
+                    headers=headers
+                )
+                r.raise_for_status()
+                data = r.json()
+                data["eicar_url"] = eicar_url
+                return data
+            except Exception as e:
+                logger.error(f"EICAR test failed on {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def get_public_ip(self, agent_id: str) -> Dict[str, Any]:
+        """Fetch the public (WAN) exit IP address of a specific node."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                r = await client.get(f"{agent.api_base_url}/api/connectivity/public-ip", headers=headers)
+                if r.status_code == 200:
+                    data = r.json()
+                    return {"agent_id": agent_id, "public_ip": data.get("ip") or data.get("public_ip") or data}
+                return {"agent_id": agent_id, "error": f"HTTP {r.status_code}"}
+            except Exception as e:
+                logger.error(f"Failed to get public IP for {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def list_apps(self, agent_id: str) -> Dict[str, Any]:
+        """List the applications currently configured in the traffic simulation profile of a node."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                r = await client.get(f"{agent.api_base_url}/api/config/apps", headers=headers)
+                r.raise_for_status()
+                data = r.json()
+                apps = data if isinstance(data, list) else data.get("apps", data.get("applications", []))
+                return {"agent_id": agent_id, "count": len(apps) if isinstance(apps, list) else None, "apps": apps}
+            except Exception as e:
+                logger.error(f"Failed to list apps for {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def export_app_config(self, agent_id: str) -> Dict[str, Any]:
+        """Export the full application traffic configuration from a node as JSON."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            try:
+                r = await client.get(
+                    f"{agent.api_base_url}/api/config/applications/export?format=json",
+                    headers=headers
+                )
+                r.raise_for_status()
+                return {"agent_id": agent_id, "config": r.json()}
+            except Exception as e:
+                logger.error(f"Failed to export app config from {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def import_app_config(self, agent_id: str, config: Any) -> Dict[str, Any]:
+        """Import an application traffic configuration to a node (overwrites current config)."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        import json as _json
+        content = _json.dumps(config) if not isinstance(config, str) else config
+
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            try:
+                r = await client.post(
+                    f"{agent.api_base_url}/api/config/applications/import",
+                    json={"content": content},
+                    headers=headers
+                )
+                r.raise_for_status()
+                return {"success": True, "agent_id": agent_id, "message": "Application config imported successfully"}
+            except Exception as e:
+                logger.error(f"Failed to import app config to {agent_id}: {e}")
+                return {"error": str(e)}
