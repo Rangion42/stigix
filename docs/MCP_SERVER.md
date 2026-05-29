@@ -99,11 +99,33 @@ Add this entry under `mcpServers` (replace the URL with the IP/port of your Stig
 Use this option if you do not have Node.js installed, or if you prefer running the Python bridge script locally.
 
 #### Step 1: Initialize the local python environment
-Go to your cloned `stigix` repository directory and run the initialization script:
+
+Choose the setup instructions matching your operating system:
+
+##### 🍎 macOS / Linux
+Open your terminal, navigate to your cloned `stigix` repository directory, and run:
 ```bash
+# Make the setup script executable
+chmod +x ./mcp-server/setup-bridge.sh
+
+# Run the setup script
 ./mcp-server/setup-bridge.sh
 ```
-This script automatically creates a virtual environment (`.venv`) and installs the required Python dependencies in `mcp-server/`.
+This script automatically checks for Python 3, creates a `.venv` folder, and installs all the required libraries for you.
+
+##### 🪟 Windows (PowerShell)
+Open PowerShell, navigate to your cloned `stigix` repository directory, and run:
+```powershell
+# Navigate into the mcp-server directory
+cd mcp-server
+
+# Create the Python virtual environment
+python -m venv .venv
+
+# Upgrade pip and install the required dependencies
+.\.venv\Scripts\pip.exe install --upgrade pip
+.\.venv\Scripts\pip.exe install -r .\requirements.txt
+```
 
 #### Step 2: Configure Claude Desktop
 Add this entry under `mcpServers` in your configuration file:
