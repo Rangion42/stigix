@@ -788,6 +788,73 @@ async def import_app_config(agent_id: str, config: dict) -> dict:
 # Main Entry Point
 # -----------------------------------------------------------------------------
 
+# -----------------------------------------------------------------------------
+# Phase 4 Tool Additions
+# -----------------------------------------------------------------------------
+
+@mcp.tool()
+async def get_convergence_history(agent_id: str, limit: int = 10) -> dict:
+    """
+    Get the convergence/failover test history for a specific node.
+    Returns past test results including the target peer, max blackout duration (ms),
+    and a human-readable verdict (PERFECT / GOOD / DEGRADED / BAD / CRITICAL).
+
+    Args:
+        agent_id: ID of the Stigix node.
+        limit: Maximum number of historical results to return (default 10).
+    """
+    return await orchestrator.get_convergence_history(agent_id, limit)
+
+
+@mcp.tool()
+async def list_security_results(agent_id: str, limit: int = 20) -> dict:
+    """
+    Get the last N individual security test results from a specific node.
+    Returns all test types (URL, DNS, Threat) in chronological order (newest first).
+    Useful for investigating recent security events or test failures.
+
+    Args:
+        agent_id: ID of the Stigix node.
+        limit: Maximum number of results to return (default 20).
+    """
+    return await orchestrator.list_security_results(agent_id, limit)
+
+
+@mcp.tool()
+async def compare_nodes(agent_id_a: str, agent_id_b: str) -> dict:
+    """
+    Compare two Stigix nodes side-by-side across key dimensions.
+    Fetches snapshots of both nodes in parallel and returns:
+    - Per-node: health, version, traffic status, DEM health, security %, fabric peer count
+    - A diff section highlighting any differences between the two nodes
+    Use this to investigate why two nodes behave differently.
+
+    Args:
+        agent_id_a: ID of the first Stigix node.
+        agent_id_b: ID of the second Stigix node.
+    """
+    return await orchestrator.compare_nodes(agent_id_a, agent_id_b)
+
+
+@mcp.tool()
+async def generate_report(agent_ids: Optional[List[str]] = None) -> dict:
+    """
+    Generate a fabric-wide summary report across all (or specified) Stigix nodes.
+    Fetches node snapshots in parallel and returns:
+    - Per-node: health, version, traffic status, DEM health, security %, peer count
+    - Global summary: healthy/unhealthy count, traffic running count, total peers
+    Use this to get an overview of the entire Stigix fabric at a glance.
+
+    Args:
+        agent_ids: Optional list of agent IDs to include. If omitted, reports on ALL registered nodes.
+    """
+    return await orchestrator.generate_report(agent_ids)
+
+
+# -----------------------------------------------------------------------------
+# Main Entry Point
+# -----------------------------------------------------------------------------
+
 if __name__ == "__main__":
     logger.info(f"Entrypoint reached with __name__ == {__name__}")
     # Read configuration from environment

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.101] - 2026-05-29
+### Added
+- **mcp-server** 🚀 Phase 4 MCP tool expansion — 4 new compound/analytical tools completing the full feature set:
+  - `get_convergence_history`: Past failover test results with max blackout (ms) and verdict (PERFECT/GOOD/DEGRADED/BAD/CRITICAL)
+  - `list_security_results`: Last N individual security test results across all types (URL, DNS, Threat)
+  - `compare_nodes`: Side-by-side comparison of two nodes — health, version, traffic, DEM health, security %, peer count, with auto-diff
+  - `generate_report`: Fabric-wide report across all (or specified) nodes fetched in parallel, with global summary
+- **mcp-server** 🔧 Added `asyncio` top-level import to `orchestrator.py` for parallel `asyncio.gather()` in compound methods
+- **mcp-server** 🔧 Added `_fetch_node_snapshot` internal helper for efficient parallel node data collection
+- **agent** 📋 Created `stigix-mcp-sync` skill — automated workflow to detect CLI→MCP gaps after CLI changes, with living CLI-to-MCP registry at `.agent/skills/stigix-mcp-sync/references/cli_to_mcp_map.md`
+- **mcp-server** 📊 MCP server now has **48 tools** total (was 18 before Phase 1), achieving full CLI feature parity
+
 ## [v1.4.0-patch.100] - 2026-05-29
 ### Added
 - **mcp-server** 🚀 Phase 3 MCP tool expansion — 6 new tools completing the CLI feature parity:

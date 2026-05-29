@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 import httpx
@@ -1369,3 +1370,253 @@ class TestOrchestrator:
             except Exception as e:
                 logger.error(f"Failed to import app config to {agent_id}: {e}")
                 return {"error": str(e)}
+
+    # -------------------------------------------------------------------------
+    # Phase 4 Additions
+    # -------------------------------------------------------------------------
+
+    async def get_convergence_history(self, agent_id: str, limit: int = 10) -> Dict[str, Any]:
+        """Fetch the convergence/failover test history for a node."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                r = await client.get(f"{agent.api_base_url}/api/convergence/history", headers=headers)
+                r.raise_for_status()
+                data = r.json()
+                rows = data if isinstance(data, list) else data.get("results", [])
+                rows = rows[:limit]
+
+                # Enrich each row with a human-readable verdict
+                def verdict(max_bo: Any) -> str:
+                    if max_bo is None:
+                        return "UNKNOWN"
+                    try:
+                        mb = float(max_bo)
+                    except Exception:
+                        return "UNKNOWN"
+                    if mb == 0:
+                        return "PERFECT"
+                    if mb < 1000:
+                        return "GOOD"
+                    if mb < 5000:
+                        return "DEGRADED"
+                    if mb < 10000:
+                        return "BAD"
+                    return "CRITICAL"
+
+                for row in rows:
+                    max_bo = None
+                    for key in ("max_blackout_ms", "maxBlackout", "blackout"):
+                        if key in row:
+                            max_bo = row[key]
+                            break
+                    row["verdict"] = verdict(max_bo)
+                    row["max_blackout_ms"] = max_bo
+
+                return {"agent_id": agent_id, "count": len(rows), "history": rows}
+            except Exception as e:
+                logger.error(f"Failed to fetch convergence history for {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def list_security_results(self, agent_id: str, limit: int = 20) -> Dict[str, Any]:
+        """Fetch the last N individual security test results from a node (all types)."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                r = await client.get(
+                    f"{agent.api_base_url}/api/security/results?limit={limit}",
+                    headers=headers
+                )
+                r.raise_for_status()
+                data = r.json()
+                results = data.get("results", data if isinstance(data, list) else [])
+                return {"agent_id": agent_id, "count": len(results), "results": results}
+            except Exception as e:
+                logger.error(f"Failed to list security results for {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def compare_nodes(self, agent_id_a: str, agent_id_b: str) -> Dict[str, Any]:
+        """
+        Compare two Stigix nodes side-by-side across key dimensions:
+        health, traffic, DEM probe health, security score, and fabric peers.
+        """
+        # Fetch both nodes in parallel
+        results = await asyncio.gather(
+            self._fetch_node_snapshot(agent_id_a),
+            self._fetch_node_snapshot(agent_id_b),
+            return_exceptions=True
+        )
+
+        snap_a = results[0] if not isinstance(results[0], Exception) else {"error": str(results[0])}
+        snap_b = results[1] if not isinstance(results[1], Exception) else {"error": str(results[1])}
+
+        comparison: Dict[str, Any] = {
+            "nodes": [agent_id_a, agent_id_b],
+            agent_id_a: snap_a,
+            agent_id_b: snap_b,
+            "diff": {}
+        }
+
+        # Build a human-readable diff summary
+        if "error" not in snap_a and "error" not in snap_b:
+            diff = {}
+
+            # Traffic running?
+            ta = snap_a.get("traffic_running")
+            tb = snap_b.get("traffic_running")
+            if ta != tb:
+                diff["traffic_running"] = {agent_id_a: ta, agent_id_b: tb}
+
+            # Version match?
+            va = snap_a.get("version")
+            vb = snap_b.get("version")
+            if va != vb:
+                diff["version"] = {agent_id_a: va, agent_id_b: vb}
+
+            # DEM global health
+            dha = snap_a.get("dem_global_health")
+            dhb = snap_b.get("dem_global_health")
+            if dha != dhb:
+                diff["dem_global_health"] = {agent_id_a: dha, agent_id_b: dhb}
+
+            # Security stats
+            sec_a = snap_a.get("security_blocked_pct")
+            sec_b = snap_b.get("security_blocked_pct")
+            if sec_a != sec_b:
+                diff["security_blocked_pct"] = {agent_id_a: sec_a, agent_id_b: sec_b}
+
+            # Peer count
+            pc_a = snap_a.get("fabric_peer_count")
+            pc_b = snap_b.get("fabric_peer_count")
+            if pc_a != pc_b:
+                diff["fabric_peer_count"] = {agent_id_a: pc_a, agent_id_b: pc_b}
+
+            comparison["diff"] = diff
+            comparison["identical"] = len(diff) == 0
+
+        return comparison
+
+    async def _fetch_node_snapshot(self, agent_id: str) -> Dict[str, Any]:
+        """Internal helper: fetch a compact snapshot of one node for comparison."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        base = agent.api_base_url
+        snapshot: Dict[str, Any] = {"agent_id": agent_id}
+
+        async with httpx.AsyncClient(timeout=12.0) as client:
+            # Health + version
+            for path, key in [
+                ("/api/system/health", "health"),
+                ("/api/version", "version"),
+            ]:
+                try:
+                    r = await client.get(f"{base}{path}", headers=headers)
+                    if r.status_code == 200:
+                        snapshot[key] = r.json()
+                        if key == "version":
+                            snapshot["version"] = r.json().get("version") or r.json().get("tag")
+                except Exception:
+                    pass
+
+            # Traffic status
+            try:
+                r = await client.get(f"{base}/api/traffic/status", headers=headers)
+                if r.status_code == 200:
+                    d = r.json()
+                    snapshot["traffic_running"] = d.get("running") or d.get("active") or d.get("status") == "running"
+            except Exception:
+                pass
+
+            # DEM global health score
+            try:
+                r = await client.get(f"{base}/api/connectivity/stats?range=1h", headers=headers)
+                if r.status_code == 200:
+                    d = r.json()
+                    snapshot["dem_global_health"] = d.get("global_health") or d.get("score")
+            except Exception:
+                pass
+
+            # Security blocked %
+            try:
+                r = await client.get(f"{base}/api/security/results/stats", headers=headers)
+                if r.status_code == 200:
+                    d = r.json()
+                    total = d.get("total", 0)
+                    blocked = d.get("blocked", 0)
+                    snapshot["security_blocked_pct"] = round(blocked / total * 100, 1) if total else None
+                    snapshot["security_stats"] = d
+            except Exception:
+                pass
+
+            # Fabric peer count
+            try:
+                r = await client.get(f"{base}/api/targets", headers=headers)
+                if r.status_code == 200:
+                    d = r.json()
+                    targets = d if isinstance(d, list) else d.get("targets", [])
+                    snapshot["fabric_peer_count"] = len(targets)
+            except Exception:
+                pass
+
+        return snapshot
+
+    async def generate_report(self, agent_ids: Optional[list] = None) -> Dict[str, Any]:
+        """
+        Generate a fabric-wide summary report across all (or specified) nodes.
+        Returns per-node status, aggregate health, security posture, and traffic overview.
+        """
+        # Resolve agent list
+        if not agent_ids:
+            all_agents = await self.registry.list_endpoints()
+            agent_ids = [a.agent_id for a in all_agents] if all_agents else []
+
+        if not agent_ids:
+            return {"error": "No agents registered in the registry."}
+
+        # Fetch snapshots in parallel
+        tasks = [self._fetch_node_snapshot(aid) for aid in agent_ids]
+        snapshots = await asyncio.gather(*tasks, return_exceptions=True)
+
+        nodes = []
+        healthy_count = 0
+        traffic_running_count = 0
+        total_peers = 0
+
+        for i, snap in enumerate(snapshots):
+            if isinstance(snap, Exception):
+                nodes.append({"agent_id": agent_ids[i], "error": str(snap)})
+                continue
+            nodes.append(snap)
+
+            # Aggregate metrics
+            health = snap.get("health", {})
+            is_healthy = isinstance(health, dict) and health.get("status") in ("ok", "healthy", "ready")
+            if is_healthy:
+                healthy_count += 1
+            if snap.get("traffic_running"):
+                traffic_running_count += 1
+            total_peers += snap.get("fabric_peer_count", 0)
+
+        report = {
+            "generated_at": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+            "node_count": len(agent_ids),
+            "summary": {
+                "healthy_nodes": healthy_count,
+                "unhealthy_nodes": len(agent_ids) - healthy_count,
+                "traffic_running": traffic_running_count,
+                "total_fabric_peers": total_peers,
+            },
+            "nodes": nodes
+        }
+        return report
