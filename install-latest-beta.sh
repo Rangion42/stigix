@@ -161,24 +161,6 @@ else
     COMPOSE_URL="$REPO_URL/docker-compose-latest-beta.bridge.yml"
 fi
 
-# 2. Interactive Mode Selection if script is run without arguments and not piped
-# We check if stdin is a terminal to allow interactive prompt
-if [ -t 0 ] && [ "$INSTALL_MODE" == "both" ] && [[ ! " $@ " =~ " --mode " ]]; then
-    echo ""
-    echo "📌 Choose Deployment Mode:"
-    echo "1) Both (Source + Target) [Default] - Runs Dashboard, Traffic Gen, and Echo targets"
-    echo "2) Target Only - Deploys only the Echo/XFR targets"
-    echo "3) Source Only - Deploys only the Dashboard and Traffic Gen"
-    read -p "Select an option [1-3] (Default: 1): " MODE_CHOICE
-    
-    case $MODE_CHOICE in
-        2) INSTALL_MODE="target" ;;
-        3) INSTALL_MODE="source" ;;
-        *) INSTALL_MODE="both" ;;
-    esac
-fi
-
-echo "🎯 Selected Mode: $INSTALL_MODE"
 INSTALL_DIR="stigix"
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
@@ -342,8 +324,14 @@ fi
 
 echo ""
 echo "=========================================="
-echo "✅ Stigix All-in-One Installation complete!"
+echo "✅ Stigix All-in-One Installation complete! [Beta]"
 echo ""
+
+# Show installed version
+INSTALLED_VERSION=$(docker exec stigix cat /app/VERSION 2>/dev/null || echo "")
+if [ -n "$INSTALLED_VERSION" ]; then
+    echo "📦 Installed version: $INSTALLED_VERSION (beta/latest)"
+fi
 
 if [ "$INSTALL_MODE" == "target" ]; then
     echo "🎯 Target Site is active (XFR: 9000, Voice: 6100, Probes: 6200, iPerf: 5201)."

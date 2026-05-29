@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.92] - 2026-05-29
+### Fixed
+- **stigix-cli** 🔧 Fixed status card table alignment — ANSI escape codes in label column were inflating visible width, causing right border to overflow. Now uses correct visible-length calculation for padding.
+### Added
+- **stigix-cli** 📂 `status` command now shows the history file path (`~/.stigix-cli.history`) below the status card so users know where prompt history is stored.
+- **stigix-cli** 📂 `history` command now shows the history file path in the list footer and when the session is empty.
+- **install.sh** 📦 Installed Docker image version is now displayed at the end of the install output (`📦 Installed version: vX.Y.Z-patch.N`).
+- **install-latest-beta.sh** 📦 Same version display added, with `(beta/latest)` suffix.
+- **install.sh / install-latest-beta.sh** 🧹 Removed interactive mode selection prompt — all Stigix deployments are always Source+Target (both), simplifying the install output.
+
 ## [v1.4.0-patch.91] - 2026-05-29
 ### Added
 - **cli** 💻 Introduced the `--autocomplete` flag to programmatically query and output autocompletion suggestions from the command line, enabling external shell integrations.

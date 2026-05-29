@@ -586,7 +586,9 @@ def cmd_status(args):
     # Print the beautiful card
     max_label_len = max(len(r[0]) for r in rows if r is not None)
     card_width = 64
-    inner_width = card_width - 4
+    inner_width = card_width - 4  # 2 border chars + 2 padding spaces
+    # Visible label width = 2 (indent) + max_label_len + 3 (" : ")
+    label_visible_len = 2 + max_label_len + 3
 
     print(c("2;34", "┏" + "━" * (card_width - 2) + "┓"))
     title_str = " Stigix Status Overview "
@@ -602,10 +604,12 @@ def cmd_status(args):
             label, val = r
             label_formatted = c("1;36", f"  {label:<{max_label_len}} : ")
             val_clean = clean_ansi(val)
-            pad_len = inner_width - (max_label_len + 5) - len(val_clean)
+            pad_len = max(0, inner_width - label_visible_len - len(val_clean))
             print(c("2;34", "┃") + label_formatted + val + (" " * pad_len) + c("2;34", "┃"))
 
     print(c("2;34", "┗" + "━" * (card_width - 2) + "┛"))
+    # Show where command history is stored
+    dim(f"  history file: {HISTORY_FILE}")
     print()
 
     # Dynamic failover convergence info
@@ -3824,10 +3828,12 @@ def cmd_history(args):
     if sub == "list":
         if not SESSION_HISTORY:
             dim("  (session history is empty)")
+            dim(f"  prompt history file: {HISTORY_FILE}")
             return
         hdr("━━ Session Command History ━━━━━━━━━━━━━━━━━")
         for i, cmd in enumerate(SESSION_HISTORY, 1):
             print(f"  {i:>3}  {cmd}")
+        dim(f"  prompt history file: {HISTORY_FILE}")
             
     elif sub == "clear":
         SESSION_HISTORY = []
