@@ -98,6 +98,13 @@ Add this entry under `mcpServers` (replace the URL with the IP/port of your Stig
 ### Option B: Local Python Bridge Method
 Use this option if you do not have Node.js installed, or if you prefer running the Python bridge script locally.
 
+#### Step 0: Clone the Repository
+Since this method relies on local scripts (`setup-bridge.sh`, `bridge.py`, etc.), you must first clone the Stigix repository to your machine if you haven't already:
+```bash
+git clone https://github.com/jsuzanne/stigix.git
+cd stigix
+```
+
 #### Step 1: Initialize the local python environment
 
 Choose the setup instructions matching your operating system:
