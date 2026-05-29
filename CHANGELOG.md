@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.84] - 2026-05-29
+### Fixed
+- **install** ⚙️ Refactored the `find_free_port` function in both installers (`install.sh` and `install-latest-beta.sh`) to execute all port checks sequentially (rather than in an if-elif block). This ensures that if a tool (like `lsof` run without root privileges) fails to find the conflict, fallback checks like `ss`, `netstat`, or dynamic `/dev/tcp` socket opening will still correctly flag the port as busy.
+
 ## [v1.4.0-patch.83] - 2026-05-29
 ### Added
 - **install** ⚙️ Added an interactive, real-time CLI progress bar during the post-deployment Web Dashboard connectivity check loop (using `\r` carriage return to draw visual blocks on a single line).

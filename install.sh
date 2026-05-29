@@ -30,20 +30,26 @@ find_free_port() {
     local max_port=$2
     while [ "$port" -le "$max_port" ]; do
         local in_use=false
-        if command -v lsof &> /dev/null; then
+        
+        if [ "$in_use" = false ] && command -v lsof &> /dev/null; then
             if lsof -i :$port > /dev/null 2>&1; then
                 in_use=true
             fi
-        elif command -v ss &> /dev/null; then
+        fi
+        
+        if [ "$in_use" = false ] && command -v ss &> /dev/null; then
             if ss -tln | grep -q -E "(^|:)$port($|[^0-9])"; then
                 in_use=true
             fi
-        elif command -v netstat &> /dev/null; then
+        fi
+        
+        if [ "$in_use" = false ] && command -v netstat &> /dev/null; then
             if netstat -an | grep -E "(^|[^0-9])$port($|[^0-9])" | grep -q -i listen; then
                 in_use=true
             fi
-        else
-            # Fallback: check if we can open a socket
+        fi
+        
+        if [ "$in_use" = false ]; then
             if (timeout 1 bash -c "cat < /dev/null > /dev/tcp/127.0.0.1/$port") >/dev/null 2>&1; then
                 in_use=true
             fi
