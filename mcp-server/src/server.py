@@ -558,6 +558,147 @@ async def list_speedtest_history(agent_id: str, limit: int = 20) -> dict:
     return await orchestrator.list_speedtest_history(agent_id, limit)
 
 
+# -----------------------------------------------------------------------------
+# Phase 2 Tool Additions
+# -----------------------------------------------------------------------------
+
+@mcp.tool()
+async def run_security_url_batch(agent_id: str) -> dict:
+    """
+    Run a FULL batch URL filtering audit on a specific node.
+    Automatically reads the enabled URL categories from the node's security config
+    and tests all of them at once. Returns a summary (blocked/allowed/unknown)
+    and individual results for each category.
+    Note: This test can take up to 3 minutes to complete.
+
+    Args:
+        agent_id: ID of the Stigix node to run the audit on.
+    """
+    return await orchestrator.run_security_url_batch(agent_id)
+
+
+@mcp.tool()
+async def run_security_dns_batch(agent_id: str) -> dict:
+    """
+    Run a FULL batch DNS security audit on a specific node.
+    Automatically reads the enabled DNS test domains from the node's security config
+    and tests all of them at once. Returns a summary (blocked/allowed/unknown)
+    and individual results for each domain.
+    Note: This test can take up to 3 minutes to complete.
+
+    Args:
+        agent_id: ID of the Stigix node to run the audit on.
+    """
+    return await orchestrator.run_security_dns_batch(agent_id)
+
+
+@mcp.tool()
+async def add_dem_probe(
+    agent_id: str,
+    name: str,
+    target: str,
+    probe_type: str = "HTTP",
+    timeout_ms: int = 5000
+) -> dict:
+    """
+    Add a new Digital Experience Monitoring (DEM) probe to a specific node.
+    The probe is appended to the existing list — existing probes are preserved.
+
+    Args:
+        agent_id: ID of the Stigix node.
+        name: Display name for the probe (e.g., 'Google DNS', 'Azure West').
+        target: Target host/URL/IP (e.g., 'https://example.com', '8.8.8.8', '1.2.3.4:5201').
+        probe_type: Type of probe — 'HTTP', 'HTTPS', 'PING', 'TCP', 'UDP', or 'DNS'. Default: 'HTTP'.
+        timeout_ms: Probe timeout in milliseconds. Default: 5000.
+    """
+    return await orchestrator.add_dem_probe(agent_id, name, target, probe_type, timeout_ms)
+
+
+@mcp.tool()
+async def remove_dem_probe(agent_id: str, probe_name: str) -> dict:
+    """
+    Remove a DEM experience probe by name from a specific node.
+    The match is case-insensitive. All other probes are preserved.
+
+    Args:
+        agent_id: ID of the Stigix node.
+        probe_name: Exact name of the probe to remove (case-insensitive).
+    """
+    return await orchestrator.remove_dem_probe(agent_id, probe_name)
+
+
+@mcp.tool()
+async def add_fabric_target(
+    agent_id: str,
+    name: str,
+    host: str,
+    voice: bool = True,
+    convergence: bool = True,
+    xfr: bool = True,
+    security: bool = True,
+    connectivity: bool = True
+) -> dict:
+    """
+    Add a new Stigix fabric peer/target to a specific node.
+    Use this to register a new branch or node into the mesh.
+
+    Args:
+        agent_id: ID of the Stigix node that will manage this target.
+        name: Display name for the new target (e.g., 'Branch-Paris').
+        host: IP address or FQDN of the target node.
+        voice: Enable voice simulation capability. Default: True.
+        convergence: Enable convergence/failover probe capability. Default: True.
+        xfr: Enable XFR speedtest capability. Default: True.
+        security: Enable security probe capability. Default: True.
+        connectivity: Enable connectivity probe capability. Default: True.
+    """
+    return await orchestrator.add_fabric_target(agent_id, name, host, voice, convergence, xfr, security, connectivity)
+
+
+@mcp.tool()
+async def remove_fabric_target(agent_id: str, target_name_or_host: str) -> dict:
+    """
+    Remove a Stigix fabric peer/target from a specific node.
+    Matches by name (case-insensitive), host IP, or ID prefix.
+
+    Args:
+        agent_id: ID of the Stigix node managing the target.
+        target_name_or_host: Name, IP address, or ID prefix of the target to remove.
+    """
+    return await orchestrator.remove_fabric_target(agent_id, target_name_or_host)
+
+
+@mcp.tool()
+async def set_fabric_target_enabled(agent_id: str, target_name_or_host: str, enabled: bool) -> dict:
+    """
+    Enable or disable a Stigix fabric peer/target on a specific node.
+    Disabled targets are ignored for testing but remain configured.
+
+    Args:
+        agent_id: ID of the Stigix node managing the target.
+        target_name_or_host: Name, IP address, or ID prefix of the target.
+        enabled: True to enable, False to disable.
+    """
+    return await orchestrator.set_fabric_target_enabled(agent_id, target_name_or_host, enabled)
+
+
+@mcp.tool()
+async def set_traffic_client_count(agent_id: str, client_count: int) -> dict:
+    """
+    Set the number of parallel traffic worker clients on a specific node.
+    Higher values generate more concurrent application traffic (simulates more users).
+    Valid range: 1 to 20.
+
+    Args:
+        agent_id: ID of the Stigix node.
+        client_count: Number of parallel workers (1 = minimal, 20 = maximum density).
+    """
+    return await orchestrator.set_traffic_client_count(agent_id, client_count)
+
+
+# -----------------------------------------------------------------------------
+# Main Entry Point
+# -----------------------------------------------------------------------------
 
 if __name__ == "__main__":
     logger.info(f"Entrypoint reached with __name__ == {__name__}")

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.99] - 2026-05-29
+### Added
+- **mcp-server** 🚀 Phase 2 MCP tool expansion — 8 new tools for batch security audits, DEM probe management, fabric target management, and traffic density control:
+  - `run_security_url_batch`: Full URL filtering audit — auto-reads enabled categories from node config, tests all at once, returns blocked/allowed/unknown summary
+  - `run_security_dns_batch`: Full DNS security audit — same approach for DNS test domains (up to 180s timeout)
+  - `add_dem_probe`: Add a DEM experience probe (HTTP/HTTPS/PING/TCP/UDP/DNS) to a node, preserving existing probes
+  - `remove_dem_probe`: Remove a DEM probe by name (case-insensitive match)
+  - `add_fabric_target`: Register a new Stigix peer/branch into the mesh with full capability flags
+  - `remove_fabric_target`: Remove a fabric target by name, host, or ID prefix
+  - `set_fabric_target_enabled`: Enable or disable a fabric target without removing it
+  - `set_traffic_client_count`: Set parallel traffic worker count (1–20) for density control
+- **mcp-server** 🔧 Added 8 corresponding orchestrator methods in `lib/orchestrator.py`; batch methods auto-resolve config+profile before calling batch endpoints
+
 ## [v1.4.0-patch.98] - 2026-05-29
 ### Added
 - **mcp-server** 🚀 Phase 1 MCP tool expansion — 12 new tools aligned with stigix-cli capabilities:

@@ -852,3 +852,334 @@ class TestOrchestrator:
             except Exception as e:
                 logger.error(f"Failed to fetch speedtest history for {agent_id}: {e}")
                 return {"error": str(e)}
+
+    # -------------------------------------------------------------------------
+    # Phase 2 Additions
+    # -------------------------------------------------------------------------
+
+    async def run_security_url_batch(self, agent_id: str) -> Dict[str, Any]:
+        """Run a batch URL filtering test using all enabled categories from the node's config."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        base = agent.api_base_url
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                # 1. Get enabled categories from config
+                cfg_r = await client.get(f"{base}/api/security/config", headers=headers)
+                cfg_r.raise_for_status()
+                config = cfg_r.json()
+                enabled_cats = config.get("url_filtering", {}).get("enabled_categories", [])
+                if not enabled_cats:
+                    return {"error": "No URL categories enabled in security config."}
+
+                # 2. Get the profile to resolve URL + name for each category
+                prof_r = await client.get(f"{base}/api/security/profile", headers=headers)
+                prof_r.raise_for_status()
+                profile = prof_r.json()
+                items = profile.get("url_filtering", {}).get("items", [])
+                enabled_items = [i for i in items if i.get("id") in enabled_cats]
+                if not enabled_items:
+                    return {"error": "No matching URL items found in profile for the enabled categories."}
+
+                tests = [{"url": i["url"], "category": i["name"]} for i in enabled_items]
+            except Exception as e:
+                return {"error": f"Failed to build URL batch test list: {e}"}
+
+        # 3. Run the batch with a long timeout (180s)
+        async with httpx.AsyncClient(timeout=190.0) as client:
+            try:
+                logger.info(f"Running URL batch test on {agent_id} ({len(tests)} categories)")
+                r = await client.post(
+                    f"{base}/api/security/url-test-batch",
+                    json={"tests": tests},
+                    headers=headers
+                )
+                r.raise_for_status()
+                data = r.json()
+                results = data.get("results", data if isinstance(data, list) else [])
+                blocked = sum(1 for res in results if res.get("status", "").lower() in ["blocked", "denied"])
+                allowed = sum(1 for res in results if res.get("status", "").lower() in ["allowed", "ok", "passed"])
+                return {
+                    "agent_id": agent_id,
+                    "total": len(results),
+                    "blocked": blocked,
+                    "allowed": allowed,
+                    "unknown": len(results) - blocked - allowed,
+                    "results": results
+                }
+            except Exception as e:
+                logger.error(f"URL batch test failed on {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def run_security_dns_batch(self, agent_id: str) -> Dict[str, Any]:
+        """Run a batch DNS security test using all enabled tests from the node's config."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        base = agent.api_base_url
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                # 1. Get enabled DNS tests from config
+                cfg_r = await client.get(f"{base}/api/security/config", headers=headers)
+                cfg_r.raise_for_status()
+                config = cfg_r.json()
+                enabled_tests = config.get("dns_security", {}).get("enabled_tests", [])
+                if not enabled_tests:
+                    return {"error": "No DNS tests enabled in security config."}
+
+                # 2. Get the profile to resolve domain + name for each test
+                prof_r = await client.get(f"{base}/api/security/profile", headers=headers)
+                prof_r.raise_for_status()
+                profile = prof_r.json()
+                items = profile.get("dns_security", {}).get("items", [])
+                enabled_items = [i for i in items if i.get("id") in enabled_tests]
+                if not enabled_items:
+                    return {"error": "No matching DNS items found in profile for the enabled tests."}
+
+                tests = [{"domain": i["domain"], "testName": i["name"]} for i in enabled_items]
+            except Exception as e:
+                return {"error": f"Failed to build DNS batch test list: {e}"}
+
+        # 3. Run the batch with a long timeout (180s)
+        async with httpx.AsyncClient(timeout=190.0) as client:
+            try:
+                logger.info(f"Running DNS batch test on {agent_id} ({len(tests)} domains)")
+                r = await client.post(
+                    f"{base}/api/security/dns-test-batch",
+                    json={"tests": tests},
+                    headers=headers
+                )
+                r.raise_for_status()
+                data = r.json()
+                results = data.get("results", data if isinstance(data, list) else [])
+                blocked = sum(1 for res in results if res.get("status", "").lower() in ["blocked", "denied"])
+                allowed = sum(1 for res in results if res.get("status", "").lower() in ["allowed", "ok", "passed", "resolved"])
+                return {
+                    "agent_id": agent_id,
+                    "total": len(results),
+                    "blocked": blocked,
+                    "allowed": allowed,
+                    "unknown": len(results) - blocked - allowed,
+                    "results": results
+                }
+            except Exception as e:
+                logger.error(f"DNS batch test failed on {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def add_dem_probe(
+        self, agent_id: str, name: str, target: str,
+        probe_type: str = "HTTP", timeout_ms: int = 5000
+    ) -> Dict[str, Any]:
+        """Add a new DEM experience probe to a node (appends to existing list)."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        base = agent.api_base_url
+        probe_type = probe_type.upper()
+        if probe_type == "ICMP":
+            probe_type = "PING"
+        if probe_type not in ["HTTP", "HTTPS", "PING", "TCP", "UDP", "DNS"]:
+            return {"error": f"Invalid probe type '{probe_type}'. Valid: HTTP, HTTPS, PING, TCP, UDP, DNS"}
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                # Fetch existing probes first (don't overwrite)
+                r_get = await client.get(f"{base}/api/connectivity/custom", headers=headers)
+                r_get.raise_for_status()
+                data = r_get.json()
+                probes = data if isinstance(data, list) else data.get("targets", [])
+
+                new_probe = {
+                    "name": name,
+                    "type": probe_type,
+                    "target": target,
+                    "timeout": timeout_ms,
+                    "enabled": True
+                }
+                probes.append(new_probe)
+
+                r = await client.post(
+                    f"{base}/api/connectivity/custom",
+                    json={"endpoints": probes},
+                    headers=headers
+                )
+                r.raise_for_status()
+                return {"success": True, "message": f"Probe '{name}' ({probe_type} → {target}) added to {agent_id}", "probe": new_probe}
+            except Exception as e:
+                logger.error(f"Failed to add DEM probe to {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def remove_dem_probe(self, agent_id: str, probe_name: str) -> Dict[str, Any]:
+        """Remove a DEM probe by name (case-insensitive) from a node."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        base = agent.api_base_url
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                r_get = await client.get(f"{base}/api/connectivity/custom", headers=headers)
+                r_get.raise_for_status()
+                data = r_get.json()
+                probes = data if isinstance(data, list) else data.get("targets", [])
+
+                # Find match by name (case-insensitive)
+                match_idx = next(
+                    (i for i, p in enumerate(probes) if p.get("name", "").lower() == probe_name.lower()),
+                    None
+                )
+                if match_idx is None:
+                    available = [p.get("name") for p in probes]
+                    return {"error": f"Probe '{probe_name}' not found. Available: {available}"}
+
+                removed = probes.pop(match_idx)
+                r = await client.post(
+                    f"{base}/api/connectivity/custom",
+                    json={"endpoints": probes},
+                    headers=headers
+                )
+                r.raise_for_status()
+                return {"success": True, "message": f"Probe '{removed.get('name')}' removed from {agent_id}"}
+            except Exception as e:
+                logger.error(f"Failed to remove DEM probe from {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def add_fabric_target(
+        self, agent_id: str, name: str, host: str,
+        voice: bool = True, convergence: bool = True,
+        xfr: bool = True, security: bool = True, connectivity: bool = True
+    ) -> Dict[str, Any]:
+        """Add a new Stigix fabric target/peer to a node."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        body = {
+            "name": name,
+            "host": host,
+            "enabled": True,
+            "capabilities": {
+                "voice": voice,
+                "convergence": convergence,
+                "xfr": xfr,
+                "security": security,
+                "connectivity": connectivity
+            }
+        }
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                r = await client.post(f"{agent.api_base_url}/api/targets", json=body, headers=headers)
+                r.raise_for_status()
+                return {"success": True, "message": f"Target '{name}' ({host}) added to {agent_id}", "target": body}
+            except Exception as e:
+                logger.error(f"Failed to add fabric target to {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def remove_fabric_target(self, agent_id: str, target_name_or_host: str) -> Dict[str, Any]:
+        """Remove a Stigix fabric target by name or host from a node."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        base = agent.api_base_url
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                r_get = await client.get(f"{base}/api/targets", headers=headers)
+                r_get.raise_for_status()
+                data = r_get.json()
+                targets = data if isinstance(data, list) else data.get("targets", [])
+
+                key = target_name_or_host.lower()
+                match = next(
+                    (t for t in targets if
+                     t.get("name", "").lower() == key or
+                     t.get("host", "") == target_name_or_host or
+                     t.get("id", "").startswith(target_name_or_host)),
+                    None
+                )
+                if not match:
+                    available = [(t.get("name"), t.get("host")) for t in targets]
+                    return {"error": f"Target '{target_name_or_host}' not found. Available: {available}"}
+
+                full_id = match.get("id")
+                r = await client.delete(f"{base}/api/targets/{full_id}", headers=headers)
+                r.raise_for_status()
+                return {"success": True, "message": f"Target '{match.get('name')}' ({match.get('host')}) removed from {agent_id}"}
+            except Exception as e:
+                logger.error(f"Failed to remove fabric target from {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def set_fabric_target_enabled(self, agent_id: str, target_name_or_host: str, enabled: bool) -> Dict[str, Any]:
+        """Enable or disable a Stigix fabric target on a node."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        base = agent.api_base_url
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                r_get = await client.get(f"{base}/api/targets", headers=headers)
+                r_get.raise_for_status()
+                data = r_get.json()
+                targets = data if isinstance(data, list) else data.get("targets", [])
+
+                key = target_name_or_host.lower()
+                match = next(
+                    (t for t in targets if
+                     t.get("name", "").lower() == key or
+                     t.get("host", "") == target_name_or_host or
+                     t.get("id", "").startswith(target_name_or_host)),
+                    None
+                )
+                if not match:
+                    available = [(t.get("name"), t.get("host")) for t in targets]
+                    return {"error": f"Target '{target_name_or_host}' not found. Available: {available}"}
+
+                full_id = match.get("id")
+                r = await client.put(f"{base}/api/targets/{full_id}", json={"enabled": enabled}, headers=headers)
+                r.raise_for_status()
+                state = "enabled" if enabled else "disabled"
+                return {"success": True, "message": f"Target '{match.get('name')}' {state} on {agent_id}"}
+            except Exception as e:
+                logger.error(f"Failed to set target status on {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def set_traffic_client_count(self, agent_id: str, client_count: int) -> Dict[str, Any]:
+        """Set the number of parallel traffic worker clients on a node (1-20)."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        if not (1 <= client_count <= 20):
+            return {"error": "client_count must be between 1 and 20."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                r = await client.post(
+                    f"{agent.api_base_url}/api/traffic/rate",
+                    json={"client_count": client_count},
+                    headers=headers
+                )
+                r.raise_for_status()
+                return {"success": True, "message": f"Traffic density set to {client_count} parallel clients on {agent_id}"}
+            except Exception as e:
+                logger.error(f"Failed to set client count on {agent_id}: {e}")
+                return {"error": str(e)}
+
