@@ -1224,7 +1224,7 @@ class TestOrchestrator:
 
                 threat_r = await client.post(
                     f"{base}/api/security/threat-test",
-                    json={"endpoints": [eicar_url]},
+                    json={"endpoint": eicar_url},
                     headers=headers
                 )
                 threat_r.raise_for_status()
@@ -1282,7 +1282,7 @@ class TestOrchestrator:
                 logger.info(f"Running EICAR test on {agent_id} with URL: {eicar_url}")
                 r = await client.post(
                     f"{base}/api/security/threat-test",
-                    json={"endpoints": [eicar_url]},
+                    json={"endpoint": eicar_url},
                     headers=headers
                 )
                 r.raise_for_status()
