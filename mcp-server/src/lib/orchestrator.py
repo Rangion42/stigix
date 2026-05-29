@@ -1287,6 +1287,9 @@ class TestOrchestrator:
                 )
                 r.raise_for_status()
                 data = r.json()
+                # Wrap non-dict responses for safety
+                if not isinstance(data, dict):
+                    data = {"results": data}
                 data["eicar_url"] = eicar_url
                 return data
             except Exception as e:
@@ -1523,9 +1526,11 @@ class TestOrchestrator:
                 try:
                     r = await client.get(f"{base}{path}", headers=headers)
                     if r.status_code == 200:
-                        snapshot[key] = r.json()
+                        raw = r.json()
+                        snapshot[key] = raw
                         if key == "version":
-                            snapshot["version"] = r.json().get("version") or r.json().get("tag")
+                            # Flatten version string for easy comparison
+                            snapshot["version"] = raw.get("version") or raw.get("tag")
                 except Exception:
                     pass
 
@@ -1609,7 +1614,7 @@ class TestOrchestrator:
             total_peers += snap.get("fabric_peer_count", 0)
 
         report = {
-            "generated_at": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+            "generated_at": datetime.utcnow().isoformat() + "Z",
             "node_count": len(agent_ids),
             "summary": {
                 "healthy_nodes": healthy_count,
