@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.95] - 2026-05-29
+### Added
+- **stigix-cli** 📋 `history dump` command: prints all unique commands (persistent file + current session) clean to stdout — one command per line, ready to copy-paste into a script. Reads prompt_toolkit `.stigix-cli.history` and strips the `+` format markers automatically.
+- **docker-compose** 💾 Added `.stigix-cli.history` and `.stigix-cli.json` volume mounts to all 4 compose files — CLI history and session token now survive container upgrades/recreations.
+- **install.sh / install-latest-beta.sh** 🏗️ `touch` pre-creates `.stigix-cli.history` and `.stigix-cli.json` before container start so Docker mounts them as files (not directories).
+### Fixed
+- **stigix-cli** 🔄 `system upgrade` monitoring timeout now shows a clear message when the container stops before finishing restart, with exact command to run: `cd stigix && docker compose up -d`.
+
 ## [v1.4.0-patch.94] - 2026-05-29
 ### Added
 - **stigix-cli** ⏰ Idle timeout: CLI automatically exits after N seconds of inactivity. Default: **300s** (5 min). Set `--idle-timeout 0` to disable entirely.

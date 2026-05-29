@@ -262,6 +262,8 @@ elif [ "$INSTALL_MODE" == "source" ]; then
 fi
 
 mkdir -p ./config ./logs ./mcp-data
+# Pre-create CLI persistence files so Docker mounts them as files (not dirs)
+touch ./.stigix-cli.history ./.stigix-cli.json
 
 echo "✅ Files prepared in $PWD"
 

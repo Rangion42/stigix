@@ -3674,7 +3674,12 @@ def cmd_system(args):
                 time.sleep(3)
                 retry_count += 1
                 
-            err("Monitoring timed out. Please check container status manually via 'docker ps'.")
+            err("Monitoring timed out. The upgrade pull completed but the container may not have restarted automatically.")
+            warn("This can happen when the container restarts itself — the CLI loses connection before 'up -d' can run.")
+            print()
+            info("Run this from your host to bring it back up:")
+            print(c("1;36", "    cd stigix && docker compose up -d"))
+            print()
 
     elif sub == "interfaces":
         r = api_get("/api/system/interfaces")
@@ -3859,6 +3864,7 @@ def cmd_history(args):
     """Manage session command history.
 
     history                       — show commands run in this session
+    history dump                  — dump all history (session + persistent) for copy-paste scripting
     history save <filename>       — save session commands to a local script file
     history clear                 — clear the session history in memory
     """
@@ -3868,6 +3874,7 @@ def cmd_history(args):
     if sub in ("--help", "-h", "help"):
         _help_section("HISTORY", [
             ("history",                   "Show commands run in the current session"),
+            ("history dump",              "Dump all history (session + file) — clean, copy-paste ready"),
             ("history save <filename>",   "Save session commands to a script file"),
             ("history clear",             "Clear current session history"),
         ])
@@ -3882,6 +3889,32 @@ def cmd_history(args):
         for i, cmd in enumerate(SESSION_HISTORY, 1):
             print(f"  {i:>3}  {cmd}")
         dim(f"  prompt history file: {HISTORY_FILE}")
+
+    elif sub == "dump":
+        # Collect persistent history from HISTORY_FILE (prompt_toolkit format: lines starting with +)
+        persistent = []
+        if HISTORY_FILE.exists():
+            try:
+                for line in HISTORY_FILE.read_text(errors="replace").splitlines():
+                    if line.startswith("+"):
+                        persistent.append(line[1:])  # strip the leading +
+            except Exception:
+                pass
+        # Merge: persistent (older) then current session (newer), deduplicate keeping order
+        seen = set()
+        all_cmds = []
+        for cmd in persistent + SESSION_HISTORY:
+            if cmd and cmd not in seen:
+                seen.add(cmd)
+                all_cmds.append(cmd)
+        if not all_cmds:
+            dim("  (no history found)")
+            return
+        print(f"# Stigix CLI history dump — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"# {len(all_cmds)} unique commands  |  source: session + {HISTORY_FILE}")
+        print()
+        for cmd in all_cmds:
+            print(cmd)
             
     elif sub == "clear":
         SESSION_HISTORY = []
@@ -3902,7 +3935,7 @@ def cmd_history(args):
         except Exception as e:
             err(f"Failed to save history: {e}")
     else:
-        err("Usage: history [list | save <filename> | clear]")
+        err("Usage: history [list | dump | save <filename> | clear]")
 
 
 def cmd_help(args):
@@ -4180,7 +4213,7 @@ COMPLETER_TREE = {
     "auth":        {"login": None, "logout": None, "status": None},
     "status":      None,
     "connect":     {"list": None, "save": None, "forget": None},
-    "history":     {"list": None, "save": None, "clear": None},
+    "history":     {"list": None, "dump": None, "save": None, "clear": None},
     "autocomplete": {"on": None, "off": None, "status": None},
     "autocompletion": {"on": None, "off": None, "status": None},
     "traffic":     {

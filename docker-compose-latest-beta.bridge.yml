@@ -52,6 +52,8 @@ services:
       - ./mcp-data:/app/mcp-data
       - /var/run/docker.sock:/var/run/docker.sock
       - ./docker-compose-latest-beta.bridge.yml:/app/docker-compose.yml
+      - ./.stigix-cli.history:/root/.stigix-cli.history
+      - ./.stigix-cli.json:/root/.stigix-cli.json
 
     environment:
       # --- General & Web UI ---
