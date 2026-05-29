@@ -1579,7 +1579,7 @@ class TestOrchestrator:
         # Resolve agent list
         if not agent_ids:
             all_agents = await self.registry.list_endpoints()
-            agent_ids = [a.agent_id for a in all_agents] if all_agents else []
+            agent_ids = [a.meta.get("site_name") or a.id for a in all_agents] if all_agents else []
 
         if not agent_ids:
             return {"error": "No agents registered in the registry."}

@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.102] - 2026-05-29
+### Fixed
+- **mcp-server** 🐛 Fixed `generate_report` crashing with `AttributeError: 'StigixEndpoint' has no attribute 'agent_id'` when called without arguments. Now correctly uses `meta.get("site_name") or id` matching the `get_endpoint()` lookup pattern.
+
 ## [v1.4.0-patch.101] - 2026-05-29
 ### Added
 - **mcp-server** 🚀 Phase 4 MCP tool expansion — 4 new compound/analytical tools completing the full feature set:
