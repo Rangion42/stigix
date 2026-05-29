@@ -49,8 +49,12 @@ find_free_port() {
             fi
         fi
         
-        if [ "$in_use" = false ]; then
-            if (timeout 1 bash -c "cat < /dev/null > /dev/tcp/127.0.0.1/$port") >/dev/null 2>&1; then
+        if [ "$in_use" = false ] && command -v curl &> /dev/null; then
+            # Curl returns exit code 7 if connection is refused (port is closed).
+            # Any other exit code (like 52 empty reply, 0 success, etc.) means port is open.
+            curl -s --connect-timeout 1 http://127.0.0.1:$port >/dev/null 2>&1
+            local curl_exit=$?
+            if [ "$curl_exit" -ne 7 ]; then
                 in_use=true
             fi
         fi
@@ -79,6 +83,41 @@ print_progress_bar() {
     for ((k=0; k<num_empty; k++)); do bar="${bar}░"; done
     
     printf "\r   [%s] %3d%% - %s" "$bar" "$pct" "$text"
+}
+
+dump_process_on_port() {
+    local port=$1
+    echo "   [Process info for port $port]:"
+    # Windows Git Bash check
+    if [[ "$OS_TYPE" =~ MINGW|MSYS|CYGWIN ]]; then
+        local win_ns=$(netstat -ano | grep -E ":$port " 2>/dev/null)
+        if [ -n "$win_ns" ]; then
+            echo "$win_ns" | sed 's/^/     /'
+            return 0
+        fi
+    fi
+    if command -v lsof &> /dev/null; then
+        local lsof_out=$(lsof -i :$port 2>/dev/null)
+        if [ -n "$lsof_out" ]; then
+            echo "$lsof_out" | sed 's/^/     /'
+            return 0
+        fi
+    fi
+    if command -v ss &> /dev/null; then
+        local ss_out=$(ss -tlnp | grep -E ":$port " 2>/dev/null)
+        if [ -n "$ss_out" ]; then
+            echo "$ss_out" | sed 's/^/     /'
+            return 0
+        fi
+    fi
+    if command -v netstat &> /dev/null; then
+        local ns_out=$(netstat -anp 2>/dev/null | grep -E ":$port " 2>/dev/null)
+        if [ -n "$ns_out" ]; then
+            echo "$ns_out" | sed 's/^/     /'
+            return 0
+        fi
+    fi
+    echo "     (Could not retrieve process info; it might be owned by root or running in docker. Try running: sudo lsof -i :$port)"
 }
 
 # Parse command line arguments
@@ -166,7 +205,19 @@ if [ "$INSTALL_MODE" != "target" ]; then
     if [ -n "$FREE_PORT" ]; then
         PORT=$FREE_PORT
         if [ "$PORT" -ne 8080 ]; then
-            echo "⚠️  Port 8080 is in use. Auto-selected alternative port: $PORT"
+            echo "⚠️  Port 8080 is in use."
+            dump_process_on_port 8080
+            if [ -t 0 ]; then
+                read -p "Would you like to proceed with alternative port $PORT? [Y/n]: " PROMPT_CHOICE
+                PROMPT_CHOICE=${PROMPT_CHOICE:-Y}
+                if [[ "$PROMPT_CHOICE" =~ ^[Nn] ]]; then
+                    echo "❌ Installation cancelled."
+                    exit 1
+                fi
+                echo "✅ Proceeding with port $PORT."
+            else
+                echo "⚠️  Auto-selected alternative port: $PORT"
+            fi
         else
             echo "✅ Port 8080 is free."
         fi
