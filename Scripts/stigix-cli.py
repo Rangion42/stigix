@@ -4351,10 +4351,22 @@ Examples:
                         help="Execute a single command and exit (non-interactive)")
     parser.add_argument("--script", metavar="FILE",
                         help="Execute commands from a file, one per line")
+    parser.add_argument("--autocomplete", metavar="TEXT", nargs="?", const="",
+                        help="Generate autocomplete suggestions for the given input text")
     args = parser.parse_args()
 
     # Load saved session first, then override with --url if given
     load_session()
+
+    if args.autocomplete is not None:
+        if HAS_PROMPT_TOOLKIT:
+            from prompt_toolkit.document import Document
+            doc = Document(args.autocomplete, cursor_position=len(args.autocomplete))
+            completer = StigixCompleter(COMPLETER_TREE)
+            completions = list(completer.get_completions(doc, None))
+            for c in completions:
+                print(c.text)
+        sys.exit(0)
     if args.url:
         STIGIX_URL = args.url
         if not STIGIX_URL.startswith("http"):
