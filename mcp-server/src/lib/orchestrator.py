@@ -601,3 +601,254 @@ class TestOrchestrator:
             except Exception as e:
                 logger.error(f"Failed to fetch probe details for {agent_id}: {e}")
                 return {"error": str(e)}
+
+    # -------------------------------------------------------------------------
+    # Phase 1 Additions — Aligned with stigix-cli capabilities
+    # -------------------------------------------------------------------------
+
+    async def get_node_status(self, agent_id: str) -> Dict[str, Any]:
+        """Fetch an aggregated node status summary (health, version, traffic, site info)."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        base = agent.api_base_url
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            result: Dict[str, Any] = {"agent_id": agent_id, "base_url": base}
+            try:
+                for path, key in [
+                    ("/api/system/health", "health"),
+                    ("/api/version", "version"),
+                    ("/api/traffic/status", "traffic"),
+                    ("/api/siteinfo", "site"),
+                ]:
+                    try:
+                        r = await client.get(f"{base}{path}", headers=headers)
+                        if r.status_code == 200:
+                            result[key] = r.json()
+                    except Exception as e:
+                        result[key] = {"error": str(e)}
+                # Convergence status
+                try:
+                    r = await client.get(f"{base}/api/convergence/status", headers=headers)
+                    if r.status_code == 200:
+                        result["convergence"] = r.json()
+                except Exception:
+                    pass
+                return result
+            except Exception as e:
+                logger.error(f"Failed to fetch node status for {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def get_traffic_stats(self, agent_id: str) -> Dict[str, Any]:
+        """Fetch live traffic stats (per-app requests, error rates, client count)."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        base = agent.api_base_url
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                stats_r = await client.get(f"{base}/api/stats", headers=headers)
+                traffic_r = await client.get(f"{base}/api/traffic/status", headers=headers)
+                result: Dict[str, Any] = {}
+                if stats_r.status_code == 200:
+                    result["stats"] = stats_r.json()
+                if traffic_r.status_code == 200:
+                    result["traffic_status"] = traffic_r.json()
+                return result
+            except Exception as e:
+                logger.error(f"Failed to fetch traffic stats for {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def get_traffic_logs(self, agent_id: str, limit: int = 50) -> Dict[str, Any]:
+        """Fetch recent traffic generation logs from a node."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                r = await client.get(f"{agent.api_base_url}/api/logs", headers=headers)
+                r.raise_for_status()
+                data = r.json()
+                # Trim to requested limit if it's a list
+                if isinstance(data, list):
+                    data = data[-limit:]
+                return {"agent_id": agent_id, "logs": data}
+            except Exception as e:
+                logger.error(f"Failed to fetch traffic logs for {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def get_security_results_stats(self, agent_id: str) -> Dict[str, Any]:
+        """Fetch the security test results scorecard from a node."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                r = await client.get(f"{agent.api_base_url}/api/security/results/stats", headers=headers)
+                r.raise_for_status()
+                return r.json()
+            except Exception as e:
+                logger.error(f"Failed to fetch security results stats for {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def get_security_config(self, agent_id: str) -> Dict[str, Any]:
+        """Fetch the security policy configuration (enabled modules, profile) from a node."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        base = agent.api_base_url
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                result: Dict[str, Any] = {}
+                # Fetch config (enabled modules)
+                cfg_r = await client.get(f"{base}/api/security/config", headers=headers)
+                if cfg_r.status_code == 200:
+                    result["config"] = cfg_r.json()
+                # Fetch dynamic profile (list of test targets)
+                prof_r = await client.get(f"{base}/api/security/profile", headers=headers)
+                if prof_r.status_code == 200:
+                    result["profile"] = prof_r.json()
+                return result
+            except Exception as e:
+                logger.error(f"Failed to fetch security config for {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def get_security_profile_dynamic(self, agent_id: str, probe_type: str) -> Dict[str, Any]:
+        """Fetch the dynamic list of security test targets from the node's profile."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                r = await client.get(f"{agent.api_base_url}/api/security/profile", headers=headers)
+                r.raise_for_status()
+                profile = r.json()
+                # Extract the relevant section by probe_type
+                if probe_type == "dns":
+                    options = profile.get("dns", profile.get("dnsList", []))
+                elif probe_type == "url":
+                    options = profile.get("url", profile.get("urlList", []))
+                elif probe_type == "threat":
+                    options = profile.get("threat", profile.get("threatList", []))
+                else:
+                    options = profile
+                return {"agent_id": agent_id, "probe_type": probe_type, "options": options}
+            except Exception as e:
+                logger.error(f"Failed to fetch security profile for {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def list_dem_probes(self, agent_id: str) -> Dict[str, Any]:
+        """List all configured DEM (Digital Experience Monitoring) probes on a node."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                r = await client.get(f"{agent.api_base_url}/api/connectivity/custom", headers=headers)
+                r.raise_for_status()
+                data = r.json()
+                probes = data if isinstance(data, list) else data.get("targets", [])
+                return {"agent_id": agent_id, "count": len(probes), "probes": probes}
+            except Exception as e:
+                logger.error(f"Failed to list DEM probes for {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def run_probes_now(self, agent_id: str) -> Dict[str, Any]:
+        """Trigger an immediate run of all DEM probes on a node."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        async with httpx.AsyncClient(timeout=90.0) as client:
+            try:
+                r = await client.get(f"{agent.api_base_url}/api/connectivity/test", headers=headers)
+                r.raise_for_status()
+                data = r.json()
+                results = data if isinstance(data, list) else data.get("results", [data])
+                return {"agent_id": agent_id, "probe_count": len(results), "results": results}
+            except Exception as e:
+                logger.error(f"Failed to run probes for {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def get_dem_probe_stats(self, agent_id: str) -> Dict[str, Any]:
+        """Fetch historical DEM probe stats (global health score, per-probe latency, reliability)."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        base = agent.api_base_url
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            try:
+                result: Dict[str, Any] = {"agent_id": agent_id}
+                # Global stats
+                stats_r = await client.get(f"{base}/api/connectivity/stats?range=1h", headers=headers)
+                if stats_r.status_code == 200:
+                    result["global_stats"] = stats_r.json()
+                # Recent results
+                results_r = await client.get(
+                    f"{base}/api/connectivity/results?timeRange=1h&limit=500", headers=headers
+                )
+                if results_r.status_code == 200:
+                    result["recent_results"] = results_r.json()
+                # Probe config for context
+                cfg_r = await client.get(f"{base}/api/connectivity/custom", headers=headers)
+                if cfg_r.status_code == 200:
+                    data = cfg_r.json()
+                    result["probes_config"] = data if isinstance(data, list) else data.get("targets", [])
+                return result
+            except Exception as e:
+                logger.error(f"Failed to fetch DEM probe stats for {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def list_fabric_targets(self, agent_id: str) -> Dict[str, Any]:
+        """List all manually-managed Stigix peer/fabric targets configured on a node."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                r = await client.get(f"{agent.api_base_url}/api/targets", headers=headers)
+                r.raise_for_status()
+                data = r.json()
+                targets = data if isinstance(data, list) else data.get("targets", [])
+                return {"agent_id": agent_id, "count": len(targets), "targets": targets}
+            except Exception as e:
+                logger.error(f"Failed to list fabric targets for {agent_id}: {e}")
+                return {"error": str(e)}
+
+    async def list_speedtest_history(self, agent_id: str, limit: int = 20) -> Dict[str, Any]:
+        """Fetch the speedtest (XFR) history from a node."""
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                r = await client.get(f"{agent.api_base_url}/api/tests/xfr", headers=headers)
+                r.raise_for_status()
+                data = r.json()
+                jobs = data if isinstance(data, list) else data.get("jobs", [])
+                return {"agent_id": agent_id, "count": len(jobs), "jobs": jobs[:limit]}
+            except Exception as e:
+                logger.error(f"Failed to fetch speedtest history for {agent_id}: {e}")
+                return {"error": str(e)}

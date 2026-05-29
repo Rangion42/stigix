@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.98] - 2026-05-29
+### Added
+- **mcp-server** 🚀 Phase 1 MCP tool expansion — 12 new tools aligned with stigix-cli capabilities:
+  - `get_node_status`: Aggregated health, version, traffic, site info, and convergence state in one call
+  - `get_traffic_stats`: Live per-app request counts, error rates, and client count
+  - `get_traffic_logs`: Recent traffic generation logs (with configurable limit)
+  - `get_security_results_stats`: Security test scorecard (DNS/URL/Threat pass/fail summary)
+  - `get_security_config`: Security policy module config + full dynamic test target profile
+  - `get_security_test_options_dynamic`: Live security test options fetched from node profile (replaces hardcoded list)
+  - `list_dem_probes`: List all configured DEM experience probes on a node
+  - `run_dem_probes_now`: Trigger an immediate DEM probe run and return results
+  - `get_dem_probe_stats`: Historical DEM stats — global health score, per-probe latency, reliability (1h window)
+  - `list_fabric_targets`: List manually-managed Stigix peer targets with capabilities
+  - `list_speedtest_history`: XFR speedtest history with throughput, RTT, and status
+- **mcp-server** 🔧 Added 11 corresponding orchestrator methods in `lib/orchestrator.py` following the existing async/httpx pattern
+
 ## [v1.4.0-patch.97] - 2026-05-29
 ### Fixed
 - **web-dashboard** 🔄 Fixed `system upgrade` and `redeploy` container recreation failing to start the new container. It now spawns the `docker compose up -d` command in a detached background helper container (`stigix-upgrader`) via the Docker socket, preventing the compose process from being killed when the Stigix container shuts down.

@@ -412,8 +412,152 @@ async def get_probe_details(agent_id: str, probe_name: str) -> dict:
 
 
 # -----------------------------------------------------------------------------
-# Main Entry Point
+# Phase 1 Tool Additions — Aligned with stigix-cli capabilities
 # -----------------------------------------------------------------------------
+
+@mcp.tool()
+async def get_node_status(agent_id: str) -> dict:
+    """
+    Get a comprehensive status summary for a specific Stigix node.
+    Aggregates health, version, traffic status, site info, and live convergence state.
+    Use this as the first tool when troubleshooting or checking on a node.
+
+    Args:
+        agent_id: ID of the Stigix node (e.g., 'BR8', 'Hetzner').
+    """
+    return await orchestrator.get_node_status(agent_id)
+
+
+@mcp.tool()
+async def get_traffic_stats(agent_id: str) -> dict:
+    """
+    Get live traffic generation statistics for a specific node.
+    Returns per-application request counts, error rates, client count,
+    and current traffic running status.
+
+    Args:
+        agent_id: ID of the Stigix node.
+    """
+    return await orchestrator.get_traffic_stats(agent_id)
+
+
+@mcp.tool()
+async def get_traffic_logs(agent_id: str, limit: int = 50) -> dict:
+    """
+    Fetch recent traffic generation logs from a specific node.
+    Useful for debugging application simulation issues.
+
+    Args:
+        agent_id: ID of the Stigix node.
+        limit: Maximum number of log entries to return (default 50).
+    """
+    return await orchestrator.get_traffic_logs(agent_id, limit)
+
+
+@mcp.tool()
+async def get_security_results_stats(agent_id: str) -> dict:
+    """
+    Get the security test results scorecard for a specific node.
+    Returns a summary of passed/failed/blocked results across DNS, URL, and Threat tests.
+    Use this to quickly assess the security posture of a node.
+
+    Args:
+        agent_id: ID of the Stigix node.
+    """
+    return await orchestrator.get_security_results_stats(agent_id)
+
+
+@mcp.tool()
+async def get_security_config(agent_id: str) -> dict:
+    """
+    Get the security policy configuration for a specific node.
+    Returns both the module enable/disable config and the full dynamic test target profile
+    (DNS domains, URL categories, threat scenarios) configured on the node.
+
+    Args:
+        agent_id: ID of the Stigix node.
+    """
+    return await orchestrator.get_security_config(agent_id)
+
+
+@mcp.tool()
+async def get_security_test_options_dynamic(agent_id: str, probe_type: str) -> dict:
+    """
+    Get the DYNAMIC list of security test targets/categories for a specific probe type,
+    fetched live from the node's actual configured profile.
+    Prefer this over 'get_security_test_options' as it reflects the real configuration.
+
+    Args:
+        agent_id: ID of the Stigix node to fetch the profile from.
+        probe_type: 'dns', 'url', or 'threat'.
+    """
+    return await orchestrator.get_security_profile_dynamic(agent_id, probe_type)
+
+
+@mcp.tool()
+async def list_dem_probes(agent_id: str) -> dict:
+    """
+    List all configured Digital Experience Monitoring (DEM) probes on a specific node.
+    Returns probe names, types (HTTP, PING, DNS, TCP, UDP), targets, and enabled status.
+
+    Args:
+        agent_id: ID of the Stigix node.
+    """
+    return await orchestrator.list_dem_probes(agent_id)
+
+
+@mcp.tool()
+async def run_dem_probes_now(agent_id: str) -> dict:
+    """
+    Trigger an immediate run of all DEM experience probes on a specific node.
+    Returns RTT, status, and reachability for each probe.
+    Note: This may take up to 30-60 seconds depending on the number of probes.
+
+    Args:
+        agent_id: ID of the Stigix node.
+    """
+    return await orchestrator.run_probes_now(agent_id)
+
+
+@mcp.tool()
+async def get_dem_probe_stats(agent_id: str) -> dict:
+    """
+    Get historical DEM probe statistics for a specific node.
+    Returns the global health score, per-probe average latency, and reliability
+    over the last hour. Includes raw probe results for detailed analysis.
+
+    Args:
+        agent_id: ID of the Stigix node.
+    """
+    return await orchestrator.get_dem_probe_stats(agent_id)
+
+
+@mcp.tool()
+async def list_fabric_targets(agent_id: str) -> dict:
+    """
+    List all manually-configured Stigix peer/fabric targets on a specific node.
+    Returns each target's name, host, capabilities (xfr, voice, convergence, security),
+    enabled status, and source (managed vs autodiscovered).
+
+    Args:
+        agent_id: ID of the Stigix node to query.
+    """
+    return await orchestrator.list_fabric_targets(agent_id)
+
+
+@mcp.tool()
+async def list_speedtest_history(agent_id: str, limit: int = 20) -> dict:
+    """
+    Get the speedtest (XFR) history for a specific node.
+    Returns past test results including target, protocol, throughput (Mbps), RTT, and status.
+
+    Args:
+        agent_id: ID of the Stigix node.
+        limit: Maximum number of historical results to return (default 20).
+    """
+    return await orchestrator.list_speedtest_history(agent_id, limit)
+
+
 
 if __name__ == "__main__":
     logger.info(f"Entrypoint reached with __name__ == {__name__}")
