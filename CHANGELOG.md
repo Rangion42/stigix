@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.89] - 2026-05-29
+### Added
+- **cli** 💻 Added dynamic auto-completion suggestions for saved profile names when using the `connect` and `connect forget` commands.
+
 ## [v1.4.0-patch.88] - 2026-05-29
 ### Refactored / Fixed
 - **cli** 💻 Revamped the CLI status overview screen (`status` command) into a clean, card-based aligned panel layout.

@@ -3980,11 +3980,23 @@ class StigixCompleter(Completer):
                 for sub in subcmds.keys():
                     if sub.startswith(current_word):
                         yield Completion(sub, start_position=-len(current_word))
+                if cmd == "connect" and PROFILES:
+                    for profile_name in PROFILES.keys():
+                        if profile_name.startswith(current_word):
+                            yield Completion(profile_name, start_position=-len(current_word))
             return
 
         subcmd = prefix_words[1].lower()
         subcmds = self.tree[cmd]
         if not isinstance(subcmds, dict) or subcmd not in subcmds:
+            return
+
+        # Suggest profiles to forget
+        if cmd == "connect" and subcmd == "forget":
+            if PROFILES:
+                for profile_name in PROFILES.keys():
+                    if profile_name.startswith(current_word):
+                        yield Completion(profile_name, start_position=-len(current_word))
             return
 
         # Special case: suggest local JSON or CSV files for import / export
