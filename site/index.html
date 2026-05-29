@@ -76,6 +76,7 @@
       <li><a href="#use-cases">Use Cases</a></li>
       <li><a href="#gallery">Screenshots</a></li>
       <li><a href="#quickstart">Quick Start</a></li>
+      <li><a href="#stigix-cli">CLI</a></li>
       <li><a href="#docs">Docs</a></li>
     </ul>
     <a href="https://github.com/jsuzanne/stigix" target="_blank" rel="noopener noreferrer" class="nav__gh" id="nav-github-btn">
@@ -95,6 +96,7 @@
   <a href="#use-cases">Use Cases</a>
   <a href="#gallery">Screenshots</a>
   <a href="#quickstart">Quick Start</a>
+  <a href="#stigix-cli">CLI</a>
   <a href="#docs">Docs</a>
   <a href="https://github.com/jsuzanne/stigix" target="_blank" rel="noopener noreferrer">View on GitHub →</a>
 </div>
@@ -111,7 +113,7 @@
         <span class="hero__badge-dot" aria-hidden="true"></span>
         Open-source · MIT · Docker-ready
       </div>
-      <span class="hero__version">current: jsuzanne/stigix:stable</span>
+      <span class="hero__version">current: jsuzanne/stigix:stable &nbsp;·&nbsp; <a href="https://github.com/jsuzanne/stigix/releases" target="_blank" rel="noopener noreferrer" style="color:var(--teal);text-decoration:none;">v1.4.0-patch.91</a></span>
     </div>
 
     <h1 class="hero__headline">
@@ -292,14 +294,53 @@
         <div class="caps__col-category">security</div>
       </div>
       <div class="caps__col" role="cell">
-        <div class="caps__col-desc">URL filtering validation across 66 categories (malware, phishing, gambling, adult content). DNS security tests against 24 domains including DGA and C2 patterns. EICAR-based IPS/threat prevention validation. Scheduled testing with persistent result history and export.</div>
+        <div class="caps__col-desc">URL filtering validation across 66 categories (malware, phishing, gambling, adult content). DNS security tests against 24 domains including DGA and C2 patterns. EICAR-based IPS/threat prevention validation. <strong style="color:var(--white)">7 real-traffic C2 attack simulations</strong> (SQL Injection, DNS C2, Greyware DNS, Sliver C2 Emulation, EICAR over HTTPS, DNS Tunneling) with enforced/bypass/inconclusive verdicts. EDL lists with sequential or random execution. Scheduled testing with persistent result history and export.</div>
       </div>
       <div class="caps__col" role="cell">
         <div class="caps__col-tags">
           <span class="tag">66 URL cats</span>
           <span class="tag">DNS security</span>
           <span class="tag">EICAR/IPS</span>
+          <span class="tag">7 C2 attacks</span>
           <span class="tag">EDL support</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4b. AI Security (AISA) -->
+    <div class="caps__row" role="row">
+      <div class="caps__col" role="cell">
+        <div class="caps__col-name">AI Security <span class="tag" style="margin-left:6px;background:rgba(251,191,36,0.12);border-color:rgba(251,191,36,0.35);color:#fbbf24;font-size:0.58rem;vertical-align:middle;">BETA</span></div>
+        <div class="caps__col-category">security · AI</div>
+      </div>
+      <div class="caps__col" role="cell">
+        <div class="caps__col-desc">5 Palo Alto AI Security simulation scenarios targeting live AI applications (ChatGPT, Grok, Gemini, Perplexity): DLP data exfiltration, Prompt Injection, CVE-2014-9222 exploit simulation, EICAR upload, and AI volume traffic across 24 AI apps. Dedicated AISA scheduler. <em style="color:var(--muted)">Results may vary depending on AI platform responses — marked beta while validation is ongoing.</em></div>
+      </div>
+      <div class="caps__col" role="cell">
+        <div class="caps__col-tags">
+          <span class="tag">5 scenarios</span>
+          <span class="tag">ChatGPT / Grok</span>
+          <span class="tag">Gemini / Perplexity</span>
+          <span class="tag">DLP · Prompt Inj.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4c. Security Score Dashboard -->
+    <div class="caps__row" role="row">
+      <div class="caps__col" role="cell">
+        <div class="caps__col-name">Security Score Dashboard</div>
+        <div class="caps__col-category">security · analytics</div>
+      </div>
+      <div class="caps__col" role="cell">
+        <div class="caps__col-desc">Per-module security posture scoring across URL, DNS, Threat Prevention, and C2 modules. 24-hour trend charts with min/max tracking and run markers. Baseline pinning and gap analysis to compare current posture against a reference. Latest Changes diff view between consecutive test runs.</div>
+      </div>
+      <div class="caps__col" role="cell">
+        <div class="caps__col-tags">
+          <span class="tag">Posture score</span>
+          <span class="tag">24h trends</span>
+          <span class="tag">Baseline pinning</span>
+          <span class="tag">Gap analysis</span>
         </div>
       </div>
     </div>
@@ -311,14 +352,16 @@
         <div class="caps__col-category">protocol simulation</div>
       </div>
       <div class="caps__col" role="cell">
-        <div class="caps__col-desc">Layer-2/3 device simulation with Scapy-based DHCP and ARP, placing virtual devices directly on the wire. Simulates cameras, sensors, and other IoT profiles. Attack mode for validating malicious behavior detection: DNS flood, C2 beacon, port scan, data exfiltration.</div>
+        <div class="caps__col-desc">Layer-2/3 device simulation with Scapy-based DHCP and ARP, placing virtual devices directly on the wire. Simulates cameras, sensors, industrial controllers, and Raspberry Pi profiles. Attack mode: DNS flood, C2 beacon, port scan, data exfiltration. Import directly from <strong style="color:var(--white)">Palo Alto IoT Security CSV</strong> or <strong style="color:var(--white)">Vulnerability Report CSV</strong> (CVE-based Danger Score, APT attribution, ICS-CERT detection). FIFO concurrency scheduler supports 100+ simultaneous devices.</div>
       </div>
       <div class="caps__col" role="cell">
         <div class="caps__col-tags">
           <span class="tag">DHCP/ARP</span>
           <span class="tag">Layer-2/3</span>
           <span class="tag">Attack mode</span>
-          <span class="tag">Cameras</span>
+          <span class="tag">100+ devices</span>
+          <span class="tag">CSV import</span>
+          <span class="tag">CVE scoring</span>
         </div>
       </div>
     </div>
@@ -418,6 +461,25 @@
       </div>
     </div>
 
+    <!-- 11. Stigix CLI -->
+    <div class="caps__row" role="row">
+      <div class="caps__col" role="cell">
+        <div class="caps__col-name">Stigix CLI</div>
+        <div class="caps__col-category">operations</div>
+      </div>
+      <div class="caps__col" role="cell">
+        <div class="caps__col-desc">Interactive terminal console built into the container. Supports <code style="font-family:var(--mono);font-size:0.8em;color:var(--teal)">auth login</code>, <code style="font-family:var(--mono);font-size:0.8em;color:var(--teal)">status</code>, traffic control, and exec mode. Session saved locally for reconnect. Command history persisted to a local JSON file for scripting and audit. Tab-completion for saved profiles. Launch with <code style="font-family:var(--mono);font-size:0.8em;color:var(--teal)">docker exec -it stigix stigix-cli</code>.</div>
+      </div>
+      <div class="caps__col" role="cell">
+        <div class="caps__col-tags">
+          <span class="tag">Interactive</span>
+          <span class="tag">Auth</span>
+          <span class="tag">History file</span>
+          <span class="tag">Tab-complete</span>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /.caps__table -->
 </section>
 
@@ -472,6 +534,12 @@
         <p class="usecase__desc">Simulate realistic IoT device presence at Layer 2/3 and validate that DHCP profiling, micro-segmentation, and traffic classification work correctly. Test QoS policy prioritization for voice traffic using Scapy-based RTP packet simulation with MOS score estimation.</p>
       </article>
 
+      <article class="usecase" role="listitem">
+        <div class="usecase__num">07</div>
+        <h3 class="usecase__title">AI Security Validation <span style="font-family:var(--mono);font-size:0.6rem;font-weight:600;color:#fbbf24;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);padding:2px 6px;border-radius:3px;vertical-align:middle;letter-spacing:0.08em;">BETA</span></h3>
+        <p class="usecase__desc">Simulate DLP exfiltration, Prompt Injection, exploit attempts, and EICAR uploads against live AI platforms (ChatGPT, Grok, Gemini, Perplexity). Validate that AI Security policies detect and block sensitive data leaving through AI chat interfaces — a rapidly growing attack vector in enterprise environments.</p>
+      </article>
+
     </div>
   </div>
 </section>
@@ -498,6 +566,7 @@
       <button class="gallery__tab" data-tab="topology" role="tab" aria-selected="false" id="tab-btn-topology">Topology</button>
       <button class="gallery__tab" data-tab="statistics" role="tab" aria-selected="false" id="tab-btn-statistics">Statistics</button>
       <button class="gallery__tab" data-tab="config" role="tab" aria-selected="false" id="tab-btn-config">Config</button>
+      <button class="gallery__tab" data-tab="dashboard2" role="tab" aria-selected="false" id="tab-btn-dashboard2">Dashboard 2</button>
     </div>
 
     <div class="gallery__panel active" id="tab-dashboard">
@@ -577,6 +646,14 @@
         <div class="gallery__bar"><span class="gallery__bar-dot"></span><span class="gallery__bar-dot"></span><span class="gallery__bar-dot"></span><span class="gallery__bar-label">Configuration — applications, probes, interfaces</span></div>
         <img src="assets/screenshots/configuration.png" alt="Stigix configuration tab" loading="lazy">
         <div class="gallery__caption">Manage application groups, traffic weights, network interfaces, synthetic probes, and Prisma API credentials.</div>
+      </div>
+    </div>
+
+    <div class="gallery__panel" id="tab-dashboard2">
+      <div class="gallery__frame">
+        <div class="gallery__bar"><span class="gallery__bar-dot"></span><span class="gallery__bar-dot"></span><span class="gallery__bar-dot"></span><span class="gallery__bar-label">Dashboard — alternate view</span></div>
+        <img src="assets/screenshots/dashboard-2.png" alt="Stigix dashboard alternate view" loading="lazy">
+        <div class="gallery__caption">Alternate dashboard layout showing traffic density controls, per-application breakdown, and live WebSocket log stream.</div>
       </div>
     </div>
 
@@ -678,6 +755,91 @@
 
 
 <!-- ══════════════════════════════════════════════════════════
+     STIGIX CLI — terminal verification section
+══════════════════════════════════════════════════════════ -->
+<section class="quickstart" id="stigix-cli" style="background: var(--bg);">
+  <div class="wrap">
+    <div class="quickstart__header">
+      <span class="label">Operations</span>
+      <h2 class="quickstart__title">Verify and control with the built-in CLI</h2>
+      <p class="quickstart__sub">Stigix ships a fully interactive terminal console inside the container — no external tooling required.</p>
+    </div>
+
+    <div class="terminal" role="region" aria-label="Stigix CLI demo">
+      <div class="terminal__bar" style="position: relative;">
+        <div class="terminal__dots">
+          <span class="terminal__dot"></span>
+          <span class="terminal__dot"></span>
+          <span class="terminal__dot"></span>
+        </div>
+        <span class="terminal__title">stigix-cli — interactive console</span>
+        <button class="terminal__copy" aria-label="Copy CLI command" id="copy-cli">Copy</button>
+      </div>
+      <div class="terminal__body">
+        <div class="terminal__line">
+          <span class="terminal__comment"># Launch the interactive console</span>
+        </div>
+        <div class="terminal__line">
+          <span class="terminal__prompt">$</span>
+          <span class="terminal__cmd">docker exec -it stigix stigix-cli</span>
+        </div>
+        <div class="terminal__line" style="margin-top: 12px;">
+          <span class="terminal__out info">stigix@localhost:8080 !</span>
+          <span class="terminal__cmd" style="margin-left:8px;">auth login</span>
+        </div>
+        <div class="terminal__line">
+          <span class="terminal__out">Username [admin]:</span>
+          <span class="terminal__cmd" style="margin-left:8px;">admin</span>
+        </div>
+        <div class="terminal__line">
+          <span class="terminal__out">Password:</span>
+        </div>
+        <div class="terminal__line">
+          <span class="terminal__out ok">✓ Logged in as admin  (session saved → /root/.stigix-cli.json)</span>
+        </div>
+        <div class="terminal__line" style="margin-top: 10px;">
+          <span class="terminal__out info">stigix@localhost:8080 ›</span>
+          <span class="terminal__cmd" style="margin-left:8px;">status</span>
+        </div>
+        <div class="terminal__line">
+          <span class="terminal__out">━━ Stigix Status ━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+        </div>
+        <div class="terminal__line">
+          <span class="terminal__out ok">✓ Backend     [READY]</span>
+        </div>
+        <div class="terminal__line">
+          <span class="terminal__out">→ Version     v1.4.0</span>
+        </div>
+        <div class="terminal__line">
+          <span class="terminal__out info">  Traffic     [RUNNING]</span>
+        </div>
+        <div class="terminal__line">
+          <span class="terminal__out">→ Public IP   203.0.113.42</span>
+        </div>
+        <div class="terminal__line">
+          <span class="terminal__out">→ Prisma Site BR8</span>
+        </div>
+        <div class="terminal__line" style="margin-top: 10px;">
+          <span class="terminal__comment"># Commands are saved to ~/.stigix-history.json for scripting</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="qs-note">
+      <div class="qs-note__icon">🖥️</div>
+      <div class="qs-note__body">
+        <strong>Command history is saved to a local JSON file.</strong>
+        Every command you run in the CLI is persisted — making it easy to review past operations, build automation scripts, or audit actions taken on a deployment. Tab-completion works for saved connection profiles.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<hr class="rule">
+
+
+<!-- ══════════════════════════════════════════════════════════
      DOCS
 ══════════════════════════════════════════════════════════ -->
 <section class="docs" id="docs">
@@ -761,6 +923,36 @@
         <span class="doc-link__arr">→</span>
       </a>
 
+      <a href="https://github.com/jsuzanne/stigix/blob/main/docs/STIGIX_CLI.md" target="_blank" rel="noopener noreferrer" class="doc-link" id="docs-cli-link">
+        <span class="doc-link__ico">🖥️</span>
+        <div class="doc-link__text"><strong>Stigix CLI</strong><span>Interactive console reference</span></div>
+        <span class="doc-link__arr">→</span>
+      </a>
+
+      <a href="https://github.com/jsuzanne/stigix/blob/main/docs/AUTODISCOVERY_GUIDE.md" target="_blank" rel="noopener noreferrer" class="doc-link" id="docs-autodiscovery-link">
+        <span class="doc-link__ico">📡</span>
+        <div class="doc-link__text"><strong>Autodiscovery Guide</strong><span>Zero-config peer registry</span></div>
+        <span class="doc-link__arr">→</span>
+      </a>
+
+      <a href="https://github.com/jsuzanne/stigix/blob/main/docs/XFR_TESTING.md" target="_blank" rel="noopener noreferrer" class="doc-link" id="docs-xfr-link">
+        <span class="doc-link__ico">🚀</span>
+        <div class="doc-link__text"><strong>XFR Speedtest</strong><span>Bandwidth & latency testing</span></div>
+        <span class="doc-link__arr">→</span>
+      </a>
+
+      <a href="https://github.com/jsuzanne/stigix/blob/main/docs/MCP_SERVER.md" target="_blank" rel="noopener noreferrer" class="doc-link" id="docs-mcp-link">
+        <span class="doc-link__ico">🧠</span>
+        <div class="doc-link__text"><strong>MCP Server</strong><span>Model Context Protocol integration</span></div>
+        <span class="doc-link__arr">→</span>
+      </a>
+
+      <a href="https://github.com/jsuzanne/stigix/blob/main/docs/REMOTE_ACCESS.md" target="_blank" rel="noopener noreferrer" class="doc-link" id="docs-remote-link">
+        <span class="doc-link__ico">🔒</span>
+        <div class="doc-link__text"><strong>Remote Access</strong><span>Tailscale, CF Tunnels, reverse proxy</span></div>
+        <span class="doc-link__arr">→</span>
+      </a>
+
     </div>
   </div>
 </section>
@@ -783,6 +975,9 @@
         <li><a href="https://github.com/jsuzanne/stigix/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a></li>
       </ul>
     </div>
+    <p class="footer__note" id="footer-last-updated" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--stroke);font-family:var(--mono);font-size:0.72rem;color:var(--muted);">
+      Site last updated: <strong style="color:var(--mid)">2026-05-29</strong> &nbsp;·&nbsp; Covers release <a href="https://github.com/jsuzanne/stigix/releases" target="_blank" rel="noopener noreferrer" style="color:var(--teal);">v1.4.0-patch.91</a> &nbsp;·&nbsp; <a href="https://github.com/jsuzanne/stigix/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" style="color:var(--teal);">View changelog →</a>
+    </p>
     <p class="footer__note" id="footer-disclaimer">
       <strong>Disclaimer:</strong> This is a personal, community-driven open-source project maintained by the author independently.
       It is <strong>not</strong> an official Palo Alto Networks product, feature, or tool, and it is not supported or endorsed by Palo Alto Networks in any way.
