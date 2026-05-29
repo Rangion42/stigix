@@ -6,15 +6,15 @@
 
 ## 🎯 Overview
 
-The Stigix MCP Server provides a **natural language interface** to orchestrate your entire SD-WAN validation mesh. Using Claude Desktop, you can manage traffic tests, security probes, and network impairments across multiple sites using simple conversational commands.
+The Stigix MCP Server provides a **natural language interface** to orchestrate your entire SD-WAN validation mesh. Using Claude Desktop, you can manage traffic tests, security probes, network impairments, DEM experience monitoring, and fabric topology — all from conversational commands.
 
 ### Key Features
 
-✅ **Mesh-Ready Orchestration** - Control any node in the mesh from any other node via distributed discovery.
-✅ **Natural Language** - Command your infrastructure in plain English or French.
-✅ **Distributed Control** - The MCP server runs on every Stigix instance, providing total redundancy.
-✅ **Full Toolset** - Integrated support for Speedtests (XFR), Convergence, Voice/IoT simulations, Security probes, and VyOS impairments.
-✅ **SSE Transport** - Native support for Server-Sent Events (SSE) for easy remote access.
+✅ **Mesh-Ready Orchestration** - Control any node in the mesh from any other node via distributed discovery.  
+✅ **Natural Language** - Command your infrastructure in plain English or French.  
+✅ **Distributed Control** - The MCP server runs on every Stigix instance, providing total redundancy.  
+✅ **Full Toolset** - 48 tools covering 100% of stigix-cli capabilities: traffic, security, DEM probes, fabric targets, VyOS, and analytics.  
+✅ **SSE Transport** - Native support for Server-Sent Events (SSE) for easy remote access.  
 
 ---
 
@@ -137,6 +137,7 @@ python -m venv .venv
 #### Step 2: Configure Claude Desktop
 Add this entry under `mcpServers` in your configuration file:
 
+**macOS / Linux:**
 ```json
 {
   "mcpServers": {
@@ -154,16 +155,35 @@ Add this entry under `mcpServers` in your configuration file:
 }
 ```
 
+**Windows (PowerShell):**
+```json
+{
+  "mcpServers": {
+    "stigix-bridge": {
+      "command": "C:\\path\\to\\stigix\\mcp-server\\.venv\\Scripts\\python.exe",
+      "args": [
+        "C:\\path\\to\\stigix\\mcp-server\\bridge.py",
+        "http://<STIGIX_NODE_IP>:3100/sse"
+      ],
+      "env": {
+        "PYTHONPATH": "C:\\path\\to\\stigix\\mcp-server"
+      }
+    }
+  }
+}
+```
+
 > [!IMPORTANT]
-> - **Paths**: You **MUST** replace `<PATH_TO_STIGIX_REPOSITORY>` with the actual absolute path to where you cloned the repository (e.g. `/Users/yourname/Github/stigix`).
+> - **Paths**: Replace `<PATH_TO_STIGIX_REPOSITORY>` (or `C:\path\to\stigix`) with the actual absolute path to where you cloned the repository.
 > - **URL**: Replace `<STIGIX_NODE_IP>` with the IP of the Stigix instance you want to pilot.
+> - **Windows paths**: Use double backslashes `\\` in JSON strings, or forward slashes `/`.
 
 ---
 
 ### 3. Verify Connection
 1. **Restart Claude Desktop** completely (Cmd+Q, then reopen).
 2. Click the 🔨 **hammer icon** (bottom right of the prompt box).
-3. If everything is correct, you should see your configured server with a green status and the full list of tools (e.g., `list_endpoints`, `run_test`).
+3. If everything is correct, you should see your configured server with a green status and the full list of tools.
 
 ### 4. Troubleshooting
 If the server doesn't appear or shows a red error:
@@ -176,28 +196,107 @@ If the server doesn't appear or shows a red error:
 
 ---
 
-## 🛠️ Available MCP Tools
+## 🛠️ Available MCP Tools (48 tools)
 
-| Component | Tool Name | Description | Examples (Natural Language) |
-| :--- | :--- | :--- | :--- |
-| **Discovery** | `list_endpoints` | List Fabric nodes or targets. | *"Active nodes?", "Internet targets?", "List fabric endpoints"* |
-| **Traffic** | `run_test` | Start xfr, conv, voice, iot test. | *"Speedtest BR1->Paris", "Probe to 8.8.8.8 (100 PPS)"* |
-| **Traffic** | `get_test_status` | Get metrics for a specific test. | *"Result for test G-2026...", "Stats for CONV-1234"* |
-| **Traffic** | `stop_test` | Stop a long-running test. | *"Stop probe 8.8.8.8", "Kill test CONV-567"* |
-| **Management** | `set_traffic_status` | Start/stop app traffic simulation. | *"Start traffic on Raspi4", "Disable simulation London"* |
-| **Management** | `set_traffic_rate` | Adjust generation speed (0.1s - 10s). | *"Turbo mode on BR1 (0.1s)", "Slow down Paris to 5s"* |
-| **Management** | `set_voice_status` | Start/stop voice simulation. | *"Launch voice sim on BR1", "Stop VoIP Paris"* |
-| **Diagnostics** | `get_diagnostics` | Full node dashboard & health. | *"Health of node BR1", "Dashboard for Raspi4", "CPU/RAM Paris"* |
-| **Diagnostics** | `get_app_score` | Success rate for a specific app. | *"Teams score on Raspi4", "Webex stats London"* |
-| **Security** | `get_security_test_options` | Available targets (DNS/URL/Threat). | *"DNS options?", "Malware sites?", "Threat scenarios"* |
-| **Security** | `run_security_probe` | Test DNS/URL/Threat filtering. | *"Test malware.com", "Check EICAR on BR1"* |
-| **VyOS** | `list_vyos_routers` | List managed VyOS routers. | *"VyOS routers managed by BR1", "List VyOS gear"* |
-| **VyOS** | `list_vyos_scenarios` | List config sequences (scenarios). | *"Available scenarios?", "Failover sequences"* |
-| **VyOS** | `run_vyos_scenario` | Execute a config sequence. | *"Apply failover-paris", "Run mission force-4g"* |
-| **VyOS** | `get_vyos_timeline` | History of VyOS changes. | *"Recent VyOS changes", "Router history"* |
-| **VyOS** | `set_vyos_scenario_status` | Enable/Disable a cyclic scenario. | *"Stop cyclic flapping", "Disable seq-123"* |
-| **DEM** | `get_dem_summary` | Global Experience score & status. | *"Global DEM state", "Which probes are failing?"* |
-| **DEM** | `get_probe_details` | Detailed metrics for one probe. | *"Details for Google DNS probe", "Analyze latency for SaaS"* |
+> [!TIP]
+> All tools that target a specific node accept an `agent_id` parameter — this is the node's name as shown in `list_endpoints` (e.g., `"BR8"`, `"Paris"`, `"Hetzner"`).
+
+### Discovery & Status
+
+| Tool | Description | Example |
+|---|---|---|
+| `list_endpoints` | List all fabric nodes or internet targets | *"Active nodes?", "Internet targets?"* |
+| `get_node_status` | Full status summary (health, version, traffic, site, convergence) | *"Status of BR8?", "Is Paris healthy?"* |
+| `get_public_ip` | WAN exit IP of a node | *"What's the public IP of BR8?"* |
+| `generate_report` | Fabric-wide report across all (or specified) nodes in parallel | *"Give me an overview of all nodes"* |
+| `compare_nodes` | Side-by-side comparison of two nodes | *"Compare BR8 and Hetzner"* |
+
+### Traffic Generation
+
+| Tool | Description | Example |
+|---|---|---|
+| `set_traffic_status` | Start or stop application traffic simulation | *"Start traffic on BR8"* |
+| `set_traffic_rate` | Adjust traffic speed (0.1s – 10s delay) | *"Turbo mode on BR8"* |
+| `set_traffic_client_count` | Set number of parallel workers (1–20) | *"Set 10 clients on Paris"* |
+| `set_voice_status` | Start or stop voice simulation | *"Launch voice sim on BR8"* |
+| `get_traffic_stats` | Live per-app request counts, error rates, client count | *"Traffic stats for BR8?"* |
+| `get_traffic_logs` | Recent traffic generation logs | *"Show last 50 logs for BR8"* |
+| `list_apps` | Apps configured in the traffic profile | *"What apps is BR8 simulating?"* |
+| `export_app_config` | Export app config as JSON (for backup or cloning) | *"Export BR8's app config"* |
+| `import_app_config` | Import app config to a node (overwrites current) | *"Copy Paris app config to BR8"* |
+
+### Test Orchestration
+
+| Tool | Description | Example |
+|---|---|---|
+| `run_test` | Start XFR, convergence, voice, or IoT test | *"Speedtest BR8 → Paris"* |
+| `get_test_status` | Get metrics for a running or completed test | *"Status of test CONV-1234?"* |
+| `stop_test` | Stop a running test | *"Stop the convergence test"* |
+
+### XFR Speedtest
+
+| Tool | Description | Example |
+|---|---|---|
+| `list_speedtest_history` | Past XFR speedtest results with throughput, RTT, status | *"Last speedtests from BR8?"* |
+
+### Convergence / Failover
+
+| Tool | Description | Example |
+|---|---|---|
+| `get_convergence_history` | Past failover tests with max blackout (ms) and verdict | *"Convergence history for BR8?"* |
+
+### Security Testing
+
+| Tool | Description | Example |
+|---|---|---|
+| `get_security_results_stats` | Security test scorecard (blocked/allowed summary) | *"Security score for BR8?"* |
+| `list_security_results` | Last N individual security test results (all types) | *"Last 20 security tests on BR8"* |
+| `get_security_config` | Security policy config + dynamic test target profile | *"Security config on BR8?"* |
+| `get_security_test_options` | Available test options (static list, legacy) | *"DNS test options?"* |
+| `get_security_test_options_dynamic` | Live test options fetched from node profile | *"URL filtering options on BR8?"* |
+| `run_security_probe` | Run a single DNS / URL / Threat test | *"Test malware.com on BR8"* |
+| `run_security_url_batch` | Full URL filtering audit (all enabled categories) | *"Run full URL audit on BR8"* |
+| `run_security_dns_batch` | Full DNS security audit (all enabled domains) | *"Run full DNS audit on BR8"* |
+| `run_eicar_test` | EICAR threat prevention test (cloud URL or custom) | *"EICAR test on BR8"* |
+| `run_full_security_audit` | Complete suite: URL batch + DNS batch + EICAR | *"Full security audit on BR8"* |
+
+### DEM / Experience Probes
+
+| Tool | Description | Example |
+|---|---|---|
+| `get_dem_summary` | Global DEM health score and status | *"DEM overview for BR8?"* |
+| `get_probe_details` | Detailed metrics for one probe by name | *"Details for Google DNS probe on BR8"* |
+| `list_dem_probes` | List all configured DEM probes | *"What probes are on BR8?"* |
+| `run_dem_probes_now` | Trigger immediate probe run, return results | *"Run probes now on BR8"* |
+| `get_dem_probe_stats` | Historical DEM stats (1h): health score, latency, reliability | *"DEM stats for BR8 last hour"* |
+| `add_dem_probe` | Add a new DEM probe (HTTP/HTTPS/PING/TCP/UDP/DNS) | *"Add a PING probe to 8.8.8.8 on BR8"* |
+| `remove_dem_probe` | Remove a probe by name | *"Remove 'Google DNS' probe from BR8"* |
+
+### Fabric Target Management
+
+| Tool | Description | Example |
+|---|---|---|
+| `list_fabric_targets` | List all peer targets with capabilities | *"What are BR8's fabric targets?"* |
+| `add_fabric_target` | Register a new peer in the mesh | *"Add Hetzner (1.2.3.4) as a target on BR8"* |
+| `remove_fabric_target` | Remove a peer by name, host, or ID | *"Remove Hetzner target from BR8"* |
+| `set_fabric_target_enabled` | Enable or disable a peer target | *"Disable Paris target on BR8"* |
+
+### Diagnostics & Analytics
+
+| Tool | Description | Example |
+|---|---|---|
+| `get_diagnostics` | Full node dashboard: CPU, bitrate, app stats, voice, peers | *"Health of BR8", "CPU/RAM Paris"* |
+| `get_app_score` | Success rate for a specific application | *"Teams score on BR8?"* |
+
+### VyOS Router Management
+
+| Tool | Description | Example |
+|---|---|---|
+| `list_vyos_routers` | List managed VyOS routers | *"VyOS routers managed by BR8"* |
+| `list_vyos_scenarios` | List available config sequences | *"Available VyOS scenarios?"* |
+| `run_vyos_scenario` | Execute a config sequence | *"Apply failover-paris scenario"* |
+| `get_vyos_timeline` | History of VyOS configuration changes | *"Recent VyOS changes on BR8"* |
+| `set_vyos_scenario_status` | Enable or disable a cyclic scenario | *"Stop cyclic flapping on BR8"* |
 
 ---
 
@@ -207,38 +306,81 @@ If the server doesn't appear or shows a red error:
 Before launching a test, ensure the target endpoint supports the requested profile:
 
 - **`xfr` (Speedtest)**: Requires a Stigix node or a dedicated XFR target.
-- **`conv` (Convergence)**: Requires a Stigix Fabric node (it uses internal probing daemons).
-- **`voice` (VoIP)**: Requires a Stigix Fabric node (it uses the Voice Echo server).
+- **`conv` (Convergence)**: Requires a Stigix Fabric node (uses internal probing daemons).
+- **`voice` (VoIP)**: Requires a Stigix Fabric node (uses the Voice Echo server).
 - **`iot` (Data)**: Requires a Stigix Fabric node.
 
 > [!TIP]
 > Use `list_endpoints` to check the `kind` and `capabilities` of each node before proposing a test.
 
-### 2. Performance & Troubleshooting
+### 2. Performance Investigation
 **User:** *"Teams quality is bad at the Paris site, can you investigate?"*
-- `get_app_score(agent_id="Paris-BR1", app_name="Teams")`
-- `get_dem_summary(agent_id="Paris-BR1")`
-- `get_probe_details(agent_id="Paris-BR1", probe_name="Microsoft 365")`
-- `get_diagnostics(agent_id="Paris-BR1")`
+```
+get_node_status("Paris-BR1")
+get_app_score("Paris-BR1", app_name="Teams")
+get_dem_summary("Paris-BR1")
+get_probe_details("Paris-BR1", probe_name="Microsoft 365")
+```
 
-### 2. Network Orchestration (VyOS)
+### 3. Full Security Audit
+**User:** *"Run a complete security audit on BR8."*
+```
+run_full_security_audit("BR8")
+→ Runs URL batch (all categories) + DNS batch (all domains) + EICAR threat test
+→ Returns per-phase results + global score (e.g., "14/15 blocked")
+```
+
+### 4. Node Comparison
+**User:** *"Why is Paris behaving differently from BR8?"*
+```
+compare_nodes("Paris-BR1", "BR8")
+→ Returns side-by-side: version, traffic running, DEM health, security %, peer count
+→ Highlights differences automatically in the "diff" section
+```
+
+### 5. Network Orchestration (VyOS)
 **User:** *"Main link is down in Paris, failover to 4G."*
-- `list_vyos_scenarios(agent_id="Paris-BR1")`
-- `run_vyos_scenario(agent_id="Paris-BR1", scenario_id="force-4g-failover")`
-- `get_vyos_timeline(agent_id="Paris-BR1")`
+```
+list_vyos_scenarios("Paris-BR1")
+run_vyos_scenario("Paris-BR1", scenario_id="force-4g-failover")
+get_vyos_timeline("Paris-BR1")
+```
 
-### 3. Security Validation
-**User:** *"Verify if the URL filtering policy is active on node BR1."*
-- `get_security_test_options(probe_type="url")`
-- `run_security_probe(agent_id="BR1", probe_type="url", target="http://gambling.com")`
-- `run_security_probe(agent_id="BR1", probe_type="threat", target="STIGIX-EICAR-01")`
-
-### 4. Traffic Control & Simulation
+### 6. Traffic Stress Test
 **User:** *"I want to stress the network from London."*
-- `set_traffic_status(source_id="London", enabled=true)`
-- `set_traffic_rate(agent_id="London", rate=0.1)` (Turbo Mode)
-- `run_test(source_id="London", target_id="Paris,DC1", profile="xfr", bitrate="200M")`
+```
+set_traffic_client_count("London", client_count=20)
+set_traffic_rate("London", rate=0.1)
+run_test(source_id="London", target_id="Paris,DC1", profile="xfr", bitrate="200M")
+```
+
+### 7. Fabric-Wide Overview
+**User:** *"Give me a status report of all my nodes."*
+```
+generate_report()
+→ Fetches all nodes in parallel, returns health, traffic, DEM, security, peer count per node
+→ Global summary: healthy/unhealthy count, traffic running count
+```
+
+### 8. DEM Probe Management
+**User:** *"Add a probe to monitor our Azure endpoint from BR8."*
+```
+add_dem_probe("BR8", name="Azure West", target="https://azure.microsoft.com", probe_type="HTTPS")
+run_dem_probes_now("BR8")
+```
 
 ---
 
-*Last Updated: March 16, 2026*
+## 🔄 Keeping MCP Tools Up-to-Date
+
+When `stigix-cli.py` is updated (new commands, bug fixes, new API parameters), the MCP server tools should be synchronized to match. The project includes an agent skill for this:
+
+**`.agent/skills/stigix-mcp-sync/`** — Run this skill after any CLI changes to:
+1. Detect new or modified API endpoints in the CLI
+2. Cross-reference against the living CLI→MCP registry (`references/cli_to_mcp_map.md`)
+3. Implement missing tools following the existing orchestrator pattern
+4. Deploy the updated MCP server
+
+---
+
+*Last Updated: v1.4.0-patch.101 — 2026-05-29*
