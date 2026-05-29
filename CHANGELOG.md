@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.86] - 2026-05-29
+### Added
+- **install** ⚙️ Added note in installer success message instructing the user how to modify the Web UI port later (editing `PORT` in `stigix/.env` and restarting via `docker compose up -d`).
+
 ## [v1.4.0-patch.85] - 2026-05-29
 ### Added
 - **install** ⚙️ Added interactive confirmation prompt when port `8080` is in use, letting the user choose whether to proceed with the alternative port or cancel the installation.
