@@ -8466,7 +8466,7 @@ app.get('/api/security/eicar-targets', authenticateToken, (req, res) => {
 
 // API: Threat Prevention Test (EICAR)
 app.post('/api/security/threat-test', authenticateToken, async (req, res) => {
-    const { endpoint, scenarioId, testName } = req.body;
+    const { endpoint, scenarioId, testName, mcp_source } = req.body;
 
     const runId = `manual-threat-${Date.now()}`;
 
@@ -8486,7 +8486,8 @@ app.post('/api/security/threat-test', authenticateToken, async (req, res) => {
                     ? 'EICAR file downloaded successfully via Stigix Cloud (not blocked by IPS)'
                     : 'Stigix Cloud EICAR test BLOCKED (Security Policy Enforcement confirmed)',
                 latency: probeResult.latency_ms,
-                data: probeResult.data
+                data: probeResult.data,
+                ...(mcp_source && { mcp_source })
             };
 
             // Use custom testName if provided (e.g., "EICAR Test (MCP)"), else default
@@ -8559,7 +8560,8 @@ app.post('/api/security/threat-test', authenticateToken, async (req, res) => {
                     success: true,
                     status: 'allowed',
                     endpoint: ep,
-                    message: 'EICAR file downloaded successfully (not blocked by IPS)'
+                    message: 'EICAR file downloaded successfully (not blocked by IPS)',
+                    ...(mcp_source && { mcp_source })
                 };
 
                 logTest(`[THREAT-TEST-${testId}] EICAR test result: ALLOWED`, { endpoint: ep });
@@ -8587,7 +8589,8 @@ app.post('/api/security/threat-test', authenticateToken, async (req, res) => {
                     endpoint: ep,
                     message,
                     error: curlError.message,
-                    reason: status === 'unreachable' ? 'Host unreachable or connection timeout' : 'CURL error (IPS likely dropped connection)'
+                    reason: status === 'unreachable' ? 'Host unreachable or connection timeout' : 'CURL error (IPS likely dropped connection)',
+                    ...(mcp_source && { mcp_source })
                 };
 
                 logTest(`[THREAT-TEST-${testId}] EICAR test result: ${status.toUpperCase()}`, { endpoint: ep, error: curlError.message });

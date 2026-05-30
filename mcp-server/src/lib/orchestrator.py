@@ -489,10 +489,10 @@ class TestOrchestrator:
                     eicar_label = f"EICAR Test ({cloud_url})"
                 else:
                     eicar_label = f"EICAR Test (Cloud: {target})"
-                payload = {"scenarioId": target, "testName": eicar_label}
+                payload = {"scenarioId": target, "testName": eicar_label, "mcp_source": "mcp"}
             else:
                 # Direct URL endpoint — same format as UI
-                payload = {"endpoint": target, "testName": f"EICAR Test ({target})"}
+                payload = {"endpoint": target, "testName": f"EICAR Test ({target})", "mcp_source": "mcp"}
         else:
             return {"error": f"Unsupported security test type: {test_type}"}
             

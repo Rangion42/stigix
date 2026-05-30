@@ -182,10 +182,17 @@ async def run_test(
     - 'iot': Target MUST be a Stigix Fabric node.
 
     PROFILES:
-    - 'xfr' (speedtest): Data transfer test.
-    - 'conv' (convergence): Network probe/failover test (Long-running).
+    - 'xfr' (speedtest): Data transfer test. Fixed duration, stops automatically.
+    - 'conv' (convergence): CONTINUOUS failover/probe test. DOES NOT STOP AUTOMATICALLY.
     - 'voice' / 'iot': Application-specific simulations.
-    
+
+    ⚠️  CONVERGENCE WORKFLOW (profile='conv') — MANDATORY BEHAVIOR:
+    1. Call run_test once to START the test.
+    2. Immediately inform the user of the test ID (e.g., "Test CONV-0129 started, dis-moi quand arrêter").
+    3. STOP IMMEDIATELY — do NOT call get_test_status, do NOT poll.
+    4. Wait for the user to explicitly say "stop" / "arrête" / "stop test".
+    5. Only then call stop_test(test_id) to get final results.
+
     Args:
         source_id: Node ID (initiator).
         target_id: Node ID(S) (receivers). Use comma-separated list for multi-target: 'T1,T2'.
@@ -249,8 +256,10 @@ async def get_test_status(test_id: str) -> dict:
 @mcp.tool()
 async def stop_test(test_id: str) -> dict:
     """
-    Stop an active traffic test (especially for convergence tests).
-    
+    Stop an active traffic test and retrieve final metrics.
+    Call this ONLY when the user explicitly asks to stop (for convergence tests).
+    After stopping, always summarize the final metrics (packets sent/received, loss %, latency, jitter).
+
     Args:
         test_id: The global test ID (e.g., G-20260313-ABCD) or a local ID (CONV-XXXX).
     """
