@@ -6,7 +6,7 @@
 
 ## 🎯 Overview
 
-The Stigix MCP Server provides a **natural language interface** to orchestrate your entire SD-WAN validation mesh. Using Claude Desktop, you can manage traffic tests, security probes, network impairments, DEM experience monitoring, and fabric topology — all from conversational commands.
+The Stigix MCP Server provides a **natural language interface** to orchestrate your entire SD-WAN validation mesh. Using Claude Desktop, you can manage traffic tests, security probes, network impairments, DEM experience monitoring — all from conversational commands.
 
 ### Key Features
 
