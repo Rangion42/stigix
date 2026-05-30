@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.109] - 2026-05-30
+### Fixed
+- **mcp-server** 🐛 `get_security_results_stats`: was returning raw counters only — Claude was computing wrong enforcement % (49%) instead of real weighted scores (URL 35.1, DNS 97.6, Threat 100.0).
+### Added
+- **mcp-server** 📊 `get_security_results_stats` now fetches 3 sources in parallel: `posture_scores` (real weighted 0–100 scores matching dashboard), `raw_counters` (volume context), `score_trend` (last 24 runs, url/dns/threat per entry for trend reporting).
+- **mcp-server** 📝 Explicit docstring instructions: Claude must lead with `posture_scores`, never compute a ratio from `raw_counters` and call it a score.
+
 ## [v1.4.0-patch.108] - 2026-05-30
 ### Changed
 - **mcp-server** 🎯 `get_vyos_interfaces`: interfaces without a description are now **silently excluded** from what Claude sees — they are management interfaces, not chaos targets. Claude only receives chaos-eligible interfaces (those with a configured description).

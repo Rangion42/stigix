@@ -418,4 +418,85 @@ When `stigix-cli.py` is updated (new commands, bug fixes, new API parameters), t
 
 ---
 
-*Last Updated: v1.4.0-patch.106 — 2026-05-30*
+## 🔁 Upgrading Stigix — Do I Need to Restart Claude Desktop?
+
+**Short answer: yes, typically.**
+
+### Why
+
+Claude Desktop connects to the Stigix MCP server through a persistent SSE connection:
+
+```
+Claude Desktop
+    │  spawns (child process)
+    ▼
+npx @modelcontextprotocol/inspector     ← stdio bridge
+    │  SSE persistent connection
+    ▼
+http://<node>:3100/sse                  ← MCP Server (Python, in Docker)
+```
+
+When the Stigix container restarts during an upgrade:
+1. The SSE connection **drops** immediately
+2. The `npx inspector` child process receives a connection error and **dies**
+3. Claude Desktop detects its MCP child is dead → marks the server as **unavailable**
+4. The MCP tools are no longer accessible until reconnection
+
+### How to Reconnect
+
+**Option A — Fastest:** In Claude Desktop settings, find `stigix-cloud` under Developer → MCP Servers and toggle it off/on (if supported by your Claude Desktop version).
+
+**Option B — Reliable:** Fully quit Claude Desktop (`Cmd+Q` on macOS), then relaunch. The `npx inspector` process restarts and re-establishes the SSE connection.
+
+> [!NOTE]
+> You do **not** need to change `claude_desktop_config.json` — only the running connection needs to be refreshed.
+
+### Typical Upgrade Workflow
+
+```bash
+# On the Stigix node
+docker compose pull && docker compose up -d
+
+# On your Mac — after the container is back online
+# Quit Claude Desktop → Reopen
+# Verify: Settings → MCP Server → Service Status should show ● Online
+```
+
+---
+
+## 🧠 What Does Stigix Actually Receive from Claude?
+
+**The natural language text never reaches Stigix.**
+
+When you type a prompt in Claude Desktop (e.g. *"What is the security score for BR8?"*), the translation happens entirely on Anthropic's servers:
+
+```
+You type:  "What is the security score for BR8?"
+                │
+                ▼  sent to Anthropic (Claude LLM)
+           Claude reasons, selects the right tool and arguments
+                │
+                ▼  generates a structured JSON-RPC call
+           {
+             "method": "tools/call",
+             "params": {
+               "name": "get_security_score",
+               "arguments": { "agent_id": "BR8-Ubuntu" }
+             }
+           }
+                │
+                ▼  npx inspector → SSE → port 3100
+           Stigix MCP Server receives ONLY this structured call
+```
+
+**Stigix never sees** *"What is the security score for BR8?"*. It only receives the resolved tool name and arguments. The natural language stays between you and Anthropic's API.
+
+This also means:
+- **Privacy**: your conversational text is not logged by Stigix
+- **What Stigix logs** (`mcp-history.jsonl`): only `tool_name`, `agent_id`, `duration_ms`, `status` — never the prompt
+- **Debugging**: if a tool is called with wrong arguments, the issue is in Claude's reasoning (docstring quality), not in Stigix
+
+---
+
+*Last Updated: v1.4.0-patch.108 — 2026-05-30*
+
