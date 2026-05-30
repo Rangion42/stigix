@@ -484,6 +484,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
     // Convergence State
     const [convergenceThresholds, setConvergenceThresholds] = useState({ good: 1, degraded: 5, critical: 10 });
     const [mcpStatus, setMcpStatus] = useState<{ online: boolean; status?: string; transport?: string; url?: string; error?: string } | null>(null);
+    const [mcpHistory, setMcpHistory] = useState<{ entries: any[]; stats: { totalCalls: number; errorCount: number; avgDuration: number } } | null>(null);
     const [slsConfig, setSlsConfig] = useState<any>(null);
     const [isTestingPrisma, setIsTestingPrisma] = useState(false);
     const [prismaTestResult, setPrismaTestResult] = useState<{ success?: boolean; error?: string } | null>(null);
@@ -679,9 +680,19 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
         fetchMcpStatus();
         const mcpInterval = setInterval(fetchMcpStatus, 15000);
 
+        const fetchMcpHistory = () => {
+            fetch('/api/admin/mcp/history?limit=30', { headers: authHeaders })
+                .then(r => r.json())
+                .then(setMcpHistory)
+                .catch(() => {});
+        };
+        fetchMcpHistory();
+        const mcpHistoryInterval = setInterval(fetchMcpHistory, 3000);
+
         return () => {
             clearInterval(sysInfoInterval);
             clearInterval(mcpInterval);
+            clearInterval(mcpHistoryInterval);
             clearInterval(egressInterval);
             clearInterval(containerStatsInterval);
         };
@@ -3928,19 +3939,134 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                             </div>
                         </div>
 
+                        {/* ── MCP Live Interaction Feed ── */}
                         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-                            <h3 className="text-xs font-black uppercase tracking-widest text-text-muted mb-4">Architecture Mesh</h3>
-                            <div className="bg-card-secondary/30 border border-border rounded-xl p-4 font-mono text-[10px] text-text-secondary leading-relaxed space-y-1">
-                                <div className="flex items-center gap-2 text-emerald-500 font-black">
-                                    <CheckCircle size={10} />
-                                    <span>[Mesh Ready] Full registry synchronization detected.</span>
-                                </div>
-                                <div className="pl-4 opacity-70">
-                                    • Orchestrator can pilot all learned nodes (managed & synthesized).<br />
-                                    • JWT-signed API calls between nodes are automated.<br />
-                                    • Discovery refresh every 5 minutes.
+                            <div className="flex items-center justify-between mb-5">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-text-muted">Live Interactions</h3>
+                                <div className="flex items-center gap-3">
+                                    {mcpHistory && mcpHistory.stats.totalCalls > 0 && (
+                                        <div className="flex items-center gap-4 text-[9px] font-black tracking-widest">
+                                            <span className="text-cyan-400">{mcpHistory.stats.totalCalls} CALLS</span>
+                                            <span className="text-emerald-400">{mcpHistory.stats.avgDuration}ms AVG</span>
+                                            {mcpHistory.stats.errorCount > 0 && (
+                                                <span className="text-red-400">{mcpHistory.stats.errorCount} ERRORS</span>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                        <span className="text-[8px] font-black text-emerald-400 tracking-widest uppercase">Live</span>
+                                    </div>
                                 </div>
                             </div>
+
+                            {(!mcpHistory || mcpHistory.entries.length === 0) ? (
+                                <div className="flex flex-col items-center justify-center py-12 space-y-3 opacity-40">
+                                    <Terminal size={28} className="text-text-muted" />
+                                    <p className="text-[10px] font-black text-text-muted tracking-widest uppercase">No interactions yet</p>
+                                    <p className="text-[9px] text-text-muted opacity-60">Ask Claude something — calls will appear here in real time</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                                    {mcpHistory.entries.map((entry: any, i: number) => {
+                                        // Category → color mapping
+                                        const tool: string = entry.tool || '';
+                                        const cat = tool.startsWith('vyos') || tool.includes('vyos') ? 'vyos'
+                                            : tool.includes('security') || tool.includes('eicar') || tool.includes('audit') ? 'security'
+                                            : tool.includes('traffic') || tool.includes('app') || tool.includes('apps') ? 'traffic'
+                                            : tool.includes('dem') || tool.includes('probe') || tool.includes('speedtest') ? 'dem'
+                                            : tool.includes('convergence') || tool.includes('conv') ? 'conv'
+                                            : tool.includes('fabric') || tool.includes('endpoint') ? 'fabric'
+                                            : tool.includes('voice') ? 'voice'
+                                            : 'system';
+
+                                        const catStyle: Record<string, { bg: string; text: string; icon: string }> = {
+                                            vyos:     { bg: 'bg-purple-500/15 border-purple-500/20', text: 'text-purple-400', icon: '⚙' },
+                                            security: { bg: 'bg-red-500/15 border-red-500/20',    text: 'text-red-400',    icon: '🛡' },
+                                            traffic:  { bg: 'bg-cyan-500/15 border-cyan-500/20',   text: 'text-cyan-400',   icon: '↕' },
+                                            dem:      { bg: 'bg-blue-500/15 border-blue-500/20',   text: 'text-blue-400',   icon: '📡' },
+                                            conv:     { bg: 'bg-orange-500/15 border-orange-500/20', text: 'text-orange-400', icon: '⚡' },
+                                            fabric:   { bg: 'bg-emerald-500/15 border-emerald-500/20', text: 'text-emerald-400', icon: '🔗' },
+                                            voice:    { bg: 'bg-indigo-500/15 border-indigo-500/20', text: 'text-indigo-400', icon: '🎙' },
+                                            system:   { bg: 'bg-slate-500/10 border-slate-500/15',  text: 'text-slate-400',  icon: '⊙' },
+                                        };
+                                        const style = catStyle[cat];
+                                        const isError = entry.status === 'error';
+                                        const isFirst = i === 0;
+
+                                        // Relative time
+                                        const ageMs = Date.now() - new Date(entry.ts).getTime();
+                                        const ageStr = ageMs < 5000 ? 'just now'
+                                            : ageMs < 60000 ? `${Math.floor(ageMs / 1000)}s ago`
+                                            : ageMs < 3600000 ? `${Math.floor(ageMs / 60000)}m ago`
+                                            : `${Math.floor(ageMs / 3600000)}h ago`;
+
+                                        // Duration bar width (max 1000ms = 100%)
+                                        const barPct = Math.min((entry.duration_ms || 0) / 1000 * 100, 100);
+                                        const barColor = (entry.duration_ms || 0) < 300 ? 'bg-emerald-500'
+                                            : (entry.duration_ms || 0) < 800 ? 'bg-amber-500' : 'bg-red-500';
+
+                                        return (
+                                            <div
+                                                key={i}
+                                                className={cn(
+                                                    'flex items-center gap-3 px-4 py-3 rounded-xl border transition-all',
+                                                    isError
+                                                        ? 'bg-red-500/5 border-red-500/20'
+                                                        : isFirst
+                                                            ? 'bg-card-secondary/60 border-border shadow-sm ring-1 ring-white/5'
+                                                            : 'bg-card-secondary/20 border-border/50 hover:border-border'
+                                                )}
+                                            >
+                                                {/* Category icon */}
+                                                <div className={cn('w-7 h-7 rounded-lg border flex items-center justify-center text-[13px] shrink-0', style.bg)}>
+                                                    {style.icon}
+                                                </div>
+
+                                                {/* Tool name + duration bar */}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-mono text-[11px] font-black text-text-primary tracking-tight truncate">{tool}</span>
+                                                        {isFirst && (
+                                                            <span className="px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest bg-white/5 text-text-muted border border-white/5">new</span>
+                                                        )}
+                                                    </div>
+                                                    {/* Duration mini-bar */}
+                                                    <div className="flex items-center gap-2 mt-1.5">
+                                                        <span className={cn('text-[9px] font-black tabular-nums shrink-0', isError ? 'text-red-400' : 'text-text-muted')}>
+                                                            {entry.duration_ms ?? '—'}ms
+                                                        </span>
+                                                        <div className="flex-1 h-0.5 bg-white/5 rounded-full overflow-hidden">
+                                                            <div
+                                                                className={cn('h-full rounded-full transition-all', isError ? 'bg-red-500' : barColor)}
+                                                                style={{ width: `${barPct}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Agent badge */}
+                                                {entry.agent_id && entry.agent_id !== '—' && (
+                                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg shrink-0">
+                                                        <div className="w-1 h-1 rounded-full bg-emerald-500" />
+                                                        <span className="text-[9px] font-black text-emerald-400 tracking-tight max-w-[80px] truncate">{entry.agent_id}</span>
+                                                    </div>
+                                                )}
+
+                                                {/* Time + status */}
+                                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                                    <span className="text-[9px] text-text-muted font-bold whitespace-nowrap">{ageStr}</span>
+                                                    {isError ? (
+                                                        <span className="text-[8px] font-black text-red-400 uppercase tracking-widest">error</span>
+                                                    ) : (
+                                                        <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">✓ ok</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

@@ -8599,6 +8599,39 @@ app.get('/api/admin/system/mcp-status', authenticateToken, async (req, res) => {
     }
 });
 
+app.get('/api/admin/mcp/history', authenticateToken, async (req, res) => {
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+    const logFile = path.join(APP_CONFIG.logDir, 'mcp-history.jsonl');
+    try {
+        const raw = await fs.promises.readFile(logFile, 'utf8');
+        const lines = raw.trim().split('\n').filter(Boolean);
+        const entries = lines
+            .slice(-limit)
+            .map((line: string) => { try { return JSON.parse(line); } catch { return null; } })
+            .filter(Boolean)
+            .reverse(); // most recent first
+
+        // Compute stats over all entries (not just the returned slice)
+        const all = lines
+            .map((line: string) => { try { return JSON.parse(line); } catch { return null; } })
+            .filter(Boolean);
+        const totalCalls = all.length;
+        const errorCount = all.filter((e: any) => e.status === 'error').length;
+        const avgDuration = totalCalls > 0
+            ? Math.round(all.reduce((s: number, e: any) => s + (e.duration_ms || 0), 0) / totalCalls)
+            : 0;
+
+        res.json({ entries, stats: { totalCalls, errorCount, avgDuration } });
+    } catch (e: any) {
+        if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
+            res.json({ entries: [], stats: { totalCalls: 0, errorCount: 0, avgDuration: 0 } });
+        } else {
+            log('SYSTEM', `Failed to read MCP history: ${e.message}`, 'error');
+            res.status(500).json({ error: 'Failed to read MCP history' });
+        }
+    }
+});
+
 app.get('/api/admin/system/dashboard-data', authenticateToken, async (req, res) => {
     try {
         // 1. Stats — aggregate across all active client files

@@ -10,6 +10,12 @@ Supports both SSE (Server-Sent Events) and STDIO transports.
 import logging
 import os
 import sys
+import time
+import json
+import inspect
+import functools
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional, List
 
 # CRITICAL: All logs to stderr to avoid polluting stdio
@@ -50,6 +56,92 @@ mcp = FastMCP("stigix-orchestrator")
 registry = RegistryClient()
 orchestrator = TestOrchestrator()
 
+
+# -----------------------------------------------------------------------------
+# MCP Interaction Logger
+# Wraps all public async orchestrator methods to log calls to mcp-history.jsonl.
+# Zero impact on Claude / MCP protocol — purely Stigix-side visibility.
+# -----------------------------------------------------------------------------
+
+_MCP_LOG_FILE = Path(os.getenv("LOG_DIR", "/app/logs")) / "mcp-history.jsonl"
+_MCP_LOG_MAX_LINES = 500
+
+
+def _append_mcp_log(tool: str, agent_id: str, duration_ms: int, status: str, error: str = None) -> None:
+    """Append one interaction entry to mcp-history.jsonl."""
+    try:
+        _MCP_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        entry: dict = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "tool": tool,
+            "agent_id": str(agent_id) if agent_id else "—",
+            "duration_ms": duration_ms,
+            "status": status,
+        }
+        if error:
+            entry["error"] = error[:120]
+        with open(_MCP_LOG_FILE, "a") as fh:
+            fh.write(json.dumps(entry) + "\n")
+        # Rotate: keep only the last N lines
+        try:
+            lines = _MCP_LOG_FILE.read_text().splitlines()
+            if len(lines) > _MCP_LOG_MAX_LINES:
+                _MCP_LOG_FILE.write_text("\n".join(lines[-_MCP_LOG_MAX_LINES:]) + "\n")
+        except Exception:
+            pass
+    except Exception:
+        pass  # Never let logging break a tool
+
+
+def _patch_orchestrator_logging(instance) -> None:
+    """
+    Monkey-patch all public async methods on the orchestrator instance
+    to transparently log call metadata (tool name, agent_id, duration, status).
+    Called once at startup — no changes required to individual tool functions.
+    """
+    for attr_name in list(vars(type(instance))):
+        if attr_name.startswith("_"):
+            continue
+        method = getattr(instance, attr_name)
+        if not inspect.iscoroutinefunction(method):
+            continue
+
+        def _make_wrapper(fn, name):
+            @functools.wraps(fn)
+            async def _wrapper(*args, **kwargs):
+                start = time.monotonic()
+                # Best-effort agent_id extraction from first positional arg or kwarg
+                agent_id = kwargs.get("agent_id")
+                if agent_id is None and args:
+                    candidate = args[0]
+                    if isinstance(candidate, str):
+                        agent_id = candidate
+                status = "ok"
+                error_str = None
+                try:
+                    result = await fn(*args, **kwargs)
+                    # Surface errors returned as dicts/lists
+                    if isinstance(result, dict) and "error" in result:
+                        status = "error"
+                        error_str = str(result["error"])[:120]
+                    elif isinstance(result, list) and result and isinstance(result[0], dict) and "error" in result[0]:
+                        status = "error"
+                        error_str = str(result[0]["error"])[:120]
+                    return result
+                except Exception as exc:
+                    status = "error"
+                    error_str = str(exc)[:120]
+                    raise
+                finally:
+                    duration_ms = int((time.monotonic() - start) * 1000)
+                    _append_mcp_log(name, agent_id, duration_ms, status, error_str)
+            return _wrapper
+
+        setattr(instance, attr_name, _make_wrapper(method, attr_name))
+
+
+# Apply logging patch to orchestrator
+_patch_orchestrator_logging(orchestrator)
 
 # -----------------------------------------------------------------------------
 # Tool Definitions

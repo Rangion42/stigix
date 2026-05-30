@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.107] - 2026-05-30
+### Added
+- **mcp-server** 📊 MCP interaction logger: monkey-patches all public async orchestrator methods at startup to transparently log every Claude tool call to `mcp-history.jsonl` (tool name, target agent, duration ms, status ok/error). Zero impact on Claude / MCP protocol — purely Stigix-side.
+- **web-dashboard** 🔴 `GET /api/admin/mcp/history` route reads `mcp-history.jsonl` and returns the last N entries with computed stats (total calls, avg duration, error count).
+- **web-dashboard** ✨ Settings → MCP Server tab: replaced static "Architecture Mesh" placeholder with a live, color-coded interaction feed — tool category icons (purple=VyOS, red=security, cyan=traffic, blue=DEM...), duration mini-bar (green<300ms, amber<800ms, red≥800ms), node badge, relative timestamps, LIVE pulse indicator, and header stats. Refreshes every 3 seconds.
+
 ## [v1.4.0-patch.106] - 2026-05-30
 ### Added
 - **mcp-server** 🤖 2 new VyOS ad-hoc MCP tools for natural language network control:
