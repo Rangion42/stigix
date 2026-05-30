@@ -1381,10 +1381,10 @@ export default function Vyos(props: VyosProps) {
                     <div className="bg-card border border-border rounded-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300 shadow-sm">
                         <table className="w-full text-left text-xs border-collapse table-fixed">
                             <colgroup>
-                                <col className="w-[120px]" />
-                                <col className="w-[180px]" />
-                                <col className="w-[120px]" />
-                                <col className="w-[220px]" />
+                                <col className="w-[100px]" />
+                                <col className="w-[300px]" />
+                                <col className="w-[160px]" />
+                                <col className="w-[200px]" />
                                 <col className="w-auto" />
                             </colgroup>
                             <thead className="bg-card-secondary/80 border-b border-border sticky top-0">
@@ -1565,12 +1565,12 @@ export default function Vyos(props: VyosProps) {
                                                         <span className="text-text-primary font-mono text-[11px] font-medium">{new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                                                         <span className="text-text-muted font-mono text-[9px] ml-2 opacity-50">{new Date(log.timestamp).toLocaleDateString()}</span>
                                                     </td>
-                                                    <td className="px-4 py-2.5 max-w-0">
-                                                        <div className="flex items-center gap-2 min-w-0">
+                                                    <td className="px-4 py-2.5">
+                                                        <div className="flex items-center gap-2">
                                                             <div className="p-1 bg-purple-500/10 rounded flex-shrink-0">
                                                                 {getCommandIcon(log.command, 12)}
                                                             </div>
-                                                            <span className="text-text-primary font-medium text-[11px] truncate" title={log.sequence_name}>{log.sequence_name}</span>
+                                                            <span className="text-text-primary font-medium text-[11px]" title={log.sequence_name}>{log.sequence_name}</span>
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-2.5">
@@ -1581,8 +1581,8 @@ export default function Vyos(props: VyosProps) {
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-2.5 max-w-0">
-                                                        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                                                    <td className="px-4 py-2.5">
+                                                        <div className="flex items-center gap-2 flex-wrap">
                                                             <span className="px-2 py-0.5 bg-card-secondary rounded text-text-secondary font-medium text-[10px] border border-border/50 whitespace-nowrap">{getCommandDisplayName(log.command)}</span>
                                                             {(() => {
                                                                 const paramDisplay = formatActionParameters(log.command, log.parameters);

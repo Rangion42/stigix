@@ -598,10 +598,13 @@ async def vyos_execute_action(
     COMMANDS:
     - 'interface-down'   : Shut an interface down. Requires: interface
     - 'interface-up'     : Re-enable an interface. Requires: interface
-    - 'set-latency'      : Add artificial latency via netem. Requires: interface, latency_ms
-    - 'set-loss'         : Add packet loss. Requires: interface, loss_pct (0-100)
-    - 'set-corruption'   : Add packet corruption. Requires: interface, corruption_pct (0-100)
-    - 'set-rate'         : Limit bandwidth. Requires: interface, rate (e.g. '10mbit')
+    - 'set-impairment'   : Apply latency, packet loss, and/or bandwidth limit (any combination).
+                           Maps to VyOS set-qos — pass only the params you need:
+                             latency_ms=50          → 50ms delay
+                             loss_pct=3             → 3% packet loss
+                             rate='10mbit'          → bandwidth cap
+                             latency_ms=100, loss_pct=5 → both at once
+                           Requires: interface + at least one of latency_ms / loss_pct / rate
     - 'clear-qos'        : Remove all QoS impairments (latency/loss/rate). Requires: interface
     - 'deny-traffic'     : Add firewall rule to block an IP. Requires: ip
     - 'allow-traffic'    : Remove firewall block for an IP. Requires: ip

@@ -633,6 +633,11 @@ class TestOrchestrator:
         if ip is not None:
             parameters["ip"] = ip
 
+        # Translate MCP command to VyOS sequence command
+        # set-impairment is the unified MCP command; legacy separate commands also map to set-qos
+        _QOS_CMDS = {'set-impairment', 'set-latency', 'set-loss', 'set-rate', 'set-corruption'}
+        seq_command = 'set-qos' if command in _QOS_CMDS else command
+
         # Build temp sequence payload
         seq_id = f"mcp-adhoc-{uuid.uuid4().hex[:8]}"
         iface_label = f":{interface}" if interface else ""
@@ -649,7 +654,7 @@ class TestOrchestrator:
                     "offset_minutes": 0,
                     "router_id": router_id,
                     "interface": interface or "",
-                    "command": command,
+                    "command": seq_command,
                     "parameters": parameters
                 }
             ]
