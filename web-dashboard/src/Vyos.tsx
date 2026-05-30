@@ -254,6 +254,15 @@ export default function Vyos(props: VyosProps) {
         onConfirm: () => { }
     });
 
+    // VyOS Router Live State
+    const [routerStates, setRouterStates] = useState<Record<string, any>>({});
+    const [loadingStateId, setLoadingStateId] = useState<string | null>(null);
+    const [expandedStateId, setExpandedStateId] = useState<string | null>(null);
+    // RAZ Modal
+    const [razModal, setRazModal] = useState<{ id: string; name: string; state: any } | null>(null);
+    const [razLoading, setRazLoading] = useState(false);
+    const [razResult, setRazResult] = useState<any>(null);
+
     // Update countdowns when in timeline view
     useEffect(() => {
         if (view !== 'timeline') return;
@@ -475,6 +484,64 @@ export default function Vyos(props: VyosProps) {
             }
         } catch (e: any) {
             toast.error(`❌ Error: ${e.message}`, { id: toastId });
+        }
+    };
+
+    const fetchRouterState = async (routerId: string) => {
+        if (loadingStateId === routerId) return;
+        setLoadingStateId(routerId);
+        try {
+            const res = await fetch(`/api/vyos/routers/${routerId}/state`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            setRouterStates(prev => ({ ...prev, [routerId]: data }));
+            setExpandedStateId(routerId);
+        } catch (e: any) {
+            toast.error(`Failed to fetch router state: ${e.message}`);
+        } finally {
+            setLoadingStateId(null);
+        }
+    };
+
+    const openRazModal = async (routerId: string, routerName: string) => {
+        setRazLoading(true);
+        setRazResult(null);
+        try {
+            const res = await fetch(`/api/vyos/routers/${routerId}/state`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const state = await res.json();
+            setRazModal({ id: routerId, name: routerName, state });
+        } catch (e: any) {
+            toast.error(`Failed to fetch state for RAZ: ${e.message}`);
+        } finally {
+            setRazLoading(false);
+        }
+    };
+
+    const executeRaz = async (scope: string = 'full-reset') => {
+        if (!razModal) return;
+        setRazLoading(true);
+        try {
+            const res = await fetch(`/api/vyos/routers/${razModal.id}/reset`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scope })
+            });
+            const data = await res.json();
+            setRazResult(data);
+            // Refresh state in panel
+            const stateRes = await fetch(`/api/vyos/routers/${razModal.id}/state`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const newState = await stateRes.json();
+            setRouterStates(prev => ({ ...prev, [razModal.id]: newState }));
+            setRazModal(prev => prev ? { ...prev, state: newState } : null);
+        } catch (e: any) {
+            setRazResult({ error: e.message });
+        } finally {
+            setRazLoading(false);
         }
     };
 
@@ -1114,6 +1181,58 @@ export default function Vyos(props: VyosProps) {
                                 </div>
                             </div>
 
+                            {/* Live State Panel */}
+                            {expandedStateId === router.id && routerStates[router.id] && (
+                                <div className="border-t border-border/50 bg-card-secondary/20 px-4 py-3">
+                                    <div className="flex items-center justify-between mb-2.5">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-cyan-500">⬡ Live State Audit</span>
+                                        <span className="text-[10px] text-text-muted font-mono">{routerStates[router.id].version} · {routerStates[router.id].hostname}</span>
+                                    </div>
+
+                                    {/* Interface state list */}
+                                    <div className="space-y-1 mb-2.5">
+                                        {routerStates[router.id].interfaces?.map((iface: any) => (
+                                            <div key={iface.name} className="flex items-start gap-2">
+                                                <div className={`mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0 ${iface.admin_state === 'up' ? 'bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.5)]' : 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]'}`} />
+                                                <div className="flex-1 min-w-0">
+                                                    <span className="text-[11px] font-mono font-bold text-text-primary">{iface.name}</span>
+                                                    {iface.description && <span className="text-[10px] text-blue-400 ml-1.5">{iface.description}</span>}
+                                                    {iface.qos_active && (
+                                                        <span className="ml-1.5 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded text-[10px] font-mono border border-amber-500/20">
+                                                            {iface.qos_active.delay_ms ? `+${iface.qos_active.delay_ms}ms` : ''}
+                                                            {iface.qos_active.loss_pct ? ` ${iface.qos_active.loss_pct}% loss` : ''}
+                                                            {iface.qos_active.rate ? ` ${iface.qos_active.rate}` : ''}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span className={`text-[10px] font-bold mt-0.5 ${iface.admin_state === 'up' ? 'text-green-400' : 'text-red-400'}`}>{iface.admin_state}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* IP Blocks */}
+                                    {(routerStates[router.id].blackhole_count ?? 0) > 0 && (
+                                        <div className="border-t border-border/30 pt-2 mb-2">
+                                            <div className="text-[10px] text-text-muted uppercase tracking-widest mb-1">IP Blocks ({routerStates[router.id].blackhole_count})</div>
+                                            <div className="flex flex-wrap gap-1">
+                                                {routerStates[router.id].blackhole_blocks?.map((b: any, i: number) => (
+                                                    <span key={i} className="font-mono text-[10px] text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">{b.prefix}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Clean state */}
+                                    {routerStates[router.id].interfaces?.every((i: any) => !i.qos_active && i.admin_state === 'up') &&
+                                        (routerStates[router.id].blackhole_count ?? 0) === 0 && (
+                                        <div className="text-[11px] text-green-400 flex items-center gap-1.5">
+                                            <CheckCircle size={11} />
+                                            Router in clean state — no active impairments
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             <div className="px-6 py-4 bg-card-secondary/30 border-t border-border/50 flex items-center justify-between">
                                 <div className="flex gap-2">
                                     <button
@@ -1125,10 +1244,37 @@ export default function Vyos(props: VyosProps) {
                                     </button>
                                     <button
                                         className="p-2 bg-card-secondary hover:bg-purple-600/10 text-text-muted hover:text-purple-500 rounded-lg transition-all border border-border/50"
-                                        title="Refresh Info"
+                                        title="Refresh Info (get-info)"
                                         onClick={() => refreshRouterInfo(router.id)}
                                     >
                                         <RefreshCw size={16} />
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            if (expandedStateId === router.id) {
+                                                setExpandedStateId(null);
+                                            } else {
+                                                await fetchRouterState(router.id);
+                                            }
+                                        }}
+                                        className={`p-2 bg-card-secondary rounded-lg transition-all border ${
+                                            expandedStateId === router.id
+                                                ? 'border-cyan-500/40 text-cyan-400 bg-cyan-500/10'
+                                                : 'border-border/50 text-text-muted hover:text-cyan-400 hover:bg-cyan-600/10'
+                                        }`}
+                                        title="Live State Audit (get-state)"
+                                    >
+                                        {loadingStateId === router.id
+                                            ? <RefreshCw size={16} className="animate-spin" />
+                                            : <Eye size={16} />}
+                                    </button>
+                                    <button
+                                        onClick={() => openRazModal(router.id, router.name)}
+                                        disabled={razLoading}
+                                        className="p-2 bg-card-secondary hover:bg-amber-600/10 text-text-muted hover:text-amber-400 rounded-lg transition-all border border-border/50"
+                                        title="Reset All — clear QoS, IP blocks, unshut interfaces (RAZ)"
+                                    >
+                                        <Eraser size={16} />
                                     </button>
                                     <button
                                         onClick={() => editRouter(router)}
@@ -2794,5 +2940,144 @@ function LiveFeed() {
                 )}
             </div>
         </div>
+
+        {/* ── RAZ Confirmation Modal ─────────────────────────────────────────── */}
+        {razModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+                    {/* Header */}
+                    <div className="px-6 py-4 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <Eraser size={18} className="text-amber-400" />
+                            <div>
+                                <div className="font-bold text-amber-300 text-sm">Reset Router — RAZ</div>
+                                <div className="text-[11px] text-text-muted font-mono">{razModal.name}</div>
+                            </div>
+                        </div>
+                        {!razLoading && !razResult && (
+                            <button onClick={() => setRazModal(null)} className="text-text-muted hover:text-text-primary transition-colors">
+                                <XCircle size={18} />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Body */}
+                    <div className="px-6 py-4 space-y-4">
+                        {!razResult ? (
+                            <>
+                                <p className="text-[12px] text-text-secondary">
+                                    The following actions will be executed on <span className="text-text-primary font-bold">{razModal.name}</span>:
+                                </p>
+
+                                {/* QoS to clear */}
+                                {(() => {
+                                    const qosIfaces = razModal.state?.interfaces?.filter((i: any) => i.qos_active) || [];
+                                    return qosIfaces.length > 0 ? (
+                                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-2">Clear QoS ({qosIfaces.length} interface{qosIfaces.length > 1 ? 's' : ''})</div>
+                                            <div className="space-y-1">
+                                                {qosIfaces.map((i: any) => (
+                                                    <div key={i.name} className="text-[11px] font-mono text-amber-300">
+                                                        {i.name} — {i.qos_active?.delay_ms ? `+${i.qos_active.delay_ms}ms` : ''}{i.qos_active?.loss_pct ? ` ${i.qos_active.loss_pct}% loss` : ''}{i.qos_active?.rate ? ` ${i.qos_active.rate}` : ''}
+                                                        {i.description && <span className="text-text-muted ml-1.5">({i.description})</span>}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : <div className="text-[11px] text-text-muted">✓ No active QoS</div>;
+                                })()}
+
+                                {/* IP Blocks */}
+                                {(() => {
+                                    const blocks = razModal.state?.blackhole_blocks || [];
+                                    return blocks.length > 0 ? (
+                                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-2">Remove IP Blocks ({blocks.length})</div>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {blocks.map((b: any, i: number) => (
+                                                    <span key={i} className="font-mono text-[10px] text-red-300 bg-red-500/10 px-2 py-0.5 rounded">{b.prefix}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : <div className="text-[11px] text-text-muted">✓ No active IP blocks</div>;
+                                })()}
+
+                                {/* Down interfaces */}
+                                {(() => {
+                                    const downIfaces = razModal.state?.interfaces?.filter((i: any) => i.admin_state === 'down') || [];
+                                    return downIfaces.length > 0 ? (
+                                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-2">Unshut Interfaces ({downIfaces.length})</div>
+                                            <div className="space-y-1">
+                                                {downIfaces.map((i: any) => (
+                                                    <div key={i.name} className="text-[11px] font-mono text-red-300">
+                                                        🔴 {i.name}{i.description && <span className="text-text-muted ml-1.5">({i.description})</span>}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : <div className="text-[11px] text-text-muted">✓ All interfaces up</div>;
+                                })()}
+
+                                {/* Clean state message */}
+                                {razModal.state?.interfaces?.every((i: any) => !i.qos_active && i.admin_state === 'up') &&
+                                    (razModal.state?.blackhole_count ?? 0) === 0 && (
+                                    <div className="text-[12px] text-green-400 flex items-center gap-2 py-2">
+                                        <CheckCircle size={14} />
+                                        Router is already in clean state — nothing to reset.
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            /* Result */
+                            <div className="space-y-3">
+                                <div className={`flex items-center gap-2 text-sm font-bold ${razResult.success ? 'text-green-400' : 'text-amber-400'}`}>
+                                    {razResult.success ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                                    {razResult.summary || (razResult.error ? `Error: ${razResult.error}` : 'Done')}
+                                </div>
+                                {razResult.actions_taken?.length > 0 && (
+                                    <div className="space-y-1">
+                                        {razResult.actions_taken.map((a: string, i: number) => (
+                                            <div key={i} className="text-[11px] text-green-400 font-mono flex items-center gap-1.5">
+                                                <span className="text-green-500">✓</span> {a}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {razResult.errors?.length > 0 && (
+                                    <div className="space-y-1">
+                                        {razResult.errors.map((e: string, i: number) => (
+                                            <div key={i} className="text-[11px] text-red-400 font-mono flex items-center gap-1.5">
+                                                <span>✗</span> {e}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-6 py-4 border-t border-border/50 flex items-center justify-between">
+                        <button
+                            onClick={() => { setRazModal(null); setRazResult(null); }}
+                            className="px-4 py-2 text-[12px] text-text-muted hover:text-text-primary transition-colors"
+                        >
+                            {razResult ? 'Close' : 'Cancel'}
+                        </button>
+                        {!razResult && (
+                            <button
+                                onClick={() => executeRaz('full-reset')}
+                                disabled={razLoading}
+                                className="px-5 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-[12px] font-bold rounded-xl transition-all flex items-center gap-2"
+                            >
+                                {razLoading ? <RefreshCw size={14} className="animate-spin" /> : <Eraser size={14} />}
+                                {razLoading ? 'Resetting…' : 'Confirm Full Reset'}
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
     );
 }

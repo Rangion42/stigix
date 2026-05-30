@@ -2336,6 +2336,87 @@ app.get('/api/vyos/routers/:id/state', authenticateToken, async (req, res) => {
     }
 });
 
+// Bulk reset: clear QoS, clear IP blocks, unshut down interfaces
+app.post('/api/vyos/routers/:id/reset', authenticateToken, async (req, res) => {
+    const routerId = req.params.id;
+    const scope: string = req.body?.scope || 'full-reset';
+
+    try {
+        const state = await vyosManager.getState(routerId);
+        if (!state.success) {
+            return res.status(500).json({ success: false, error: state.error || 'Failed to fetch router state' });
+        }
+
+        const interfaces: any[] = state.interfaces || [];
+        const blackholeBlocks: any[] = state.blackhole_blocks || [];
+        const actions_taken: string[] = [];
+        const errors: string[] = [];
+
+        // Helper: build a minimal VyosAction for executeAction
+        const makeAction = (command: string, params: any = {}): any => ({
+            id: `raz-${Date.now()}`,
+            offset_minutes: 0,
+            router_id: routerId,
+            command,
+            params
+        });
+
+        // 1. Clear QoS on all interfaces with active QoS
+        if (['all-qos', 'full-reset'].includes(scope)) {
+            const qosIfaces = interfaces.filter((i: any) => i.qos_active);
+            for (const iface of qosIfaces) {
+                try {
+                    await vyosManager.executeAction(routerId, makeAction('clear-qos', { interface: iface.name }));
+                    actions_taken.push(`clear-qos: ${iface.name} (${iface.description || ''})`);
+                } catch (e: any) {
+                    errors.push(`clear-qos ${iface.name}: ${e.message}`);
+                }
+            }
+            if (qosIfaces.length === 0) actions_taken.push('clear-qos: no active QoS found');
+        }
+
+        // 2. Clear all blackhole IP blocks (tag-999)
+        if (['all-blocks', 'full-reset'].includes(scope)) {
+            if (blackholeBlocks.length > 0) {
+                try {
+                    await vyosManager.executeAction(routerId, makeAction('clear-all-blocks', {}));
+                    actions_taken.push(`clear-blocks: ${blackholeBlocks.length} IP block(s) removed`);
+                } catch (e: any) {
+                    errors.push(`clear-blocks: ${e.message}`);
+                }
+            } else {
+                actions_taken.push('clear-blocks: no active IP blocks found');
+            }
+        }
+
+        // 3. Unshut all down interfaces
+        if (['unshut-all', 'full-reset'].includes(scope)) {
+            const downIfaces = interfaces.filter((i: any) => i.admin_state === 'down');
+            for (const iface of downIfaces) {
+                try {
+                    await vyosManager.executeAction(routerId, makeAction('interface-up', { interface: iface.name }));
+                    actions_taken.push(`no-shut: ${iface.name} (${iface.description || ''})`);
+                } catch (e: any) {
+                    errors.push(`no-shut ${iface.name}: ${e.message}`);
+                }
+            }
+            if (downIfaces.length === 0) actions_taken.push('no-shut: all interfaces already up');
+        }
+
+        res.json({
+            success: errors.length === 0,
+            scope,
+            router_id: routerId,
+            actions_taken,
+            errors,
+            summary: `${actions_taken.length} action(s) completed, ${errors.length} error(s)`
+        });
+
+    } catch (e: any) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 // --- VyOS Sequence Endpoints ---
 
 app.get('/api/vyos/sequences', authenticateToken, (req, res) => {
