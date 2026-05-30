@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Gauge, Activity, Clock, Filter, Download, Zap, Shield, Search, ChevronRight, BarChart3, AlertCircle, Info, ChevronUp, ChevronDown, Flame, Plus, XCircle, RefreshCw, Globe, Play, Pause, TrendingUp } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip, ResponsiveContainer, AreaChart, Area, ReferenceLine, ReferenceArea } from 'recharts';
 import { twMerge } from 'tailwind-merge';
 
 interface ConnectivityPerformanceProps {
@@ -126,13 +126,22 @@ function GlobalScoreTrendChart({ results, timeRange }: { results: any[]; timeRan
             }));
     }, [results, timeRange]);
 
+    const { minScore, maxScore } = React.useMemo(() => {
+        if (!chartData.length) return { minScore: null, maxScore: null };
+        const scores = chartData.map(d => d.score);
+        return {
+            minScore: Math.min(...scores),
+            maxScore: Math.max(...scores)
+        };
+    }, [chartData]);
+
     if (!chartData.length) return (
         <div className="h-[130px] flex items-center justify-center text-text-muted text-xs italic opacity-60">No data for this period</div>
     );
     return (
         <div className="h-[130px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -28 }}>
+                <AreaChart data={chartData} margin={{ top: 10, right: 8, bottom: 0, left: -28 }}>
                     <defs>
                         <linearGradient id="globalScoreGrad" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
@@ -148,7 +157,47 @@ function GlobalScoreTrendChart({ results, timeRange }: { results: any[]; timeRan
                         labelStyle={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 'bold', marginBottom: '4px' }}
                         formatter={(value: any, name: string) => name === 'score' ? [`${value}/100`, 'Avg Score'] : [value, 'Samples']}
                     />
-                    <Area type="monotone" dataKey="score" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#globalScoreGrad)" dot={false} activeDot={{ r: 4, fill: '#6366f1' }} />
+                    
+                    {/* Visual Threshold Regions */}
+                    <ReferenceArea y1={0} y2={50} fill="#ef4444" fillOpacity={0.03} />
+                    <ReferenceArea y1={50} y2={80} fill="#f97316" fillOpacity={0.02} />
+                    
+                    {/* Warning & Critical Threshold Lines */}
+                    <ReferenceLine y={80} stroke="#f97316" strokeDasharray="4 4" strokeOpacity={0.3} label={{ value: 'Warning (80)', position: 'insideBottomRight', fill: 'var(--text-muted)', fontSize: 7, opacity: 0.6 }} />
+                    <ReferenceLine y={50} stroke="#ef4444" strokeDasharray="4 4" strokeOpacity={0.3} label={{ value: 'Critical (50)', position: 'insideBottomRight', fill: 'var(--text-muted)', fontSize: 7, opacity: 0.6 }} />
+
+                    {/* Min/Max value indicators of the current period */}
+                    {minScore !== null && minScore < 100 && (
+                        <ReferenceLine 
+                            y={minScore} 
+                            stroke="#f43f5e" 
+                            strokeDasharray="2 2" 
+                            strokeOpacity={0.8}
+                            strokeWidth={1.5}
+                            label={{ value: `Min: ${minScore}%`, position: 'insideBottomLeft', fill: '#f43f5e', fontSize: 8, fontWeight: 'bold' }} 
+                        />
+                    )}
+                    {maxScore !== null && maxScore > 0 && minScore !== maxScore && (
+                        <ReferenceLine 
+                            y={maxScore} 
+                            stroke="#10b981" 
+                            strokeDasharray="2 2" 
+                            strokeOpacity={0.8}
+                            strokeWidth={1.5}
+                            label={{ value: `Max: ${maxScore}%`, position: 'insideTopLeft', fill: '#10b981', fontSize: 8, fontWeight: 'bold' }} 
+                        />
+                    )}
+
+                    <Area 
+                        type="monotone" 
+                        dataKey="score" 
+                        stroke="#6366f1" 
+                        strokeWidth={2} 
+                        fillOpacity={1} 
+                        fill="url(#globalScoreGrad)" 
+                        dot={{ r: 3.5, stroke: '#6366f1', strokeWidth: 1.5, fill: 'var(--card)' }} 
+                        activeDot={{ r: 6, fill: '#6366f1', stroke: '#fff', strokeWidth: 2 }} 
+                    />
                 </AreaChart>
             </ResponsiveContainer>
         </div>

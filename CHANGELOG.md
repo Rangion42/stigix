@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.121] - 2026-05-30
+### Added
+- **web-dashboard** 📈 Enhanced the "Global Experience Over Time" chart:
+  - Enabled data point dots for better visibility of individual samples, particularly on the 6H and 24H intervals.
+  - Added visual threshold regions and dotted reference lines for Warning (80) and Critical (50) status.
+  - Added dynamic indicators to display the Min and Max scores achieved in the current view.
+
 ## [v1.4.0-patch.120] - 2026-05-30
 ### Removed
 - **Repository cleanup** 🧹 Removed 15 files that were no longer needed:
