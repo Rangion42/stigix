@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.118] - 2026-05-30
+### Fixed
+- **mcp-server** 🐛 `setup-bridge.sh`: Added Python 3.10+ version check and detailed installation instructions to prevent installation failures due to older Python versions (like Python 3.9).
+- **docs** 📖 `docs/MCP_SERVER.md`: Updated documentation to specify Python 3.10+ requirement for Option B (Python Bridge Method).
+
+## [v1.4.0-patch.117] - 2026-05-30
+### Fixed
+- **web-dashboard** 🐛 `Vyos.tsx`: Fixed React compilation build error by nesting the RAZ confirmation modal correctly inside the `Vyos` component scope.
+
+## [v1.4.0-patch.116] - 2026-05-30
+### Added
+- **web-dashboard** 🎨 `Vyos.tsx`: Added an 👁️ Eye button (state panel per router card) and a 🧹 Eraser button (RAZ modal).
+- **web-dashboard** 🌐 `POST /api/vyos/routers/:id/reset`: Added authenticated endpoint for router state reset.
+
 ## [v1.4.0-patch.115] - 2026-05-30
 ### Added
 - **vyos** 🆕 `op_get_state()` in `vyos_sdwan_ctl.py`: new read-only function and `get-state` CLI subcommand. Single `api_retrieve()` call returns full router state: per-interface `admin_state` (up/down), `qos_active` params (delay_ms, loss_pct, rate, corruption), and all blackhole IP blocks (tag-999). Auto-detects VyOS 1.4 (`traffic-policy/`) and 1.5 (`qos/`) policy namespaces. Zero regression risk — no existing function modified.

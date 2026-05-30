@@ -18,11 +18,25 @@ fi
 
 cd "$MCP_DIR"
 
-# 1. Check for Python
+# 1. Check for Python and verify version >= 3.10
 if ! command -v python3 &> /dev/null; then
     echo "❌ Error: python3 is not installed. Please install it first."
     exit 1
 fi
+
+PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+PYTHON_MAJOR=$(python3 -c 'import sys; print(sys.version_info.major)')
+PYTHON_MINOR=$(python3 -c 'import sys; print(sys.version_info.minor)')
+
+if [ "$PYTHON_MAJOR" -lt 3 ] || { [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 10 ]; }; then
+    echo "❌ Error: Python 3.10 or higher is required (detected version $PYTHON_VERSION)."
+    echo "Please install a newer version of Python. On macOS, you can do this easily via Homebrew:"
+    echo "    brew install python@3.11"
+    echo ""
+    echo "Once installed, make sure python3 points to the new version or run the script using python3.11."
+    exit 1
+fi
+
 
 # 2. Create Virtualenv if missing
 if [ ! -d "$VENV_PATH" ]; then

@@ -58,7 +58,7 @@ The MCP server is included by default in the Stigix `docker-compose.yml`. It sta
 ### 2. Prerequisites
 Depending on the setup method you choose below, you will need:
 * **Option A (Node/npx Method - Recommended):** Node.js installed on your machine (provides the `npx` command).
-* **Option B (Python Bridge Method):** Python 3 installed on your machine.
+* **Option B (Python Bridge Method):** Python 3.10+ installed on your machine.
 
 ---
 
@@ -118,7 +118,7 @@ chmod +x ./mcp-server/setup-bridge.sh
 # Run the setup script
 ./mcp-server/setup-bridge.sh
 ```
-This script automatically checks for Python 3, creates a `.venv` folder, and installs all the required libraries for you.
+This script automatically checks for Python 3 (requires Python 3.10 or higher), creates a `.venv` folder, and installs all the required libraries for you.
 
 ##### 🪟 Windows (PowerShell)
 Open PowerShell, navigate to your cloned `stigix` repository directory, and run:
