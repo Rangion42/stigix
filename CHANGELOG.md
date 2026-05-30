@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.119] - 2026-05-30
+### Fixed
+- **mcp-server** ⚡ `setup-bridge.sh`: Upgraded Python detection to dynamically search for Python 3.10+ executables (e.g. `python3.11` installed via Homebrew) even if the default system `python3` command refers to an older version (like Apple's 3.9.6).
+
 ## [v1.4.0-patch.118] - 2026-05-30
 ### Fixed
 - **mcp-server** 🐛 `setup-bridge.sh`: Added Python 3.10+ version check and detailed installation instructions to prevent installation failures due to older Python versions (like Python 3.9).
