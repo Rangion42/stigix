@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.120] - 2026-05-30
+### Removed
+- **Repository cleanup** 🧹 Removed 15 files that were no longer needed:
+  - `engines/rtp_enhanced.py`, `engines/srt_orchestrator.py`, `engines/srt_responder.py` — no references in codebase (SRT feature inactive, rtp_enhanced superseded)
+  - `engines/rtp.py.scapy_backup` — manual backup, no longer needed
+  - `web-dashboard/Dockerfile`, `build-and-push.sh` — old multi-container build system, replaced by `stigix-all-in-one/Dockerfile`
+  - `test_probe.js`, `test_resolve.py`, `scratch/tag_tracer.py` — ad-hoc dev scripts
+  - `web-dashboard/.txt`, `web-dashboard/test-route.js`, `stigix-registry/test/x` — test artifacts
+  - `engines/.echo_server.py.swp`, `engines/.!35649!.echo_server.py.swp` — vim swap files (should never have been committed)
+  - `sample config/.DS_Store` — macOS metadata file
+- **`.gitignore`** 🛡️ Added `*.swp`, `*.swo`, `*/.DS_Store` patterns to prevent future accidental commits of swap and macOS metadata files.
+- **Rollback**: Any deleted file can be restored with `git checkout v1.4.0-patch.119 -- <path>`.
+
 ## [v1.4.0-patch.119] - 2026-05-30
 ### Fixed
 - **mcp-server** ⚡ `setup-bridge.sh`: Upgraded Python detection to dynamically search for Python 3.10+ executables (e.g. `python3.11` installed via Homebrew) even if the default system `python3` command refers to an older version (like Apple's 3.9.6).

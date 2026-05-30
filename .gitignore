@@ -34,7 +34,13 @@ roadmap/
 
 # OS files
 .DS_Store
+*/.DS_Store
+**/.DS_Store
 Thumbs.db
+
+# Vim swap files
+*.swp
+*.swo
 
 # Temp files
 *.tmp
