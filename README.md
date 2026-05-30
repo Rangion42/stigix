@@ -79,6 +79,14 @@ This project is my way to turn all that lab and demo experience into an open-sou
 - **EDL** - IP, URL, DNS urls with sequential or random execution
 - **Test Results History** - Persistent logging with search, filtering, export, and per-type badge filtering (URL / DNS / THREAT / C2S / AIS)
 
+### 🤖 AI & MCP Integration (Claude Desktop)
+- **Natural Language Network Control** — Control the entire Stigix mesh from Claude Desktop in plain English: run tests, simulate failures, check posture across any node — no UI required. [Read more](docs/MCP_SERVER.md)
+- **VyOS Chaos Engineering via Claude** — *"Add 150ms latency on the MPLS link of BR8"* → Claude discovers all routers, lists chaos-eligible interfaces (those with descriptions), proposes the exact target, waits for your confirmation, then executes. Supports multiple VyOS routers per node.
+- **Propose & Confirm Flow** — For any VyOS action Claude presents the resolved router + interface and asks for confirmation. Destructive actions (interface-down, deny-traffic) require mandatory confirmation.
+- **MCP Live Interaction Feed** — Settings → MCP Server shows a real-time color-coded feed of every Claude tool call: category icons, duration mini-bar (green/amber/red), node badge, relative timestamps, LIVE pulse. Refreshes every 3 seconds.
+- **MCP Interaction Logging** — Every Claude tool call is transparently logged server-side to `mcp-history.jsonl` (tool name, target node, duration, status) with zero impact on the MCP protocol.
+- **Accurate Security Scores** — Claude now reports real weighted posture scores (URL Filter, DNS Security, Threat Prevention out of 100) matching the dashboard, plus a 24-run trend for evolution analysis.
+
 ### 📊 Monitoring & Analytics
 - **Real-time Logs** - Live log streaming with WebSocket updates
 - **Statistics Dashboard** - Success/failure rates, latency metrics, bandwidth tracking
@@ -110,6 +118,13 @@ This project is my way to turn all that lab and demo experience into an open-sou
 ## 🆕 What's New
 
 The project is evolving rapidly with new features and refinements added in every release.
+
+### MCP Server highlights *(v1.4.0-patch.106–109)*
+- **VyOS Natural Language Control** 🤖 — `get_vyos_interfaces` + `vyos_execute_action`: propose+confirm flow, management interfaces silently excluded, multi-router disambiguation.
+- **MCP Live Interaction Feed** ✨ — Real-time color-coded feed in Settings → MCP (category icons, duration bar, node badge, LIVE pulse, 3s refresh).
+- **MCP Interaction Logging** 📊 — Tool calls logged to `mcp-history.jsonl` server-side; API at `/api/admin/mcp/history`.
+- **Security Score Fix** 🐛 — `get_security_results_stats` now returns real weighted posture scores (URL/DNS/Threat 0–100) + 24-run trend. Eliminates wrong raw-ratio reporting.
+- **MCP Docs** 📖 — `docs/MCP_SERVER.md` updated: upgrade/reconnect workflow, natural language translation explained.
 
 ### Highlights in v1.4.0 *(current)*
 - **Vulnerability Report Import** 🧨 — New import option in the IoT toolbar for Palo Alto IoT Security **Vulnerability CSV** exports (one row per CVE per device). Aggregates by device, computes a **Danger Score** (Risk Score + Critical CVEs×15 + High CVEs×8 + APT groups×5 + ICS-CERT×10 + Max CVSS×2), and selects the top N most dangerous devices. APT groups → `beacon`, ICS-CERT → `port_scan`, Critical/High CVEs → `pan_test_domains`. [Read docs](docs/IOT_SIMULATION.md#4-vulnerability-report-import)
