@@ -117,8 +117,27 @@ chmod +x ./mcp-server/setup-bridge.sh
 
 # Run the setup script
 ./mcp-server/setup-bridge.sh
-```
 This script automatically checks for Python 3 (requires Python 3.10 or higher), creates a `.venv` folder, and installs all the required libraries for you.
+
+**Example output of a successful installation:**
+```text
+🚀 Setting up Stigix MCP Bridge in /Users/jsuzanne/Github/stigix/mcp-server...
+🐍 Using Python executable: /opt/homebrew/bin/python3.11 (Python 3.11.15)
+📦 Creating virtual environment...
+📥 Installing dependencies...
+Collecting pip
+  Downloading pip-26.0.1-py3-none-any.whl (1.8 MB)
+...
+Successfully installed mcp-1.2.1 fastmcp-0.4.1 ...
+
+✅ Setup Complete!
+--------------------------------------------------------
+To use this bridge in Claude Desktop, use these paths:
+
+Python: /Users/jsuzanne/Github/stigix/mcp-server/.venv/bin/python3
+Bridge: /Users/jsuzanne/Github/stigix/mcp-server/bridge.py
+--------------------------------------------------------
+```
 
 ##### 🪟 Windows (PowerShell)
 Open PowerShell, navigate to your cloned `stigix` repository directory, and run:
