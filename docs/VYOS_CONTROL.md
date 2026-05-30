@@ -117,6 +117,81 @@ The system uses unique **Run IDs** for every execution:
 
 ---
 
+## 🤖 MCP Natural Language Control (Claude Desktop)
+
+VyOS actions can be triggered via **plain English** from Claude Desktop, without touching the UI. This works through the Stigix MCP server, which translates Claude's tool calls into ad-hoc VyOS sequences.
+
+> [!NOTE]
+> Full MCP server setup, Claude Desktop configuration, and connection troubleshooting are documented in **[MCP_SERVER.md](MCP_SERVER.md)**.
+
+### How It Works — Ad-hoc Sequence Lifecycle
+
+When Claude executes a VyOS action (e.g. *"Add 200ms latency on the MPLS link of BR8"*), the MCP server follows this internal flow:
+
+```
+Claude Desktop (natural language)
+        │
+        ▼ Tool call: vyos_execute_action(agent_id, router_id, command, interface, latency_ms=200)
+Stigix MCP Server
+        │
+        ├─ 1. POST /api/vyos/sequences          → create temp sequence (name: mcp-adhoc-<uuid>)
+        ├─ 2. POST /api/vyos/sequences/run/<id> → execute immediately (run_id: MAN-xxxx)
+        ├─ 3. GET  /api/vyos/history?limit=1    → retrieve cli_equivalent for confirmation
+        └─ 4. DELETE /api/vyos/sequences/<id>   → clean up temp sequence
+        │
+        ▼ Returns to Claude: { success, cli_equivalent, run_id }
+```
+
+The sequence is **temporary** — it exists only for the duration of the execution and is deleted immediately after. However, the **history entry persists** in `vyos-history.jsonl`.
+
+### Traceability — Actions in VyOS History
+
+Every MCP-triggered action is fully traceable in the **VyOS Control → History** view:
+
+| Field | Value |
+|---|---|
+| `sequence_name` | `mcp-adhoc-<uuid>` — identifies it as a Claude-triggered action |
+| `run_id` | `MAN-xxxx` — manual execution counter |
+| `command` | `set-latency`, `interface-down`, `deny-traffic`, etc. |
+| `cli_equivalent` | exact VyOS CLI commands that were applied |
+| `status` | `success` or `failed` |
+| `duration_ms` | execution time |
+
+This means you can audit every Claude action after the fact, just as you would for a manual or scheduled sequence.
+
+### Propose & Confirm Workflow
+
+Before executing any action, Claude always:
+
+1. **Calls `get_vyos_interfaces`** → discovers all VyOS routers on the target node and their chaos-eligible interfaces (those with a description configured)
+2. **Proposes a specific match** → *"I found eth1 (MPLS-Link-DC1) on vyoslandc1 — shall I apply 200ms latency to this interface?"*
+3. **Waits for your confirmation** → no action is taken until you approve
+4. **Executes via `vyos_execute_action`** → creates the ad-hoc sequence, runs it, returns the CLI equivalent
+
+> [!IMPORTANT]
+> **Interfaces without a description are silently excluded** from Claude's view — they are treated as management interfaces. Only interfaces with a configured description are considered chaos targets. See [Interface Naming Best Practices](#-interface-naming-best-practices-mcp--claude-desktop) below.
+
+### Supported Actions via Natural Language
+
+| What you say | VyOS command applied |
+|---|---|
+| *"Add 150ms latency on the MPLS link"* | `tc qdisc` netem delay 150ms |
+| *"Set 5% packet loss on the WAN"* | `tc qdisc` netem loss 5% |
+| *"Rate-limit the WAN to 10 Mbps"* | `tc qdisc` tbf rate 10mbit |
+| *"Shut down the MPLS link"* | `set interfaces ethernet ethX disable` |
+| *"Restore the MPLS link"* | `delete interfaces ethernet ethX disable` |
+| *"Block traffic from 10.0.0.5"* | firewall rule deny source 10.0.0.5 |
+| *"Remove all impairments on BR8"* | clear all `tc qdisc` rules on target interface |
+
+### Multi-Router Support
+
+If a node has multiple VyOS routers (e.g. `vyoslandc1`, `vyosbr1`, `vyosbr2`), Claude will:
+- Query all routers via `get_vyos_interfaces`
+- If the intent matches a unique interface across all routers → propose it directly
+- If ambiguous (same description on two routers) → list both options and ask you to choose
+
+---
+
 ## 🤖 Interface Naming Best Practices (MCP / Claude Desktop)
 
 When using **Claude Desktop with the Stigix MCP Server**, Claude can control VyOS routers using natural language — *"Shut the MPLS link on BR1"*, *"Add 150ms latency on the WAN interface"*, *"Block IP 10.0.0.5"*.
