@@ -487,6 +487,21 @@ async def get_vyos_interfaces(agent_id: str, router_id: Optional[str] = None) ->
     a description are management interfaces and are silently excluded from this list.
     They are never proposed as targets and Claude should never act on them.
 
+    ⚠️  CRITICAL — SITE NAME RESOLUTION:
+    ─────────────────────────────────────
+    Site/router names mentioned by the user (e.g. "BR1", "BR2", "DC1", "HQ") are NOT
+    Stigix agent IDs. They appear in the interface DESCRIPTIONS of the VyOS routers.
+
+    NEVER respond with "I don't have a node called BR1" or similar.
+    ALWAYS call this tool first and search the returned interface descriptions for
+    keywords matching the user's intent (e.g. "BR1" matches description "BR1-MPLS-197").
+
+    The correct flow when the user says "Add latency on BR1 MPLS":
+      1. Call get_vyos_interfaces(agent_id) → receive all routers + interfaces
+      2. Search descriptions for "BR1" AND "MPLS" → find eth1 "BR1-MPLS-197" on vyosrouter
+      3. Propose: "I found eth1 (BR1-MPLS-197) on vyosrouter. Shall I apply latency? (yes/no)"
+      4. On confirmation → call vyos_execute_action
+
     ALWAYS CALL THIS FIRST before any vyos_execute_action.
 
     DISAMBIGUATION WORKFLOW (mandatory):
