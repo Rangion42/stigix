@@ -8431,42 +8431,38 @@ app.get('/api/security/cloud-eicar-url', authenticateToken, (req, res) => {
     res.json({ url, hasKey });
 });
 
-// API: List all configured EICAR test targets (reads eicar_endpoints from security config)
+// API: List all configured EICAR test targets — mirrors Security.tsx logic exactly
+// Sources: fabric targets with capabilities.security=true + cloud EICAR if configured
 app.get('/api/security/eicar-targets', authenticateToken, (req, res) => {
-    const config = loadSecurityConfig();
+    const targets: Array<{name: string; target: string; type: string; url: string}> = [];
 
-    const rawEndpoints: string[] = config.threat_prevention?.eicar_endpoints ||
-        (config.threat_prevention?.eicar_endpoint ? [config.threat_prevention.eicar_endpoint] : []);
-
-    // Build IP → friendly name map from fabric targets (custom + env probes)
-    const fabricNames: Record<string, string> = {};
+    // 1. Cloud EICAR target (same as Security.tsx cloud-eicar-url fetch)
+    const { url: cloudUrl } = targetManager.getEffectiveUrl('advanced-custom#{"mode":"eicar"}');
+    let hasKey = false;
     try {
-        const allPeers = [...getCustomConnectivityEndpoints(), ...getEnvConnectivityEndpoints()];
-        for (const p of allPeers) {
-            if (p.host) fabricNames[p.host] = p.name || p.host;
+        const cloudCfgRaw = fs.existsSync(CLOUD_CONFIG_FILE) ? fs.readFileSync(CLOUD_CONFIG_FILE, 'utf-8') : '{}';
+        hasKey = !!(JSON.parse(cloudCfgRaw).masterKey || process.env.STIGIX_TARGET_MASTER_KEY);
+    } catch (_) { hasKey = !!process.env.STIGIX_TARGET_MASTER_KEY; }
+
+    if (cloudUrl && hasKey) {
+        targets.push({ name: 'Stigix Cloud', target: cloudUrl, type: 'cloud', url: cloudUrl });
+    }
+
+    // 2. Fabric targets with security capability — identical to Security.tsx:
+    //    fetch('/api/targets').filter(t => t.enabled && t.capabilities?.security)
+    //    url = `http://${t.host}:${t.ports?.http ?? 8082}/eicar.com.txt`
+    try {
+        const allTargets = targetsManager.getMergedTargets();
+        const secTargets = allTargets.filter((t: any) => t.enabled && t.capabilities?.security);
+        for (const t of secTargets) {
+            const url = `http://${t.host}:${t.ports?.http ?? 8082}/eicar.com.txt`;
+            targets.push({ name: t.name || t.host, target: url, type: 'direct', url });
         }
     } catch (_) {}
 
-    const targets = rawEndpoints
-        .filter(ep => !!ep)
-        .map(ep => {
-            let hostname = ep;
-            let isCloud = false;
-            try {
-                const parsed = new URL(ep);
-                hostname = parsed.hostname;
-                isCloud = parsed.hostname.includes('stigix.io');
-            } catch (_) {}
-
-            const friendlyName = isCloud
-                ? `Stigix Cloud (${hostname})`
-                : (fabricNames[hostname] || hostname);
-
-            return { name: friendlyName, target: ep, type: isCloud ? 'cloud' : 'direct', url: ep };
-        });
-
     res.json({ targets });
 });
+
 
 // API: Threat Prevention Test (EICAR)
 app.post('/api/security/threat-test', authenticateToken, async (req, res) => {
