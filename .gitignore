@@ -10,12 +10,26 @@
 !tsconfig.node.json
 !logs/stats.json
 
-# Credentials Prisma SD-WAN
+# -------------------------------------------------------
+# Credentials & Secrets — NEVER commit these
+# Patterns to watch for:
+#   - iam.panserviceaccount.com  → Palo Alto SASE service account
+#   - client_secret / client_id  → OAuth / API keys
+#   - *.pem / *.key              → TLS private keys
+#   - .env*                      → local environment files
+# -------------------------------------------------------
 credentials.json
 **/credentials.json
+secrets.json
+**/secrets.json
+*.pem
+*.key
+*.p12
+*.pfx
 
-# Roadmap
+# Roadmap (internal notes, may contain real values)
 ROADMAP
+Roadmap/
 roadmap/
 
 # OS files
@@ -39,8 +53,14 @@ config/
 logs/
 !logs/.gitkeep
 
-# Local environment
+# Local environment (all variants)
 .env
+.env.*
+.env.local
+.env.prod
+.env.production
+.env.staging
+.env.development
 
 # Backups
 *.backup
