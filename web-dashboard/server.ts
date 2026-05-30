@@ -2326,6 +2326,16 @@ app.post('/api/vyos/routers/test/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// Live state audit: interface status, active QoS, blackhole IP blocks (read-only)
+app.get('/api/vyos/routers/:id/state', authenticateToken, async (req, res) => {
+    try {
+        const state = await vyosManager.getState(req.params.id);
+        res.json(state);
+    } catch (e: any) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 // --- VyOS Sequence Endpoints ---
 
 app.get('/api/vyos/sequences', authenticateToken, (req, res) => {

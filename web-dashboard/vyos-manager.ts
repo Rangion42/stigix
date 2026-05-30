@@ -474,6 +474,48 @@ export class VyosManager extends EventEmitter {
     }
 
     /**
+     * Full state audit: interface status, active QoS, blackhole IP blocks.
+     * Read-only — calls 'get-state' on the Python CLI. Live data from VyOS HTTP API.
+     */
+    async getState(routerId: string): Promise<any> {
+        const router = this.routers.get(routerId);
+        if (!router) throw new Error(`Router '${routerId}' not found`);
+
+        const args = [
+            this.pythonScriptPath,
+            '--host', router.host,
+            '--key', router.apiKey,
+            'get-state'
+        ];
+
+        const scrubbedArgs = args.map(arg => (arg === router.apiKey ? '***' : arg));
+        log('VYOS', `Get state CLI: ${this.pythonPath} ${scrubbedArgs.join(' ')}`, 'debug');
+
+        return new Promise((resolve, reject) => {
+            const proc = spawn(this.pythonPath, args);
+            let output = '';
+            let errorMsg = '';
+
+            proc.stdout.on('data', (data: Buffer) => output += data.toString());
+            proc.stderr.on('data', (data: Buffer) => errorMsg += data.toString());
+
+            proc.on('close', (code: number) => {
+                if (code === 0) {
+                    try {
+                        const jsonStart = output.indexOf('{');
+                        const jsonStr = jsonStart !== -1 ? output.substring(jsonStart) : output;
+                        resolve(JSON.parse(jsonStr));
+                    } catch {
+                        reject(new Error('Invalid JSON response from get-state'));
+                    }
+                } else {
+                    reject(new Error(errorMsg.trim() || `get-state exited with code ${code}`));
+                }
+            });
+        });
+    }
+
+    /**
      * Get the full unified configuration
      */
     getFullConfig(): any {

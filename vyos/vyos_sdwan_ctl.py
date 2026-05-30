@@ -559,6 +559,123 @@ def op_clear_blocks(host, api_key, verify=False):
             "error": str(e)
         }
 
+
+def op_get_state(host, api_key, verify=False):
+    """
+    Read-only full state audit for a VyOS router.
+
+    Returns in one call:
+      - Per-interface: admin state (up/down), active QoS params, description
+      - Blackhole IP blocks (tag 999)
+
+    Firewall-based blocks (SDWAN_BLOCK_*) are NOT returned as that feature
+    is no longer used — only blackhole/simple-block is supported.
+    """
+    try:
+        config = api_retrieve(host, api_key, verify)
+
+        # ── Detect VyOS version (same logic as get_router_info) ──────────────
+        if 'traffic-policy' in config:
+            version = '1.4'
+        elif 'firewall' in config:
+            fw = config['firewall']
+            version = '1.5' if ('ipv4' in fw or 'ipv6' in fw) else '1.4'
+        elif 'qos' in config and config['qos']:
+            version = '1.5'
+        else:
+            version = '1.5'
+
+        hostname = config.get('system', {}).get('host-name')
+
+        # ── QoS lookup tables ─────────────────────────────────────────────────
+        if version == '1.4':
+            ne_policies = config.get('traffic-policy', {}).get('network-emulator', {})
+        else:
+            ne_policies = config.get('qos', {}).get('policy', {}).get('network-emulator', {})
+
+        def _qos_params(policy_name):
+            """Extract delay/loss/rate/corruption from a network-emulator policy dict."""
+            if not policy_name or policy_name not in ne_policies:
+                return None
+            p = ne_policies[policy_name]
+            if not isinstance(p, dict):
+                return None
+            params = {}
+            # VyOS 1.4 key names
+            if 'network-delay' in p:
+                params['delay_ms'] = p['network-delay']
+            if 'delay' in p:
+                params['delay_ms'] = p['delay']
+            if 'packet-loss' in p:
+                params['loss_pct'] = p['packet-loss']
+            if 'loss' in p:
+                params['loss_pct'] = p['loss']
+            if 'bandwidth' in p:
+                params['rate'] = p['bandwidth']
+            if 'rate' in p:
+                params['rate'] = p['rate']
+            if 'packet-corruption' in p or 'corruption' in p:
+                params['corruption_pct'] = p.get('packet-corruption') or p.get('corruption')
+            params['policy'] = policy_name
+            return params if len(params) > 1 else None  # >1 because policy key always present
+
+        # ── Interface enumeration ──────────────────────────────────────────────
+        interfaces = []
+        for iface_name, iface_data in config.get('interfaces', {}).get('ethernet', {}).items():
+            if not isinstance(iface_data, dict):
+                continue
+
+            admin_state = 'down' if 'disable' in iface_data else 'up'
+            description = iface_data.get('description')
+
+            # Detect attached QoS policy
+            attached_policy = None
+            if version == '1.4':
+                attached_policy = iface_data.get('traffic-policy', {}).get('out')
+            else:
+                # VyOS 1.5: qos/interface/<iface>/egress/<policy_name>
+                qos_iface = config.get('qos', {}).get('interface', {}).get(iface_name, {})
+                egress = qos_iface.get('egress')
+                if isinstance(egress, dict):
+                    # egress is {policy_name: {}}
+                    attached_policy = next(iter(egress), None)
+                elif isinstance(egress, str):
+                    attached_policy = egress
+
+            addr = iface_data.get('address', [])
+            if isinstance(addr, str):
+                addr = [addr]
+
+            iface_entry = {
+                'name': iface_name,
+                'description': description,
+                'addresses': addr,
+                'admin_state': admin_state,
+                'qos_active': _qos_params(attached_policy)
+            }
+            interfaces.append(iface_entry)
+
+        interfaces.sort(key=lambda x: x['name'])
+
+        # ── Blackhole IP blocks (tag 999) ─────────────────────────────────────
+        blackhole_blocks = get_blackhole_routes(config)  # existing function
+
+        return {
+            'success': True,
+            'version': version,
+            'hostname': hostname,
+            'interfaces': interfaces,
+            'blackhole_blocks': blackhole_blocks,
+            'blackhole_count': len(blackhole_blocks)
+        }
+
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
 # RENAMED: Firewall-based block functions (fw-block/fw-unblock)
 def get_existing_fw_blocks(config, version, iface):
     """Parse config and return list of currently blocked IPs on interface (firewall)"""
@@ -882,6 +999,7 @@ def main():
     
     # Info
     sub.add_parser("get-info", help="Get router info")
+    sub.add_parser("get-state", help="Full state audit: interface status, active QoS, IP blocks (read-only)")
     
     # NEW: simple-block/simple-unblock (blackhole routes, no interface)
     p_simple_block = sub.add_parser("simple-block", help="Block IP/prefix with blackhole route (tag 999, no interface needed)")
@@ -970,6 +1088,11 @@ def main():
         info = get_router_info(args.host, args.key, args.secure)
         print(json.dumps(info, indent=2))
         sys.exit(0 if info["success"] else 1)
+
+    if args.cmd == "get-state":
+        state = op_get_state(args.host, args.key, args.secure)
+        print(json.dumps(state, indent=2))
+        sys.exit(0 if state["success"] else 1)
     
     # Handle simple-block and simple-unblock
     if args.cmd == "simple-block":

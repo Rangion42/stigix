@@ -595,6 +595,33 @@ class TestOrchestrator:
                 logger.error(f"Failed to fetch VyOS interfaces from {agent_id}: {e}")
                 return [{"error": str(e)}]
 
+    async def get_vyos_state(self, agent_id: str, router_id: str) -> Dict[str, Any]:
+        """
+        Fetch live state audit for a specific VyOS router:
+          - Interface admin state (up/down)
+          - Active QoS parameters per interface (delay, loss, rate)
+          - Blackhole IP blocks (tag-999)
+
+        Calls GET /api/vyos/routers/{router_id}/state on the Stigix agent,
+        which runs 'vyos_sdwan_ctl.py get-state' against the live VyOS HTTP API.
+        Read-only — no config changes.
+        """
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        url = f"{agent.api_base_url}/api/vyos/routers/{router_id}/state"
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.get(url, headers=headers)
+                response.raise_for_status()
+                return response.json()
+            except Exception as e:
+                logger.error(f"Failed to fetch VyOS state for {router_id} on {agent_id}: {e}")
+                return {"error": str(e), "router_id": router_id}
+
     async def vyos_execute_adhoc(
         self,
         agent_id: str,

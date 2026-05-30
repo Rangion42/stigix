@@ -597,6 +597,145 @@ async def get_vyos_interfaces(agent_id: str, router_id: Optional[str] = None) ->
 
 
 @mcp.tool()
+async def get_vyos_router_state(agent_id: str, router_id: str) -> dict:
+    """
+    Fetch the LIVE state of a specific VyOS router managed by a Stigix node.
+    Read-only — safe to call at any time without side effects.
+
+    Returns per-interface:
+      - name, description, addresses
+      - admin_state: 'up' | 'down'  (down = interface has 'disable' flag set)
+      - qos_active: null if no QoS, otherwise {policy, delay_ms, loss_pct, rate, ...}
+
+    Returns globally:
+      - blackhole_blocks: list of {prefix, description} for tag-999 blackhole routes
+      - blackhole_count: number of active IP blocks
+
+    Use this tool when the user asks:
+      - "What is the state of the VyOS routers?"
+      - "Are there any interfaces down?"
+      - "Is there any QoS active on the network?"
+      - "Are there any IP blocks in place?"
+      - "Show me the current network state / état des lieux"
+
+    After receiving the data, present it as a structured summary:
+      - List all interfaces with 🟢 up / 🔴 down status
+      - For interfaces with qos_active: show parameters (e.g. "+150ms delay, 3% loss")
+      - List blackhole IP blocks if any
+      - Suggest relevant bulk reset actions if issues are found
+
+    Args:
+        agent_id: ID of the Stigix node (MCP gateway).
+        router_id: ID of the specific VyOS router (e.g. 'vyosrouter', 'vyoslandc1').
+    """
+    return await orchestrator.get_vyos_state(agent_id, router_id)
+
+
+@mcp.tool()
+async def vyos_bulk_reset(
+    agent_id: str,
+    router_id: str,
+    scope: str
+) -> dict:
+    """
+    Execute a bulk reset action on a VyOS router.
+    Always call get_vyos_router_state FIRST to know what actions are needed, then
+    propose a clear summary to the user and require confirmation before executing.
+
+    scope values:
+      - 'all-qos'     : Clear QoS (latency/loss/rate) on ALL interfaces that have qos_active
+      - 'all-blocks'  : Remove ALL blackhole IP blocks (tag-999) on this router
+      - 'unshut-all'  : Bring up ALL interfaces with admin_state='down'
+      - 'full-reset'  : Combination of all three above in order: clear-qos, clear-blocks, unshut
+
+    Workflow (mandatory):
+    1. Call get_vyos_router_state to get current state
+    2. Build a list of affected elements:
+       - For 'all-qos': interfaces where qos_active is not null
+       - For 'all-blocks': all blackhole_blocks entries
+       - For 'unshut-all': interfaces where admin_state == 'down'
+    3. Present the plan to the user:
+       "I am about to:
+        - Clear QoS on eth1 (BR1-MPLS-197, +150ms), eth7 (BR2-INET-226, +300ms)
+        - Remove 2 IP blocks: 1.2.3.4/32, 4.3.2.1/32
+        Confirm? (yes/no)"
+    4. Wait for user confirmation
+    5. Execute via vyos_execute_action calls
+
+    Args:
+        agent_id: ID of the Stigix node.
+        router_id: ID of the VyOS router to reset.
+        scope: One of 'all-qos', 'all-blocks', 'unshut-all', 'full-reset'.
+    """
+    # Step 1: Get current state
+    state = await orchestrator.get_vyos_state(agent_id, router_id)
+    if "error" in state:
+        return state
+
+    interfaces = state.get("interfaces", [])
+    blackhole_blocks = state.get("blackhole_blocks", [])
+
+    actions_taken = []
+    errors = []
+
+    if scope in ("all-qos", "full-reset"):
+        qos_ifaces = [i for i in interfaces if i.get("qos_active")]
+        for iface in qos_ifaces:
+            result = await orchestrator.vyos_execute_adhoc(
+                agent_id=agent_id,
+                router_id=router_id,
+                command="clear-qos",
+                interface=iface["name"]
+            )
+            if result.get("success") is not False:
+                actions_taken.append(f"clear-qos on {iface['name']} ({iface.get('description', '')})")
+            else:
+                errors.append(f"clear-qos {iface['name']}: {result.get('error', 'unknown error')}")
+
+    if scope in ("all-blocks", "full-reset"):
+        if blackhole_blocks:
+            result = await orchestrator.vyos_execute_adhoc(
+                agent_id=agent_id,
+                router_id=router_id,
+                command="clear-blocks"
+            )
+            if result.get("success") is not False:
+                actions_taken.append(f"clear-blocks: removed {len(blackhole_blocks)} IP block(s)")
+            else:
+                errors.append(f"clear-blocks: {result.get('error', 'unknown error')}")
+        else:
+            actions_taken.append("clear-blocks: no blocks to remove (already clean)")
+
+    if scope in ("unshut-all", "full-reset"):
+        down_ifaces = [i for i in interfaces if i.get("admin_state") == "down"]
+        for iface in down_ifaces:
+            result = await orchestrator.vyos_execute_adhoc(
+                agent_id=agent_id,
+                router_id=router_id,
+                command="interface-up",
+                interface=iface["name"]
+            )
+            if result.get("success") is not False:
+                actions_taken.append(f"interface-up on {iface['name']} ({iface.get('description', '')})")
+            else:
+                errors.append(f"interface-up {iface['name']}: {result.get('error', 'unknown error')}")
+
+    if scope not in ("all-qos", "all-blocks", "unshut-all", "full-reset"):
+        return {
+            "error": f"Unknown scope '{scope}'. Valid values: 'all-qos', 'all-blocks', 'unshut-all', 'full-reset'"
+        }
+
+    return {
+        "success": len(errors) == 0,
+        "scope": scope,
+        "router_id": router_id,
+        "actions_taken": actions_taken,
+        "errors": errors,
+        "summary": f"{len(actions_taken)} action(s) executed, {len(errors)} error(s)"
+    }
+
+
+@mcp.tool()
 async def vyos_execute_action(
     agent_id: str,
     router_id: str,
