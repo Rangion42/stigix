@@ -297,6 +297,11 @@ If the server doesn't appear or shows a red error:
 | `run_vyos_scenario` | Execute a config sequence | *"Apply failover-paris scenario"* |
 | `get_vyos_timeline` | History of VyOS configuration changes | *"Recent VyOS changes on BR8"* |
 | `set_vyos_scenario_status` | Enable or disable a cyclic scenario | *"Stop cyclic flapping on BR8"* |
+| `get_vyos_interfaces` | List VyOS router interfaces with descriptions — required first step before ad-hoc actions | *"Show interfaces of the router on BR8"* |
+| `vyos_execute_action` | Execute any VyOS action via natural language: shut/enable interface, add latency/loss/rate, block/unblock IP | *"Shut MPLS on BR1"*, *"Add 150ms latency on WAN"*, *"Block 10.0.0.5"* |
+
+> [!TIP]
+> `get_vyos_interfaces` reads interface **descriptions** to resolve natural language intent. For `vyos_execute_action` to work with prompts like *"shut the MPLS link"*, descriptions must be set on the VyOS router (e.g., `set interfaces ethernet eth1 description "MPLS-Link-DC1"`). See [VYOS_CONTROL.md](VYOS_CONTROL.md) → *Interface Naming Best Practices*.
 
 ---
 
@@ -369,6 +374,36 @@ add_dem_probe("BR8", name="Azure West", target="https://azure.microsoft.com", pr
 run_dem_probes_now("BR8")
 ```
 
+### 9. VyOS Natural Language Control
+**User:** *"Simulate a WAN outage on BR1 — shut the MPLS link, then restore after 30 seconds."*
+```
+get_vyos_interfaces("BR1")
+→ eth0: WAN-Internet-Bouygues
+→ eth1: MPLS-Link-DC1          ← match
+→ eth2: LAN-Users-Branch
+
+vyos_execute_action("BR1", router_id="vyos-br1", command="interface-down", interface="eth1")
+→ CLI: set interfaces ethernet eth1 disable + commit
+→ Returns: {success: true, cli_equivalent: ["set interfaces...", "commit"]}
+
+# ... wait 30s ...
+
+vyos_execute_action("BR1", router_id="vyos-br1", command="interface-up", interface="eth1")
+→ CLI: delete interfaces ethernet eth1 disable + commit
+```
+
+**User:** *"Add 200ms latency and 3% loss on the WAN of BR8, then block 10.0.0.5."*
+```
+get_vyos_interfaces("BR8")    → eth0 = WAN-Internet-*
+vyos_execute_action("BR8", router_id="...", command="set-latency", interface="eth0", latency_ms=200)
+vyos_execute_action("BR8", router_id="...", command="set-loss", interface="eth0", loss_pct=3)
+vyos_execute_action("BR8", router_id="...", command="deny-traffic", ip="10.0.0.5")
+```
+
+> [!IMPORTANT]
+> Interface descriptions must be configured on the VyOS router for natural language targeting to work.
+> If Claude reports "no descriptions found", see [VYOS_CONTROL.md](VYOS_CONTROL.md) → *Interface Naming Best Practices*.
+
 ---
 
 ## 🔄 Keeping MCP Tools Up-to-Date
@@ -383,4 +418,4 @@ When `stigix-cli.py` is updated (new commands, bug fixes, new API parameters), t
 
 ---
 
-*Last Updated: v1.4.0-patch.101 — 2026-05-29*
+*Last Updated: v1.4.0-patch.106 — 2026-05-30*
