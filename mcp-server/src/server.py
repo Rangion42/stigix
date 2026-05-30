@@ -481,40 +481,89 @@ async def set_vyos_scenario_status(agent_id: str, scenario_id: str, enabled: boo
 @mcp.tool()
 async def get_vyos_interfaces(agent_id: str, router_id: Optional[str] = None) -> List[dict]:
     """
-    List VyOS router interfaces with their descriptions, IP addresses, and status.
+    List VyOS routers and their CHAOS-ELIGIBLE interfaces managed by a Stigix node.
 
-    USE THIS FIRST before any vyos_execute_action call. It lets you identify
-    which physical interface matches the user's intent (e.g. "MPLS link", "WAN", "LAN").
+    Only interfaces that have a description configured are returned — interfaces without
+    a description are management interfaces and are silently excluded from this list.
+    They are never proposed as targets and Claude should never act on them.
 
-    IMPORTANT — Interface descriptions:
-    - If interfaces show "(no description)", inform the user that interface descriptions
-      must be configured on the VyOS router for natural language targeting to work.
-    - Guide them to add descriptions: see VYOS_CONTROL.md section "Interface Naming Best Practices".
-    - Without descriptions, the user must specify the interface name explicitly (e.g. 'eth1').
+    ALWAYS CALL THIS FIRST before any vyos_execute_action.
+
+    DISAMBIGUATION WORKFLOW (mandatory):
+    ─────────────────────────────────────
+    After receiving the list, you MUST:
+
+    1. SCAN all returned interfaces across ALL routers for keyword matches with the
+       user's intent (e.g. "MPLS", "WAN", "LAN", "DC1", "Internet" in the description).
+
+    2. PRESENT the eligible interfaces to the user in a clean format:
+       - Router name + status (online/offline)
+       - For each chaos-eligible interface: name | description | IP
+
+    3. IF exactly ONE interface matches the intent → propose it and ask for confirmation:
+       "I found MPLS-Link-DC1 on vyoslandc1 / eth1 (192.168.281.18/24). Shall I apply
+        [action] to this interface? (yes/no)"
+       Wait for user confirmation before calling vyos_execute_action.
+
+    4. IF multiple interfaces match → list ALL candidates and ask the user to choose:
+       "I found MPLS links on 2 routers:
+        1. vyoslandc1 / eth1 — MPLS-Link-DC1 (192.168.281.18/24) — online
+        2. vyoslandc2new / eth1 — MPLS-Link-DC2 (192.168.386.4/24) — online
+       Which one should I target?"
+       Do NOT call vyos_execute_action until the user picks one.
+
+    5. IF a router is offline → warn the user, skip its interfaces.
+
+    6. IF no interface matches the user's intent → tell the user and list all available
+       descriptions so they can rephrase or pick one explicitly.
+
+    7. IF a router has NO chaos-eligible interfaces at all (all management, no descriptions)
+       → it will appear with chaos_eligible_interfaces: [] and a note. Inform the user that
+       this router has no interfaces configured for chaos and how to add one.
+
+    8. IF no router has any chaos-eligible interface → inform the user that natural language
+       targeting is not possible and guide them to add descriptions on the VyOS routers:
+         set interfaces ethernet ethX description "MPLS-Link-DC1"
+       Without descriptions no action can be performed via this tool.
 
     Args:
         agent_id: ID of the Stigix node managing the VyOS routers.
-        router_id: Optional. Filter by specific router ID or name. If omitted, returns all routers.
+        router_id: Optional. Filter to a specific router ID. If omitted, returns all routers.
     """
     results = await orchestrator.get_vyos_interfaces(agent_id, router_id)
 
-    # Detect missing descriptions and surface a warning
-    all_missing = all(
-        all(iface.get("description") in (None, "", "(no description)")
-            for iface in r.get("interfaces", []))
-        for r in results
-        if "error" not in r
-    )
+    # Filter: keep only chaos-eligible interfaces (those with a non-empty description).
+    # Management interfaces (no description) are silently excluded.
+    total_eligible = 0
+    for r in results:
+        if "error" in r:
+            continue
+        eligible = [
+            iface for iface in r.get("interfaces", [])
+            if iface.get("description") not in (None, "", "(no description)")
+        ]
+        r["interfaces"] = eligible
+        r["chaos_eligible_count"] = len(eligible)
+        total_eligible += len(eligible)
+        if len(eligible) == 0:
+            r["_note"] = (
+                f"Router '{r.get('router_name', r.get('router_id'))}' has no chaos-eligible "
+                "interfaces (no descriptions configured). To enable natural language targeting, "
+                "add descriptions on the VyOS router: "
+                "set interfaces ethernet ethX description 'MPLS-Link-DC1'"
+            )
 
-    if all_missing and any("error" not in r for r in results):
+    if total_eligible == 0 and any("error" not in r for r in results):
+        # Surface a top-level warning: nothing can be targeted by natural language
         for r in results:
             if "error" not in r:
-                r["_warning"] = (
-                    "No interface descriptions found on this router. "
-                    "Natural language targeting (e.g. 'shut MPLS') requires descriptive interface names. "
-                    "Please configure descriptions on your VyOS router — "
-                    "see VYOS_CONTROL.md > 'Interface Naming Best Practices'."
+                r["_global_warning"] = (
+                    "No chaos-eligible interfaces found across any router on this node. "
+                    "Natural language targeting is not possible until interface descriptions "
+                    "are configured on the VyOS routers. "
+                    "Example: set interfaces ethernet eth1 description 'MPLS-Link-DC1'"
                 )
+                break  # one warning is enough
 
     return results
 
@@ -532,38 +581,47 @@ async def vyos_execute_action(
     ip: Optional[str] = None
 ) -> dict:
     """
-    Execute an ad-hoc VyOS network action without requiring a pre-built sequence.
+    Execute an ad-hoc VyOS network action on a specific router interface.
     Creates a temporary sequence, runs it immediately, then deletes it.
+    Returns the result AND the VyOS CLI equivalent for full transparency.
 
-    WORKFLOW:
-    1. Call get_vyos_interfaces first to identify the target interface by description.
-    2. Call this tool with the resolved interface name.
-    3. Always confirm with the user before executing destructive actions (interface-down, deny-traffic).
-    4. Return the VyOS CLI equivalent so the user can see exactly what was done.
+    ⚠️  ONLY CALL THIS AFTER:
+    1. Having called get_vyos_interfaces to list all routers and interfaces.
+    2. Having identified the exact target router + interface (no ambiguity).
+    3. Having presented the action to the user and received explicit confirmation.
+       — For destructive commands (interface-down, deny-traffic) confirmation is MANDATORY.
+       — For impairments (set-latency, set-loss, set-rate) always show what you are about to do.
+
+    NEVER call this tool speculatively. Always resolve router_id and interface from
+    get_vyos_interfaces output first.
 
     COMMANDS:
-    - 'interface-down'   : Disable an interface. Requires: interface
+    - 'interface-down'   : Shut an interface down. Requires: interface
     - 'interface-up'     : Re-enable an interface. Requires: interface
-    - 'set-latency'      : Add artificial latency (netem). Requires: interface, latency_ms
+    - 'set-latency'      : Add artificial latency via netem. Requires: interface, latency_ms
     - 'set-loss'         : Add packet loss. Requires: interface, loss_pct (0-100)
     - 'set-corruption'   : Add packet corruption. Requires: interface, corruption_pct (0-100)
     - 'set-rate'         : Limit bandwidth. Requires: interface, rate (e.g. '10mbit')
     - 'clear-qos'        : Remove all QoS impairments (latency/loss/rate). Requires: interface
-    - 'deny-traffic'     : Block an IP address (firewall rule). Requires: ip
-    - 'allow-traffic'    : Unblock an IP address. Requires: ip
+    - 'deny-traffic'     : Add firewall rule to block an IP. Requires: ip
+    - 'allow-traffic'    : Remove firewall block for an IP. Requires: ip
     - 'clear-all-blocks' : Remove all IP block rules.
     - 'show-denied'      : List currently blocked IPs.
 
+    CONFIRMATION SCRIPT (use before calling):
+    "I'm about to [command] on [router_name] / [interface] ([description]).
+     This will [effect]. Confirm? (yes/no)"
+
     Args:
-        agent_id: ID of the Stigix node managing the VyOS router.
-        router_id: ID of the VyOS router (from get_vyos_interfaces).
-        command: One of the commands listed above.
-        interface: Interface name (e.g. 'eth0', 'eth1'). Required for most commands.
-        latency_ms: Latency to add in milliseconds. Used with 'set-latency'.
-        loss_pct: Packet loss percentage (0-100). Used with 'set-loss'.
-        corruption_pct: Corruption percentage (0-100). Used with 'set-corruption'.
-        rate: Bandwidth rate limit string (e.g. '10mbit', '100kbit'). Used with 'set-rate'.
-        ip: IP address to block/unblock. Used with 'deny-traffic' / 'allow-traffic'.
+        agent_id:        Stigix node ID (e.g. 'BR8-Ubuntu').
+        router_id:       VyOS router ID from get_vyos_interfaces (e.g. 'VYOS-DC1').
+        command:         One of the commands listed above.
+        interface:       Interface name (e.g. 'eth1'). Required for most commands.
+        latency_ms:      Latency in ms. Used with 'set-latency'.
+        loss_pct:        Packet loss % (0-100). Used with 'set-loss'.
+        corruption_pct:  Corruption % (0-100). Used with 'set-corruption'.
+        rate:            Bandwidth limit string (e.g. '10mbit'). Used with 'set-rate'.
+        ip:              IP address. Used with 'deny-traffic' / 'allow-traffic'.
     """
     return await orchestrator.vyos_execute_adhoc(
         agent_id, router_id, command, interface,

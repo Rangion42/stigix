@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.108] - 2026-05-30
+### Changed
+- **mcp-server** 🎯 `get_vyos_interfaces`: interfaces without a description are now **silently excluded** from what Claude sees — they are management interfaces, not chaos targets. Claude only receives chaos-eligible interfaces (those with a configured description).
+- **mcp-server** 📝 Per-router `_note` added when a router has zero chaos-eligible interfaces, with the exact VyOS CLI command to add descriptions. A `_global_warning` is surfaced when no interface at all is eligible across the entire node.
+- **mcp-server** 📝 Updated `vyos_execute_action` and `get_vyos_interfaces` docstrings: explicit disambiguation workflow (propose→confirm), offline router handling, case where no interface matches.
+
 ## [v1.4.0-patch.107] - 2026-05-30
 ### Added
 - **mcp-server** 📊 MCP interaction logger: monkey-patches all public async orchestrator methods at startup to transparently log every Claude tool call to `mcp-history.jsonl` (tool name, target agent, duration ms, status ok/error). Zero impact on Claude / MCP protocol — purely Stigix-side.
