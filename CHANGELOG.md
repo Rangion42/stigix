@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.115] - 2026-05-30
+### Added
+- **vyos** 🆕 `op_get_state()` in `vyos_sdwan_ctl.py`: new read-only function and `get-state` CLI subcommand. Single `api_retrieve()` call returns full router state: per-interface `admin_state` (up/down), `qos_active` params (delay_ms, loss_pct, rate, corruption), and all blackhole IP blocks (tag-999). Auto-detects VyOS 1.4 (`traffic-policy/`) and 1.5 (`qos/`) policy namespaces. Zero regression risk — no existing function modified.
+- **web-dashboard** 🔌 `VyosManager.getState(routerId)`: new method spawning `vyos_sdwan_ctl.py get-state`. Pattern mirrors existing `getBlocks()`.
+- **web-dashboard** 🌐 `GET /api/vyos/routers/:id/state`: new authenticated route returning live VyOS router state from HTTP API.
+- **mcp-server** 🤖 `get_vyos_router_state` MCP tool: live state audit — Claude displays 🟢/🔴 per interface, QoS params, IP blocks. Use on *"What is the current VyOS state?"*.
+- **mcp-server** ⚡ `vyos_bulk_reset` MCP tool: scope-based bulk reset (`all-qos`, `all-blocks`, `unshut-all`, `full-reset`). Queries state first, presents plan, waits for confirmation, then executes via existing `vyos_execute_adhoc` calls.
+- **mcp-server** 🔗 `orchestrator.get_vyos_state(agent_id, router_id)`: calls `GET /api/vyos/routers/{id}/state` on the Stigix agent.
+
+## [v1.4.0-patch.114] - 2026-05-30
+### Added
+- **mcp-server** 🟢 `get_vyos_interfaces` now includes `status: 'up'|'down'|'unknown'` for each interface in the MCP response. Data was already stored in `vyos-config.json` (set by `vyos_sdwan_ctl.py get-info` from the `disable` flag) — just not forwarded to Claude.
+- **web-dashboard** 🔧 `VyosRouterInterface` TypeScript type: added `status?: 'up' | 'down' | 'unknown'` field.
+- **mcp-server** 📝 `get_vyos_interfaces` docstring: updated disambiguation workflow to display 🟢/🔴 per interface and warn before acting on a `down` interface.
+
+## [v1.4.0-patch.113] - 2026-05-30
+### Fixed
+- **web-dashboard** 🎨 `Vyos.tsx` History table — **Time column**: date now stacked under time (`flex-col`) instead of inline, eliminating overlap with the Sequence column.
+- **web-dashboard** 🎨 `Vyos.tsx` History table — **Sequence column**: when `sequence_name` is `"Unknown"`, falls back to displaying `sequence_id` in muted monospace instead of the confusing "Unknown" label.
+- **mcp-server** ⏱️ `orchestrator.py vyos_execute_adhoc`: added `asyncio.sleep(0.4)` after running the adhoc sequence and before fetching history. Prevents race condition where the temp sequence was deleted before the server finished writing the history entry with the correct `sequence_name` → caused "Unknown" in history.
+### Documentation
+- **docs** 📖 `VYOS_CONTROL.md`: added "MCP Session — Validated Behaviors (30/05/2026)" section with full topology diagram, confirmed interaction table (9 scenarios), key behaviors, and prompt best practices.
+
+## [v1.4.0-patch.112] - 2026-05-30
+### Fixed
+- **mcp-server** 🧭 `get_vyos_interfaces` docstring: added **CRITICAL SITE NAME RESOLUTION** rule — Claude must never claim a VyOS node is missing if a site name like `"BR1"` or `"DC1"` matches an interface description. Must always scan descriptions first before concluding a node doesn't exist.
+### Added
+- **mcp-server** 📋 `mcp-server/Exemple/MCP_VyOS_Test_Exhaustif.md`: comprehensive test guide mapping site names (BR1/BR2/DC1) to physical router interfaces (`vyosrouter eth1`, `vyoslandc1`) with full test scenarios and cleanup steps.
+
+## [v1.4.0-patch.111] - 2026-05-30
+### Fixed
+- **mcp-server** 🔀 `orchestrator.py`: unified `set-impairment` → `set-qos` command mapping. `set-impairment` is now the canonical MCP command name; the orchestrator maps it (and legacy `set-latency`, `set-loss`, `set-rate`, `set-corruption`) to `set-qos` which handles combined latency+loss+rate in a single VyOS policy.
+- **web-dashboard** 🎨 `Vyos.tsx` History table column widths: adjusted `table-fixed` column proportions to reduce Time/Sequence overlap on smaller screens.
+
+## [v1.4.0-patch.110] - 2026-05-30
+### Fixed
+- **mcp-server** 🐛 `get_security_results_stats`: removed `raw_counters` from the MCP response payload. Raw counters were causing Claude to compute incorrect enforcement percentages (e.g. 49%) instead of using the real weighted posture scores (URL 35.1, DNS 97.6, Threat 100.0). Claude now always leads with `posture_scores`.
+
 ## [v1.4.0-patch.109] - 2026-05-30
 ### Fixed
 - **mcp-server** 🐛 `get_security_results_stats`: was returning raw counters only — Claude was computing wrong enforcement % (49%) instead of real weighted scores (URL 35.1, DNS 97.6, Threat 100.0).
