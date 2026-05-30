@@ -553,6 +553,167 @@ class TestOrchestrator:
                 logger.error(f"Failed to set status for sequence {sequence_id} on {agent_id}: {e}")
                 return {"error": str(e)}
 
+    async def get_vyos_interfaces(self, agent_id: str, router_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Return VyOS router interfaces with their descriptions.
+        Used by Claude to identify which interface to target before executing an action.
+        """
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return [{"error": f"Agent {agent_id} not found."}]
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        url = f"{agent.api_base_url}/api/vyos/routers"
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                response = await client.get(url, headers=headers)
+                response.raise_for_status()
+                routers = response.json()
+
+                result = []
+                for router in routers:
+                    if router_id and router.get("id") != router_id and router.get("name") != router_id:
+                        continue
+                    result.append({
+                        "router_id": router.get("id"),
+                        "router_name": router.get("name"),
+                        "host": router.get("host"),
+                        "status": router.get("status"),
+                        "interfaces": [
+                            {
+                                "name": iface.get("name"),
+                                "description": iface.get("description") or "(no description)",
+                                "addresses": iface.get("address", [])
+                            }
+                            for iface in router.get("interfaces", [])
+                        ]
+                    })
+                return result
+            except Exception as e:
+                logger.error(f"Failed to fetch VyOS interfaces from {agent_id}: {e}")
+                return [{"error": str(e)}]
+
+    async def vyos_execute_adhoc(
+        self,
+        agent_id: str,
+        router_id: str,
+        command: str,
+        interface: Optional[str] = None,
+        latency_ms: Optional[int] = None,
+        loss_pct: Optional[float] = None,
+        corruption_pct: Optional[float] = None,
+        rate: Optional[str] = None,
+        ip: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Execute an ad-hoc VyOS action by creating a temporary single-action sequence,
+        running it immediately, then deleting it.
+        Returns the result and the VyOS CLI equivalent for transparency.
+        """
+        import uuid
+
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        base_url = agent.api_base_url
+
+        # Build parameters dict (only non-None values)
+        parameters: Dict[str, Any] = {}
+        if latency_ms is not None:
+            parameters["latency"] = latency_ms
+        if loss_pct is not None:
+            parameters["loss"] = loss_pct
+        if corruption_pct is not None:
+            parameters["corrupt"] = corruption_pct
+        if rate is not None:
+            parameters["rate"] = rate
+        if ip is not None:
+            parameters["ip"] = ip
+
+        # Build temp sequence payload
+        seq_id = f"mcp-adhoc-{uuid.uuid4().hex[:8]}"
+        iface_label = f":{interface}" if interface else ""
+        sequence_payload = {
+            "id": seq_id,
+            "name": f"MCP: {command}{iface_label} on {router_id}",
+            "enabled": False,
+            "executionMode": "STEP_BY_STEP",
+            "cycle_duration": 0,
+            "currentStep": 0,
+            "actions": [
+                {
+                    "id": "action-1",
+                    "offset_minutes": 0,
+                    "router_id": router_id,
+                    "interface": interface or "",
+                    "command": command,
+                    "parameters": parameters
+                }
+            ]
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                # Step 1 — Create the temp sequence
+                create_resp = await client.post(
+                    f"{base_url}/api/vyos/sequences",
+                    json=sequence_payload,
+                    headers=headers
+                )
+                create_resp.raise_for_status()
+
+                # Step 2 — Run it immediately
+                run_resp = await client.post(
+                    f"{base_url}/api/vyos/sequences/run/{seq_id}",
+                    headers=headers
+                )
+                run_resp.raise_for_status()
+                run_result = run_resp.json() if run_resp.content else {"success": True}
+
+                # Step 3 — Fetch history to get CLI equivalent (last entry)
+                history_resp = await client.get(
+                    f"{base_url}/api/vyos/history?limit=1",
+                    headers=headers
+                )
+                cli_equivalent = None
+                if history_resp.status_code == 200:
+                    history = history_resp.json()
+                    if history:
+                        cli_equivalent = history[0].get("cli_equivalent")
+
+                # Step 4 — Delete the temp sequence
+                await client.delete(
+                    f"{base_url}/api/vyos/sequences/{seq_id}",
+                    headers=headers
+                )
+
+                return {
+                    "success": True,
+                    "command": command,
+                    "router_id": router_id,
+                    "interface": interface,
+                    "parameters": parameters,
+                    "cli_equivalent": cli_equivalent,
+                    "result": run_result
+                }
+
+            except Exception as e:
+                # Cleanup: try to delete the temp sequence even on failure
+                try:
+                    async with httpx.AsyncClient(timeout=5.0) as cleanup_client:
+                        await cleanup_client.delete(
+                            f"{base_url}/api/vyos/sequences/{seq_id}",
+                            headers=headers
+                        )
+                except Exception:
+                    pass
+                logger.error(f"VyOS ad-hoc action failed on {agent_id}: {e}")
+                return {"error": str(e), "command": command, "router_id": router_id}
+
+
     async def get_dem_stats(self, agent_id: str) -> Dict[str, Any]:
         """Fetch Digital Experience Monitoring (DEM) stats from a node."""
         agent = await self.registry.get_endpoint(agent_id)

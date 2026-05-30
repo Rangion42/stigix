@@ -114,3 +114,65 @@ The system uses unique **Run IDs** for every execution:
 - **Exclusive Command**: The impairment logic uses a unified `set-qos` command on the back-end Python controller for stability.
 - **API Rate Limits**: Rapidly triggering many actions (e.g., 50 per minute) may hit VyOS API constraints or cause delayed impairment application.
 - **Persistence**: Sequences and history are persisted locally in `config/vyos-sequences.json` and `logs/vyos-history.jsonl`.
+
+---
+
+## 🤖 Interface Naming Best Practices (MCP / Claude Desktop)
+
+When using **Claude Desktop with the Stigix MCP Server**, Claude can control VyOS routers using natural language — *"Shut the MPLS link on BR1"*, *"Add 150ms latency on the WAN interface"*, *"Block IP 10.0.0.5"*.
+
+For this to work, **interface descriptions must be configured on your VyOS routers**. Claude reads these descriptions to identify which physical interface matches your intent.
+
+### ✅ Good description format
+
+Use a clear, keyword-rich format:
+
+```
+set interfaces ethernet eth0 description "WAN-Internet-Bouygues"
+set interfaces ethernet eth1 description "MPLS-Link-DC1"
+set interfaces ethernet eth2 description "LAN-Users-Branch"
+set interfaces ethernet eth3 description "4G-Backup-SFR"
+```
+
+### 📋 Recommended naming convention
+
+```
+{LINK-TYPE}-{PURPOSE}-{DESTINATION}
+```
+
+| Example description | What Claude understands |
+|---|---|
+| `WAN-Internet-Bouygues` | "WAN", "internet", "Bouygues" |
+| `MPLS-Link-DC1` | "MPLS", "DC1", "datacenter" |
+| `LAN-Users-Branch` | "LAN", "users", "local" |
+| `4G-Backup-SFR` | "4G", "backup", "SFR" |
+| `IPSEC-VPN-Paris` | "VPN", "Paris", "tunnel" |
+
+### ❌ What NOT to do
+
+```
+# Bad — Claude cannot identify these
+set interfaces ethernet eth0 description "eth0"
+set interfaces ethernet eth1 description "interface 1"
+# Or no description at all
+```
+
+### ⚠️ Without descriptions
+
+If no descriptions are configured, Claude will:
+1. List all interfaces with names and IPs
+2. Warn the user that natural language targeting is unavailable
+3. Ask the user to specify the interface name explicitly (e.g. `eth1`)
+
+### How to configure on VyOS
+
+```bash
+configure
+set interfaces ethernet eth0 description "WAN-Internet-Provider"
+set interfaces ethernet eth1 description "MPLS-Link-DC1"
+commit
+save
+exit
+```
+
+Then click **Refresh** in the Stigix dashboard to sync the updated interface list.

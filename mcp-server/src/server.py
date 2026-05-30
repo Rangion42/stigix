@@ -387,6 +387,99 @@ async def set_vyos_scenario_status(agent_id: str, scenario_id: str, enabled: boo
 
 
 @mcp.tool()
+async def get_vyos_interfaces(agent_id: str, router_id: Optional[str] = None) -> List[dict]:
+    """
+    List VyOS router interfaces with their descriptions, IP addresses, and status.
+
+    USE THIS FIRST before any vyos_execute_action call. It lets you identify
+    which physical interface matches the user's intent (e.g. "MPLS link", "WAN", "LAN").
+
+    IMPORTANT — Interface descriptions:
+    - If interfaces show "(no description)", inform the user that interface descriptions
+      must be configured on the VyOS router for natural language targeting to work.
+    - Guide them to add descriptions: see VYOS_CONTROL.md section "Interface Naming Best Practices".
+    - Without descriptions, the user must specify the interface name explicitly (e.g. 'eth1').
+
+    Args:
+        agent_id: ID of the Stigix node managing the VyOS routers.
+        router_id: Optional. Filter by specific router ID or name. If omitted, returns all routers.
+    """
+    results = await orchestrator.get_vyos_interfaces(agent_id, router_id)
+
+    # Detect missing descriptions and surface a warning
+    all_missing = all(
+        all(iface.get("description") in (None, "", "(no description)")
+            for iface in r.get("interfaces", []))
+        for r in results
+        if "error" not in r
+    )
+
+    if all_missing and any("error" not in r for r in results):
+        for r in results:
+            if "error" not in r:
+                r["_warning"] = (
+                    "No interface descriptions found on this router. "
+                    "Natural language targeting (e.g. 'shut MPLS') requires descriptive interface names. "
+                    "Please configure descriptions on your VyOS router — "
+                    "see VYOS_CONTROL.md > 'Interface Naming Best Practices'."
+                )
+
+    return results
+
+
+@mcp.tool()
+async def vyos_execute_action(
+    agent_id: str,
+    router_id: str,
+    command: str,
+    interface: Optional[str] = None,
+    latency_ms: Optional[int] = None,
+    loss_pct: Optional[float] = None,
+    corruption_pct: Optional[float] = None,
+    rate: Optional[str] = None,
+    ip: Optional[str] = None
+) -> dict:
+    """
+    Execute an ad-hoc VyOS network action without requiring a pre-built sequence.
+    Creates a temporary sequence, runs it immediately, then deletes it.
+
+    WORKFLOW:
+    1. Call get_vyos_interfaces first to identify the target interface by description.
+    2. Call this tool with the resolved interface name.
+    3. Always confirm with the user before executing destructive actions (interface-down, deny-traffic).
+    4. Return the VyOS CLI equivalent so the user can see exactly what was done.
+
+    COMMANDS:
+    - 'interface-down'   : Disable an interface. Requires: interface
+    - 'interface-up'     : Re-enable an interface. Requires: interface
+    - 'set-latency'      : Add artificial latency (netem). Requires: interface, latency_ms
+    - 'set-loss'         : Add packet loss. Requires: interface, loss_pct (0-100)
+    - 'set-corruption'   : Add packet corruption. Requires: interface, corruption_pct (0-100)
+    - 'set-rate'         : Limit bandwidth. Requires: interface, rate (e.g. '10mbit')
+    - 'clear-qos'        : Remove all QoS impairments (latency/loss/rate). Requires: interface
+    - 'deny-traffic'     : Block an IP address (firewall rule). Requires: ip
+    - 'allow-traffic'    : Unblock an IP address. Requires: ip
+    - 'clear-all-blocks' : Remove all IP block rules.
+    - 'show-denied'      : List currently blocked IPs.
+
+    Args:
+        agent_id: ID of the Stigix node managing the VyOS router.
+        router_id: ID of the VyOS router (from get_vyos_interfaces).
+        command: One of the commands listed above.
+        interface: Interface name (e.g. 'eth0', 'eth1'). Required for most commands.
+        latency_ms: Latency to add in milliseconds. Used with 'set-latency'.
+        loss_pct: Packet loss percentage (0-100). Used with 'set-loss'.
+        corruption_pct: Corruption percentage (0-100). Used with 'set-corruption'.
+        rate: Bandwidth rate limit string (e.g. '10mbit', '100kbit'). Used with 'set-rate'.
+        ip: IP address to block/unblock. Used with 'deny-traffic' / 'allow-traffic'.
+    """
+    return await orchestrator.vyos_execute_adhoc(
+        agent_id, router_id, command, interface,
+        latency_ms, loss_pct, corruption_pct, rate, ip
+    )
+
+
+@mcp.tool()
 async def get_dem_summary(agent_id: str) -> dict:
     """
     Get a summary of Digital Experience Monitoring (DEM) health and recent probe results.

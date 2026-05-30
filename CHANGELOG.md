@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.106] - 2026-05-30
+### Added
+- **mcp-server** 🤖 2 new VyOS ad-hoc MCP tools for natural language network control:
+  - `get_vyos_interfaces`: List VyOS router interfaces with descriptions, IPs, and status. Detects missing descriptions and guides the user to configure them. Required first step before any ad-hoc action.
+  - `vyos_execute_action`: Execute any VyOS network action directly via Claude Desktop — shutdown/enable interface, add latency/loss/corruption/rate-limiting (netem), block/unblock IPs (firewall). No pre-built sequence needed: creates a temp sequence, runs it, deletes it.
+- **docs** 📖 Added "Interface Naming Best Practices" section to `VYOS_CONTROL.md` — explains how to format VyOS interface descriptions for Claude MCP natural language targeting (e.g., `MPLS-Link-DC1`, `WAN-Internet-Bouygues`).
+
+## [v1.4.0-patch.105] - 2026-05-29
+### Fixed
+- **mcp-server** 🐛 Fixed `run_eicar_test` returning HTTP 400 — payload was sending `{endpoints: [url]}` (array) but backend expects `{endpoint: url}` (string).
+
+## [v1.4.0-patch.104] - 2026-05-29
+### Fixed
+- **web-dashboard** 🐳 Fixed `stigix-upgrader` container not cleaning up after upgrade — helper container was left running after upgrade completion, blocking future upgrade attempts.
+
+## [v1.4.0-patch.103] - 2026-05-29
+### Fixed
+- **web-dashboard** 🐛 Code review: 3 bug fixes (details in commit `5fcadae`).
+
 ## [v1.4.0-patch.102] - 2026-05-29
 ### Fixed
 - **mcp-server** 🐛 Fixed `generate_report` crashing with `AttributeError: 'StigixEndpoint' has no attribute 'agent_id'` when called without arguments. Now correctly uses `meta.get("site_name") or id` matching the `get_endpoint()` lookup pattern.
