@@ -13,7 +13,7 @@ The Stigix MCP Server provides a **natural language interface** to orchestrate y
 ✅ **Mesh-Ready Orchestration** - Control any node in the mesh from any other node via distributed discovery.  
 ✅ **Natural Language** - Command your infrastructure in plain English or French.  
 ✅ **Distributed Control** - The MCP server runs on every Stigix instance, providing total redundancy.  
-✅ **Full Toolset** - 48 tools covering 100% of stigix-cli capabilities: traffic, security, DEM probes, fabric targets, VyOS, and analytics.  
+✅ **Full Toolset** - 50 tools covering 100% of stigix-cli capabilities: traffic, security, DEM probes, fabric targets, VyOS, and analytics.  
 ✅ **SSE Transport** - Native support for Server-Sent Events (SSE) for easy remote access.  
 
 ---
@@ -196,7 +196,7 @@ If the server doesn't appear or shows a red error:
 
 ---
 
-## 🛠️ Available MCP Tools (48 tools)
+## 🛠️ Available MCP Tools (50 tools)
 
 > [!TIP]
 > All tools that target a specific node accept an `agent_id` parameter — this is the node's name as shown in `list_endpoints` (e.g., `"BR8"`, `"Paris"`, `"Hetzner"`).
@@ -297,8 +297,10 @@ If the server doesn't appear or shows a red error:
 | `run_vyos_scenario` | Execute a config sequence | *"Apply failover-paris scenario"* |
 | `get_vyos_timeline` | History of VyOS configuration changes | *"Recent VyOS changes on BR8"* |
 | `set_vyos_scenario_status` | Enable or disable a cyclic scenario | *"Stop cyclic flapping on BR8"* |
-| `get_vyos_interfaces` | List VyOS router interfaces with descriptions — required first step before ad-hoc actions | *"Show interfaces of the router on BR8"* |
+| `get_vyos_interfaces` | List VyOS router interfaces with descriptions and up/down status — required first step before ad-hoc actions | *"Show interfaces of the router on BR8"* |
 | `vyos_execute_action` | Execute any VyOS action via natural language: shut/enable interface, add latency/loss/rate, block/unblock IP | *"Shut MPLS on BR1"*, *"Add 150ms latency on WAN"*, *"Block 10.0.0.5"* |
+| `get_vyos_router_state` | **Live state audit**: per-interface admin status (🟢/🔴), active QoS params (delay/loss/rate), and all tag-999 IP blocks in one call | *"What is the current state of vyosrouter?"* |
+| `vyos_bulk_reset` | **Bulk reset**: clear all active QoS, remove all IP blocks, and/or unshut all down interfaces — scope: `all-qos`, `all-blocks`, `unshut-all`, `full-reset` | *"Reset everything on BR8"* |
 
 > [!TIP]
 > `get_vyos_interfaces` reads interface **descriptions** to resolve natural language intent. For `vyos_execute_action` to work with prompts like *"shut the MPLS link"*, descriptions must be set on the VyOS router (e.g., `set interfaces ethernet eth1 description "MPLS-Link-DC1"`). See [VYOS_CONTROL.md](VYOS_CONTROL.md) → *Interface Naming Best Practices*.
@@ -395,9 +397,30 @@ vyos_execute_action("BR1", router_id="vyos-br1", command="interface-up", interfa
 **User:** *"Add 200ms latency and 3% loss on the WAN of BR8, then block 10.0.0.5."*
 ```
 get_vyos_interfaces("BR8")    → eth0 = WAN-Internet-*
-vyos_execute_action("BR8", router_id="...", command="set-latency", interface="eth0", latency_ms=200)
-vyos_execute_action("BR8", router_id="...", command="set-loss", interface="eth0", loss_pct=3)
+vyos_execute_action("BR8", router_id="...", command="set-impairment", interface="eth0", latency_ms=200, loss_pct=3)
 vyos_execute_action("BR8", router_id="...", command="deny-traffic", ip="10.0.0.5")
+```
+
+### 10. VyOS Live State Audit + Bulk Reset
+**User:** *"What is the current state of the VyOS routers on BR8?"*
+```
+get_vyos_router_state("BR8", router_id="vyosrouter")
+→ Interface eth0 (ALL-MPLS-190): 🟢 up
+→ Interface eth1 (BR1-MPLS-197): 🟢 up  +150ms delay  (qos_active)
+→ Interface eth7 (BR2-INET-226): 🔴 down  (admin disabled)
+→ Interface eth8 (BR2-MPLS-196): 🟢 up
+→ IP Blocks: 192.168.1.100/32 (tag-999)
+```
+
+**User:** *"Clear everything — remove QoS, blocks, and restore down interfaces."*
+```
+# Claude proposes plan:
+# • clear-qos eth1 (BR1-MPLS-197)
+# • clear-blocks: 1 IP block
+# • no-shut eth7 (BR2-INET-226)
+# User confirms →
+vyos_bulk_reset("BR8", router_id="vyosrouter", scope="full-reset")
+→ { actions_taken: ["clear-qos: eth1", "clear-blocks: 1 IP", "no-shut: eth7"], errors: [] }
 ```
 
 > [!IMPORTANT]

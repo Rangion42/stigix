@@ -2340,6 +2340,145 @@ export default function Vyos(props: VyosProps) {
                 onConfirm={confirmModal.onConfirm}
                 onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
             />
+
+            {/* ── RAZ Confirmation Modal ─────────────────────────────────────────── */}
+            {razModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+                        {/* Header */}
+                        <div className="px-6 py-4 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <Eraser size={18} className="text-amber-400" />
+                                <div>
+                                    <div className="font-bold text-amber-300 text-sm">Reset Router — RAZ</div>
+                                    <div className="text-[11px] text-text-muted font-mono">{razModal.name}</div>
+                                </div>
+                            </div>
+                            {!razLoading && !razResult && (
+                                <button onClick={() => setRazModal(null)} className="text-text-muted hover:text-text-primary transition-colors">
+                                    <XCircle size={18} />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Body */}
+                        <div className="px-6 py-4 space-y-4">
+                            {!razResult ? (
+                                <>
+                                    <p className="text-[12px] text-text-secondary">
+                                        The following actions will be executed on <span className="text-text-primary font-bold">{razModal.name}</span>:
+                                    </p>
+
+                                    {/* QoS to clear */}
+                                    {(() => {
+                                        const qosIfaces = razModal.state?.interfaces?.filter((i: any) => i.qos_active) || [];
+                                        return qosIfaces.length > 0 ? (
+                                            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
+                                                <div className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-2">Clear QoS ({qosIfaces.length} interface{qosIfaces.length > 1 ? 's' : ''})</div>
+                                                <div className="space-y-1">
+                                                    {qosIfaces.map((i: any) => (
+                                                        <div key={i.name} className="text-[11px] font-mono text-amber-300">
+                                                            {i.name} — {i.qos_active?.delay_ms ? `+${i.qos_active.delay_ms}ms` : ''}{i.qos_active?.loss_pct ? ` ${i.qos_active.loss_pct}% loss` : ''}{i.qos_active?.rate ? ` ${i.qos_active.rate}` : ''}
+                                                            {i.description && <span className="text-text-muted ml-1.5">({i.description})</span>}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : <div className="text-[11px] text-text-muted">✓ No active QoS</div>;
+                                    })()}
+
+                                    {/* IP Blocks */}
+                                    {(() => {
+                                        const blocks = razModal.state?.blackhole_blocks || [];
+                                        return blocks.length > 0 ? (
+                                            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                                                <div className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-2">Remove IP Blocks ({blocks.length})</div>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {blocks.map((b: any, i: number) => (
+                                                        <span key={i} className="font-mono text-[10px] text-red-300 bg-red-500/10 px-2 py-0.5 rounded">{b.prefix}</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : <div className="text-[11px] text-text-muted">✓ No active IP blocks</div>;
+                                    })()}
+
+                                    {/* Down interfaces */}
+                                    {(() => {
+                                        const downIfaces = razModal.state?.interfaces?.filter((i: any) => i.admin_state === 'down') || [];
+                                        return downIfaces.length > 0 ? (
+                                            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                                                <div className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-2">Unshut Interfaces ({downIfaces.length})</div>
+                                                <div className="space-y-1">
+                                                    {downIfaces.map((i: any) => (
+                                                        <div key={i.name} className="text-[11px] font-mono text-red-300">
+                                                            🔴 {i.name}{i.description && <span className="text-text-muted ml-1.5">({i.description})</span>}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : <div className="text-[11px] text-text-muted">✓ All interfaces up</div>;
+                                    })()}
+
+                                    {/* Clean state message */}
+                                    {razModal.state?.interfaces?.every((i: any) => !i.qos_active && i.admin_state === 'up') &&
+                                        (razModal.state?.blackhole_count ?? 0) === 0 && (
+                                        <div className="text-[12px] text-green-400 flex items-center gap-2 py-2">
+                                            <CheckCircle size={14} />
+                                            Router is already in clean state — nothing to reset.
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                /* Result */
+                                <div className="space-y-3">
+                                    <div className={`flex items-center gap-2 text-sm font-bold ${razResult.success ? 'text-green-400' : 'text-amber-400'}`}>
+                                        {razResult.success ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                                        {razResult.summary || (razResult.error ? `Error: ${razResult.error}` : 'Done')}
+                                    </div>
+                                    {razResult.actions_taken?.length > 0 && (
+                                        <div className="space-y-1">
+                                            {razResult.actions_taken.map((a: string, i: number) => (
+                                                <div key={i} className="text-[11px] text-green-400 font-mono flex items-center gap-1.5">
+                                                    <span className="text-green-500">✓</span> {a}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {razResult.errors?.length > 0 && (
+                                        <div className="space-y-1">
+                                            {razResult.errors.map((e: string, i: number) => (
+                                                <div key={i} className="text-[11px] text-red-400 font-mono flex items-center gap-1.5">
+                                                    <span>✗</span> {e}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-6 py-4 border-t border-border/50 flex items-center justify-between">
+                            <button
+                                onClick={() => { setRazModal(null); setRazResult(null); }}
+                                className="px-4 py-2 text-[12px] text-text-muted hover:text-text-primary transition-colors"
+                            >
+                                {razResult ? 'Close' : 'Cancel'}
+                            </button>
+                            {!razResult && (
+                                <button
+                                    onClick={() => executeRaz('full-reset')}
+                                    disabled={razLoading}
+                                    className="px-5 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-[12px] font-bold rounded-xl transition-all flex items-center gap-2"
+                                >
+                                    {razLoading ? <RefreshCw size={14} className="animate-spin" /> : <Eraser size={14} />}
+                                    {razLoading ? 'Resetting…' : 'Confirm Full Reset'}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -2940,144 +3079,5 @@ function LiveFeed() {
                 )}
             </div>
         </div>
-
-        {/* ── RAZ Confirmation Modal ─────────────────────────────────────────── */}
-        {razModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-                    {/* Header */}
-                    <div className="px-6 py-4 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Eraser size={18} className="text-amber-400" />
-                            <div>
-                                <div className="font-bold text-amber-300 text-sm">Reset Router — RAZ</div>
-                                <div className="text-[11px] text-text-muted font-mono">{razModal.name}</div>
-                            </div>
-                        </div>
-                        {!razLoading && !razResult && (
-                            <button onClick={() => setRazModal(null)} className="text-text-muted hover:text-text-primary transition-colors">
-                                <XCircle size={18} />
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Body */}
-                    <div className="px-6 py-4 space-y-4">
-                        {!razResult ? (
-                            <>
-                                <p className="text-[12px] text-text-secondary">
-                                    The following actions will be executed on <span className="text-text-primary font-bold">{razModal.name}</span>:
-                                </p>
-
-                                {/* QoS to clear */}
-                                {(() => {
-                                    const qosIfaces = razModal.state?.interfaces?.filter((i: any) => i.qos_active) || [];
-                                    return qosIfaces.length > 0 ? (
-                                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
-                                            <div className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-2">Clear QoS ({qosIfaces.length} interface{qosIfaces.length > 1 ? 's' : ''})</div>
-                                            <div className="space-y-1">
-                                                {qosIfaces.map((i: any) => (
-                                                    <div key={i.name} className="text-[11px] font-mono text-amber-300">
-                                                        {i.name} — {i.qos_active?.delay_ms ? `+${i.qos_active.delay_ms}ms` : ''}{i.qos_active?.loss_pct ? ` ${i.qos_active.loss_pct}% loss` : ''}{i.qos_active?.rate ? ` ${i.qos_active.rate}` : ''}
-                                                        {i.description && <span className="text-text-muted ml-1.5">({i.description})</span>}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ) : <div className="text-[11px] text-text-muted">✓ No active QoS</div>;
-                                })()}
-
-                                {/* IP Blocks */}
-                                {(() => {
-                                    const blocks = razModal.state?.blackhole_blocks || [];
-                                    return blocks.length > 0 ? (
-                                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                                            <div className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-2">Remove IP Blocks ({blocks.length})</div>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {blocks.map((b: any, i: number) => (
-                                                    <span key={i} className="font-mono text-[10px] text-red-300 bg-red-500/10 px-2 py-0.5 rounded">{b.prefix}</span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ) : <div className="text-[11px] text-text-muted">✓ No active IP blocks</div>;
-                                })()}
-
-                                {/* Down interfaces */}
-                                {(() => {
-                                    const downIfaces = razModal.state?.interfaces?.filter((i: any) => i.admin_state === 'down') || [];
-                                    return downIfaces.length > 0 ? (
-                                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                                            <div className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-2">Unshut Interfaces ({downIfaces.length})</div>
-                                            <div className="space-y-1">
-                                                {downIfaces.map((i: any) => (
-                                                    <div key={i.name} className="text-[11px] font-mono text-red-300">
-                                                        🔴 {i.name}{i.description && <span className="text-text-muted ml-1.5">({i.description})</span>}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ) : <div className="text-[11px] text-text-muted">✓ All interfaces up</div>;
-                                })()}
-
-                                {/* Clean state message */}
-                                {razModal.state?.interfaces?.every((i: any) => !i.qos_active && i.admin_state === 'up') &&
-                                    (razModal.state?.blackhole_count ?? 0) === 0 && (
-                                    <div className="text-[12px] text-green-400 flex items-center gap-2 py-2">
-                                        <CheckCircle size={14} />
-                                        Router is already in clean state — nothing to reset.
-                                    </div>
-                                )}
-                            </>
-                        ) : (
-                            /* Result */
-                            <div className="space-y-3">
-                                <div className={`flex items-center gap-2 text-sm font-bold ${razResult.success ? 'text-green-400' : 'text-amber-400'}`}>
-                                    {razResult.success ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
-                                    {razResult.summary || (razResult.error ? `Error: ${razResult.error}` : 'Done')}
-                                </div>
-                                {razResult.actions_taken?.length > 0 && (
-                                    <div className="space-y-1">
-                                        {razResult.actions_taken.map((a: string, i: number) => (
-                                            <div key={i} className="text-[11px] text-green-400 font-mono flex items-center gap-1.5">
-                                                <span className="text-green-500">✓</span> {a}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                                {razResult.errors?.length > 0 && (
-                                    <div className="space-y-1">
-                                        {razResult.errors.map((e: string, i: number) => (
-                                            <div key={i} className="text-[11px] text-red-400 font-mono flex items-center gap-1.5">
-                                                <span>✗</span> {e}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Footer */}
-                    <div className="px-6 py-4 border-t border-border/50 flex items-center justify-between">
-                        <button
-                            onClick={() => { setRazModal(null); setRazResult(null); }}
-                            className="px-4 py-2 text-[12px] text-text-muted hover:text-text-primary transition-colors"
-                        >
-                            {razResult ? 'Close' : 'Cancel'}
-                        </button>
-                        {!razResult && (
-                            <button
-                                onClick={() => executeRaz('full-reset')}
-                                disabled={razLoading}
-                                className="px-5 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-[12px] font-bold rounded-xl transition-all flex items-center gap-2"
-                            >
-                                {razLoading ? <RefreshCw size={14} className="animate-spin" /> : <Eraser size={14} />}
-                                {razLoading ? 'Resetting…' : 'Confirm Full Reset'}
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
-        )}
     );
 }
