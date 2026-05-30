@@ -14,6 +14,7 @@ export interface VyosRouterInterface {
     name: string;
     description: string | null;
     address: string[];
+    status?: 'up' | 'down' | 'unknown';
 }
 
 export interface VyosRouter {

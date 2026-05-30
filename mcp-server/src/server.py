@@ -487,6 +487,18 @@ async def get_vyos_interfaces(agent_id: str, router_id: Optional[str] = None) ->
     a description are management interfaces and are silently excluded from this list.
     They are never proposed as targets and Claude should never act on them.
 
+    Each interface includes:
+      - name       : OS interface name (e.g. eth1)
+      - description: human-readable label set on VyOS (e.g. BR1-MPLS-197)
+      - addresses  : list of IP/prefix (e.g. ["192.168.197.254/24"])
+      - status     : 'up' | 'down' | 'unknown'  — reflects the VyOS admin state
+                     ('down' means the interface has the 'disable' flag set on VyOS)
+
+    Use the status field to:
+      - Report interface state when the user asks "which interfaces are up/down?"
+      - Warn the user before applying an action on a 'down' interface
+      - Diagnose connectivity issues without executing any command
+
     ⚠️  CRITICAL — SITE NAME RESOLUTION:
     ─────────────────────────────────────
     Site/router names mentioned by the user (e.g. "BR1", "BR2", "DC1", "HQ") are NOT
@@ -513,11 +525,12 @@ async def get_vyos_interfaces(agent_id: str, router_id: Optional[str] = None) ->
 
     2. PRESENT the eligible interfaces to the user in a clean format:
        - Router name + status (online/offline)
-       - For each chaos-eligible interface: name | description | IP
+       - For each chaos-eligible interface: name | description | IP | status (🟢 up / 🔴 down)
 
     3. IF exactly ONE interface matches the intent → propose it and ask for confirmation:
-       "I found MPLS-Link-DC1 on vyoslandc1 / eth1 (192.168.281.18/24). Shall I apply
-        [action] to this interface? (yes/no)"
+       "I found MPLS-Link-DC1 on vyoslandc1 / eth1 (192.168.281.18/24) — 🟢 up.
+        Shall I apply [action] to this interface? (yes/no)"
+       Warn the user if the interface is 'down' before confirming.
        Wait for user confirmation before calling vyos_execute_action.
 
     4. IF multiple interfaces match → list ALL candidates and ask the user to choose:

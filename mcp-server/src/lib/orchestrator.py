@@ -584,7 +584,8 @@ class TestOrchestrator:
                             {
                                 "name": iface.get("name"),
                                 "description": iface.get("description") or "(no description)",
-                                "addresses": iface.get("address", [])
+                                "addresses": iface.get("address", []),
+                                "status": iface.get("status", "unknown")  # up / down / unknown
                             }
                             for iface in router.get("interfaces", [])
                         ]
