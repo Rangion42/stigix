@@ -848,10 +848,9 @@ class TestOrchestrator:
 
     async def get_security_results_stats(self, agent_id: str) -> Dict[str, Any]:
         """
-        Fetch the full security scorecard for a node:
+        Fetch the security scorecard for a node:
         - Weighted posture scores (URL Filter, DNS Security, Threat Prevention) out of 100
-        - Raw test counters (total, blocked, sinkholed, allowed) per module
-        - Score trend for the last 24 runs (url, dns, threat per run)
+        - Score trend for the last 24 runs (url, dns, threat per entry)
         """
         agent = await self.registry.get_endpoint(agent_id)
         if not agent:
@@ -862,23 +861,15 @@ class TestOrchestrator:
 
         async with httpx.AsyncClient(timeout=15.0) as client:
             import asyncio
-            # Fetch all three in parallel
-            raw_stats_task    = client.get(f"{base}/api/security/results/stats", headers=headers)
             latest_score_task = client.get(f"{base}/api/security/scores/latest", headers=headers)
             history_task      = client.get(f"{base}/api/security/scores?limit=24", headers=headers)
 
-            raw_r, score_r, hist_r = await asyncio.gather(
-                raw_stats_task, latest_score_task, history_task,
+            score_r, hist_r = await asyncio.gather(
+                latest_score_task, history_task,
                 return_exceptions=True
             )
 
         result: Dict[str, Any] = {"agent_id": agent_id}
-
-        # --- Raw counters (from security-history.jsonl) ---
-        if not isinstance(raw_r, Exception) and raw_r.status_code == 200:
-            result["raw_counters"] = raw_r.json()
-        else:
-            result["raw_counters"] = {"error": str(raw_r)}
 
         # --- Weighted posture scores (the real scores shown in the dashboard) ---
         if not isinstance(score_r, Exception) and score_r.status_code == 200:
@@ -888,26 +879,25 @@ class TestOrchestrator:
                 "url_filter":        scores.get("url"),
                 "dns_security":      scores.get("dns"),
                 "threat_prevention": scores.get("threat"),
-                "_note": "Weighted % of malicious categories correctly blocked/sinkholed (out of 100). This is the authoritative score shown in the Security dashboard."
+                "_note": "Weighted % of malicious categories correctly blocked/sinkholed (out of 100). Matches the Security dashboard exactly."
             }
         else:
             result["posture_scores"] = {"error": str(score_r)}
 
-        # --- Score trend (last 24 runs) ---
+        # --- Score trend (last 24 runs, newest first) ---
         if not isinstance(hist_r, Exception) and hist_r.status_code == 200:
             history = hist_r.json() if hist_r.content else []
             trend = [
                 {
-                    "ts":     h.get("timestamp"),
-                    "type":   h.get("type"),
-                    "url":    h.get("scores", {}).get("url"),
-                    "dns":    h.get("scores", {}).get("dns"),
-                    "threat": h.get("scores", {}).get("threat"),
+                    "ts":      h.get("timestamp"),
+                    "type":    h.get("type"),
+                    "url":     h.get("scores", {}).get("url"),
+                    "dns":     h.get("scores", {}).get("dns"),
+                    "threat":  h.get("scores", {}).get("threat"),
                     "trigger": h.get("trigger"),
                 }
                 for h in (history if isinstance(history, list) else [])
             ]
-            # Keep only the last 24 entries, newest first
             result["score_trend"] = sorted(trend, key=lambda x: x.get("ts") or 0, reverse=True)[:24]
         else:
             result["score_trend"] = {"error": str(hist_r)}

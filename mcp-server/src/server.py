@@ -700,29 +700,26 @@ async def get_traffic_logs(agent_id: str, limit: int = 50) -> dict:
 @mcp.tool()
 async def get_security_results_stats(agent_id: str) -> dict:
     """
-    Get the complete security posture scorecard for a Stigix node.
+    Get the security posture scorecard for a Stigix node.
 
-    Returns THREE sections — always read posture_scores for the authoritative score:
+    Returns TWO sections:
 
-    1. posture_scores — THE REAL SECURITY SCORES (use these, not raw_counters):
+    1. posture_scores — THE AUTHORITATIVE SECURITY SCORES (always use these):
        - url_filter        : weighted score 0–100 for URL filtering effectiveness
        - dns_security      : weighted score 0–100 for DNS threat blocking
        - threat_prevention : weighted score 0–100 for EICAR/threat file blocking
        These match exactly what is displayed in the Security dashboard.
        Scores are weighted by threat category severity, NOT a simple blocked/total ratio.
 
-    2. raw_counters — raw test volume stats (total tests, blocked, sinkholed, allowed).
-       ⚠️ DO NOT compute enforcement % from these and call it a "security score".
-       These are cumulative test counters since last reset — useful for volume context only.
-
-    3. score_trend — last 24 scoring runs, newest first. Each entry:
+    2. score_trend — last 24 scoring runs, newest first. Each entry:
        { ts, type, url, dns, threat, trigger }
-       Use this to describe score evolution (e.g. "DNS score dropped from 99 to 97.6 in last 6h").
+       Use this to describe score evolution (e.g. "DNS stable at 97.6, URL dropped from 38 to 36.8").
 
     REPORTING GUIDELINES:
-    - Lead with posture_scores when reporting security posture
-    - Describe the trend if scores changed significantly (delta > 5 points)
-    - Mention raw_counters only as context (total tests run, not as a score)
+    - Always lead with posture_scores
+    - Describe trend if any score changed by more than 3 points over the last 24 runs
+    - Do NOT mention or compute raw test counts — they come from a different source
+      and will not match what the user sees in the Security Efficacy panel
 
     Args:
         agent_id: ID of the Stigix node (e.g. 'BR8-Ubuntu').
