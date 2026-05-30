@@ -13,7 +13,7 @@ The Stigix MCP Server provides a **natural language interface** to orchestrate y
 ✅ **Mesh-Ready Orchestration** - Control any node in the mesh from any other node via distributed discovery.  
 ✅ **Natural Language** - Command your infrastructure in plain English or French.  
 ✅ **Distributed Control** - The MCP server runs on every Stigix instance, providing total redundancy.  
-✅ **Full Toolset** - 50 tools covering 100% of stigix-cli capabilities: traffic, security, DEM probes, fabric targets, VyOS, and analytics.  
+✅ **Full Toolset** - 51 tools covering 100% of stigix-cli capabilities: traffic, security, DEM probes, fabric targets, VyOS, and analytics.  
 ✅ **SSE Transport** - Native support for Server-Sent Events (SSE) for easy remote access.  
 
 ---
@@ -215,7 +215,7 @@ If the server doesn't appear or shows a red error:
 
 ---
 
-## 🛠️ Available MCP Tools (50 tools)
+## 🛠️ Available MCP Tools (51 tools)
 
 > [!TIP]
 > All tools that target a specific node accept an `agent_id` parameter — this is the node's name as shown in `list_endpoints` (e.g., `"BR8"`, `"Paris"`, `"Hetzner"`).
