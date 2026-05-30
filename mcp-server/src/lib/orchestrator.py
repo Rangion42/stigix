@@ -678,6 +678,11 @@ class TestOrchestrator:
                 run_resp.raise_for_status()
                 run_result = run_resp.json() if run_resp.content else {"success": True}
 
+                # Step 2b — Short wait so the server has time to write the history entry
+                # with the correct sequence_name before we delete the temp sequence.
+                # Without this, the history lookup can race and return 'Unknown'.
+                await asyncio.sleep(0.4)
+
                 # Step 3 — Fetch history to get CLI equivalent (last entry)
                 history_resp = await client.get(
                     f"{base_url}/api/vyos/history?limit=1",

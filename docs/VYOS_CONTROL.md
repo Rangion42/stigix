@@ -251,3 +251,53 @@ exit
 ```
 
 Then click **Refresh** in the Stigix dashboard to sync the updated interface list.
+
+---
+
+## ✅ MCP Session — Validated Behaviors (30/05/2026)
+
+The following interactions were tested live against a production Stigix instance (BR8-Ubuntu gateway, `vyosrouter` and `vyoslandc1`). All actions executed successfully and appear in the **VyOS Control → History** tab with `status=OK` and `cli_equivalent`.
+
+### Topology tested
+```
+Claude Desktop → stigix-br8 (MCP) → Stigix BR8-Ubuntu
+                                          │
+                                          ├─ vyosrouter  → VyOS Router → BR1, BR2
+                                          │     eth1 — BR1-MPLS-197
+                                          │     eth3 — BR1-INET-227
+                                          │     eth7 — BR2-INET-226
+                                          │     eth8 — BR2-MPLS-196
+                                          │
+                                          └─ vyoslandc1 / vyoslandc2new → DC1, DC2
+```
+
+### Confirmed working interactions
+
+| Prompt | Action | Result |
+|---|---|---|
+| *"Add 300ms latency on the BR2 internet link"* | `set-impairment` → eth7 BR2-INET-226 | ✅ |
+| *"Remove it"* | `clear-qos` → eth7 | ✅ |
+| *"Add 5% packet loss on the MPLS of BR2"* | `set-impairment (loss)` → eth8 BR2-MPLS-196 | ✅ |
+| *"Add 300ms latency on MPLS and internet of BR2 at the same time"* | 2× `set-impairment` → eth8 + eth7 | ✅ |
+| *"Add 5% packet loss on internet of BR1 and BR2"* | 2× `set-impairment (loss)` → eth3 + eth7 | ✅ |
+| *"Block IP 1.2.3.4 on DC1"* | `deny-traffic` → vyoslandc1 | ✅ |
+| *"Unblock 1.2.3.4, then block 4.3.2.1 on DC1 and DC2"* | `allow-traffic` + 2× `deny-traffic` | ✅ |
+| *"Unblock 4.3.2.1 on DC1 and DC2"* | 2× `allow-traffic` | ✅ |
+| *"Shut MPLS on BR1, wait 5 seconds, then restore — no confirm between steps"* | `interface-down` → sleep 5s → `interface-up` | ✅ |
+
+### Key behaviors validated
+
+- **Site name resolution** : Claude correctly maps `"BR2 internet"` → `eth7 BR2-INET-226` by scanning interface descriptions — no agent ID confusion.
+- **Propose-confirm workflow** : Claude always proposes the exact router + interface + action before executing. User confirms once, then action runs.
+- **Multi-interface in one call** : Claude groups multi-interface requests into a single confirmation block and executes all in sequence.
+- **Firewall without interface** : `deny-traffic` / `allow-traffic` correctly target the router without requiring an interface (firewall applies router-wide). Claude asks which router when multiple match.
+- **Automated sequence** : shutdown → wait → restore executed without intermediate confirmations after the initial user `yes`.
+- **Full history traceability** : All MCP actions appear in VyOS History as `MCP: <command>:<iface> on <router>` with the actual VyOS CLI equivalent.
+
+### Prompt best practices
+
+- ✅ Reference sites by interface description keywords: `"BR1 internet"`, `"BR2 MPLS"`, `"DC1"`
+- ✅ Don't say `"On BR8, ..."` — BR8 is the MCP gateway, not the VyOS router. It creates ambiguity.
+- ✅ Say `"Block IP X on DC1"` — Claude will identify the firewall router for that site.
+- ✅ For multi-step sequences without confirmation: `"... do X then Y without asking between steps"`
+```

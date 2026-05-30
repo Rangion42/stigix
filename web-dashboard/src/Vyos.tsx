@@ -1562,15 +1562,21 @@ export default function Vyos(props: VyosProps) {
                                                     onClick={() => setExpandedHistoryRow(isExpanded ? null : rowKey)}
                                                 >
                                                     <td className="px-4 py-2.5 whitespace-nowrap">
-                                                        <span className="text-text-primary font-mono text-[11px] font-medium">{new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                                                        <span className="text-text-muted font-mono text-[9px] ml-2 opacity-50">{new Date(log.timestamp).toLocaleDateString()}</span>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-text-primary font-mono text-[11px] font-medium">{new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                                                            <span className="text-text-muted font-mono text-[9px] opacity-40">{new Date(log.timestamp).toLocaleDateString()}</span>
+                                                        </div>
                                                     </td>
                                                     <td className="px-4 py-2.5">
                                                         <div className="flex items-center gap-2">
                                                             <div className="p-1 bg-purple-500/10 rounded flex-shrink-0">
                                                                 {getCommandIcon(log.command, 12)}
                                                             </div>
-                                                            <span className="text-text-primary font-medium text-[11px]" title={log.sequence_name}>{log.sequence_name}</span>
+                                                            {(log.sequence_name && log.sequence_name !== 'Unknown') ? (
+                                                                <span className="text-text-primary font-medium text-[11px]" title={log.sequence_name}>{log.sequence_name}</span>
+                                                            ) : (
+                                                                <span className="text-text-muted font-mono text-[10px] opacity-60" title={log.sequence_id}>{log.sequence_id || '—'}</span>
+                                                            )}
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-2.5">
