@@ -8431,6 +8431,43 @@ app.get('/api/security/cloud-eicar-url', authenticateToken, (req, res) => {
     res.json({ url, hasKey });
 });
 
+// API: List all configured EICAR test targets (reads eicar_endpoints from security config)
+app.get('/api/security/eicar-targets', authenticateToken, (req, res) => {
+    const config = loadSecurityConfig();
+
+    const rawEndpoints: string[] = config.threat_prevention?.eicar_endpoints ||
+        (config.threat_prevention?.eicar_endpoint ? [config.threat_prevention.eicar_endpoint] : []);
+
+    // Build IP → friendly name map from fabric targets (custom + env probes)
+    const fabricNames: Record<string, string> = {};
+    try {
+        const allPeers = [...getCustomConnectivityEndpoints(), ...getEnvConnectivityEndpoints()];
+        for (const p of allPeers) {
+            if (p.host) fabricNames[p.host] = p.name || p.host;
+        }
+    } catch (_) {}
+
+    const targets = rawEndpoints
+        .filter(ep => !!ep)
+        .map(ep => {
+            let hostname = ep;
+            let isCloud = false;
+            try {
+                const parsed = new URL(ep);
+                hostname = parsed.hostname;
+                isCloud = parsed.hostname.includes('stigix.io');
+            } catch (_) {}
+
+            const friendlyName = isCloud
+                ? `Stigix Cloud (${hostname})`
+                : (fabricNames[hostname] || hostname);
+
+            return { name: friendlyName, target: ep, type: isCloud ? 'cloud' : 'direct', url: ep };
+        });
+
+    res.json({ targets });
+});
+
 // API: Threat Prevention Test (EICAR)
 app.post('/api/security/threat-test', authenticateToken, async (req, res) => {
     const { endpoint, scenarioId, testName } = req.body;

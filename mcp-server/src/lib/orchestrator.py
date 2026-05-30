@@ -1041,16 +1041,29 @@ class TestOrchestrator:
         async with httpx.AsyncClient(timeout=10.0) as client:
             try:
                 if probe_type == "threat":
-                    # For threat, return the cloud EICAR URL + any configured direct endpoints
-                    r = await client.get(f"{agent.api_base_url}/api/security/cloud-eicar-url", headers=headers)
-                    cloud_data = r.json() if r.status_code == 200 else {}
-                    cloud_url = cloud_data.get("url", "")
-                    has_key = cloud_data.get("hasKey", False)
-                    options = []
-                    if cloud_url and has_key:
-                        options.append({"name": "EICAR Test (Stigix Cloud)", "target": "STIGIX-EICAR-01",
-                                        "url": cloud_url, "description": f"Cloud EICAR download from {cloud_url}"})
-                    return {"agent_id": agent_id, "probe_type": probe_type, "options": options}
+                    # Fetch all configured EICAR targets (Cloud + direct endpoints)
+                    r = await client.get(f"{agent.api_base_url}/api/security/eicar-targets", headers=headers)
+                    if r.status_code == 200:
+                        data = r.json()
+                        raw_targets = data.get("targets", [])
+                        options = []
+                        for t in raw_targets:
+                            if t.get("type") == "cloud":
+                                options.append({
+                                    "name": f"EICAR Test (Stigix Cloud — {t.get('url', '')})",
+                                    "target": t["target"],
+                                    "type": "cloud",
+                                    "url": t.get("url", "")
+                                })
+                            else:
+                                options.append({
+                                    "name": f"EICAR Test (Direct — {t.get('name', t['target'])})",
+                                    "target": t["target"],
+                                    "type": "direct",
+                                    "url": t.get("url", t["target"])
+                                })
+                        return {"agent_id": agent_id, "probe_type": probe_type, "options": options}
+                    return {"agent_id": agent_id, "probe_type": probe_type, "options": []}
 
                 r = await client.get(f"{agent.api_base_url}/api/security/profile", headers=headers)
                 r.raise_for_status()
