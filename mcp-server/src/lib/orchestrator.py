@@ -411,6 +411,19 @@ class TestOrchestrator:
                 logger.error(f"Failed to fetch dashboard for {agent_id}: {e}")
                 return {"error": str(e)}
 
+    async def _get_cloud_eicar_url(self, agent: any) -> str:
+        """Fetch the actual Cloud EICAR URL from the agent (e.g. https://target.stigix.io/eicar.com.txt)."""
+        try:
+            headers = {"Authorization": f"Bearer {self._generate_token()}"}
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                r = await client.get(f"{agent.api_base_url}/api/security/cloud-eicar-url", headers=headers)
+                if r.status_code == 200:
+                    data = r.json()
+                    return data.get("url", "")
+        except Exception:
+            pass
+        return ""
+
     async def _get_dns_test_name(self, agent: any, domain: str) -> str:
         """Look up the friendly test name for a DNS domain from the security profile."""
         try:
@@ -422,10 +435,10 @@ class TestOrchestrator:
                     items = profile.get("dns_security", {}).get("items", [])
                     for item in items:
                         if item.get("domain", "").rstrip(".") == domain.rstrip("."):
-                            return f"{item['name']} (MCP)"
+                            return item['name']
         except Exception:
             pass
-        return f"{domain} (MCP)"
+        return domain
 
     async def _get_url_category_name(self, agent: any, target_url: str) -> str:
         """Look up the friendly category name for a URL from the security profile."""
@@ -438,16 +451,16 @@ class TestOrchestrator:
                     items = profile.get("url_filtering", {}).get("items", [])
                     for item in items:
                         if item.get("url", "").rstrip("/") == target_url.rstrip("/"):
-                            return f"{item['name']} (MCP)"
+                            return item['name']
         except Exception:
             pass
         # Fallback: use domain as label
         try:
             from urllib.parse import urlparse
             domain = urlparse(target_url).netloc or target_url
-            return f"{domain} (MCP)"
+            return domain
         except Exception:
-            return f"{target_url} (MCP)"
+            return target_url
 
     async def trigger_security_test(self, agent_id: str, test_type: str, target: str) -> Dict[str, Any]:
         """Trigger a security test (DNS, URL, or Threat)."""
@@ -470,10 +483,16 @@ class TestOrchestrator:
             payload = {"url": target, "category": category_label}
         elif test_type == "threat":
             url = f"{agent.api_base_url}/api/security/threat-test"
-            if target.startswith("STIGIX-"): # Scenario ID
-                payload = {"scenarioId": target, "testName": "EICAR Test (MCP)"}
+            if target.startswith("STIGIX-"): # Scenario ID — resolve actual cloud URL for label
+                cloud_url = await self._get_cloud_eicar_url(agent)
+                if cloud_url:
+                    eicar_label = f"EICAR Test ({cloud_url})"
+                else:
+                    eicar_label = f"EICAR Test (Cloud: {target})"
+                payload = {"scenarioId": target, "testName": eicar_label}
             else:
-                payload = {"endpoint": target, "testName": "EICAR Test (MCP)"}
+                # Direct URL endpoint — same format as UI
+                payload = {"endpoint": target, "testName": f"EICAR Test ({target})"}
         else:
             return {"error": f"Unsupported security test type: {test_type}"}
             
@@ -484,9 +503,10 @@ class TestOrchestrator:
                 response = await client.post(url, json=payload, headers=headers)
                 response.raise_for_status()
                 data = response.json()
-                # Enrich with target info and test_id for MCP visibility
+                # Enrich with MCP metadata for badge display in UI
                 if isinstance(data, dict):
                     data["mcp_target"] = target
+                    data["mcp_source"] = "mcp"  # Stored in details → triggers MCP badge in Security.tsx
                     # Surface the sequential test ID prominently so Claude can reference it
                     if "testId" in data:
                         data["test_id"] = data["testId"]

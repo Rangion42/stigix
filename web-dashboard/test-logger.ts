@@ -33,6 +33,9 @@ export interface TestResult {
         http_code?: number;
         dns_ip?: string | null;
         resolved_count?: number;
+        // MCP metadata
+        mcp_source?: string;
+        mcp_target?: string;
         [key: string]: any;
     };
     slsDiagnostic?: any;

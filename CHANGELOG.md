@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.123] - 2026-05-30
+### Fixed
+- **mcp-server** 🏷️ `orchestrator.py`: Tous les tests via MCP utilisent désormais un **nom identique au format UI** (ex: `EICAR Test (https://...)`, `Phishing`, `DNS C2 Infiltration`) — plus de suffixe `(MCP)` dans le nom.
+- **mcp-server** 🏷️ `orchestrator.py`: Pour les scénarios EICAR Cloud (STIGIX-*), l'URL réelle est résolue via `/api/security/cloud-eicar-url` et affichée dans le nom (`EICAR Test (https://...)`).
+- **mcp-server** 🔵 `orchestrator.py`: Ajout de `mcp_source: "mcp"` dans le résultat pour permettre la détection MCP côté UI.
+- **web-dashboard** 🔵 `Security.tsx`: Ajout d'un badge violet `MCP` dans la colonne nom pour les tests déclenchés via MCP — distinct et non intégré au nom du test.
+- **web-dashboard** `test-logger.ts`: Ajout des champs `mcp_source` et `mcp_target` dans l'interface `TestResult.details`.
+
 ## [v1.4.0-patch.122] - 2026-05-30
 ### Fixed
 - **mcp-server** 🔖 `orchestrator.py`: MCP security probes now resolve the **friendly category/test name** from the security profile (e.g., `Phishing (MCP)` au lieu de l'URL brute). Ajout des helpers `_get_url_category_name` et `_get_dns_test_name`.

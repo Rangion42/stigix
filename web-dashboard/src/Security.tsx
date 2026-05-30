@@ -2983,7 +2983,14 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-4 text-[11px] text-text-primary font-bold tracking-tight truncate max-w-xs group-hover:text-blue-500 transition-colors">
-                                                            {result.testName}
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="truncate">{result.testName}</span>
+                                                                {result.result?.mcp_source === 'mcp' && (
+                                                                    <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-violet-600/15 text-violet-400 border border-violet-500/30">
+                                                                        MCP
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             {hasChange ? (
