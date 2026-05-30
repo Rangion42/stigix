@@ -461,10 +461,11 @@ export default function Security({ token, onGoToCloudSettings }: SecurityProps) 
             })
             .catch(() => {});
 
-        // Background polling for statistics (refreshes counters from scheduled tests)
+        // Background polling for statistics and results (picks up scheduled + MCP-launched tests)
         const pollInterval = setInterval(() => {
             fetchConfig();
             fetchHealth();
+            fetchResults(); // Refresh results so MCP/scheduled tests appear automatically
         }, 30000); // 30 seconds
 
         return () => clearInterval(pollInterval);

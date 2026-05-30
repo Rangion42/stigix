@@ -8427,7 +8427,7 @@ app.get('/api/security/cloud-eicar-url', authenticateToken, (req, res) => {
 
 // API: Threat Prevention Test (EICAR)
 app.post('/api/security/threat-test', authenticateToken, async (req, res) => {
-    const { endpoint, scenarioId } = req.body;
+    const { endpoint, scenarioId, testName } = req.body;
 
     const runId = `manual-threat-${Date.now()}`;
 
@@ -8450,8 +8450,10 @@ app.post('/api/security/threat-test', authenticateToken, async (req, res) => {
                 data: probeResult.data
             };
 
-            logTest(`[THREAT-TEST-${testId}] Cloud scenario ${scenarioId} result: ${status.toUpperCase()}`);
-            addTestResult('threat_prevention', `EICAR Test (Cloud: ${scenarioId})`, result, testId, undefined, runId);
+            // Use custom testName if provided (e.g., "EICAR Test (MCP)"), else default
+            const storedName = testName || `EICAR Test (Cloud: ${scenarioId})`;
+            logTest(`[THREAT-TEST-${testId}] Cloud scenario ${scenarioId} result: ${status.toUpperCase()} (stored as: ${storedName})`);
+            addTestResult('threat_prevention', storedName, result, testId, undefined, runId);
             await generateRunScore(runId, 'threat', 'manual');
             return res.json({ success: true, results: [result], testId });
         } catch (error: any) {
@@ -8522,7 +8524,8 @@ app.post('/api/security/threat-test', authenticateToken, async (req, res) => {
                 };
 
                 logTest(`[THREAT-TEST-${testId}] EICAR test result: ALLOWED`, { endpoint: ep });
-                addTestResult('threat_prevention', `EICAR Test (${ep})`, result, testId, undefined, runId);
+                const epLabel = testName || `EICAR Test (${ep})`;
+                addTestResult('threat_prevention', epLabel, result, testId, undefined, runId);
                 results.push(result);
             } catch (curlError: any) {
                 const exitCode = curlError.code;
@@ -8549,7 +8552,8 @@ app.post('/api/security/threat-test', authenticateToken, async (req, res) => {
                 };
 
                 logTest(`[THREAT-TEST-${testId}] EICAR test result: ${status.toUpperCase()}`, { endpoint: ep, error: curlError.message });
-                addTestResult('threat_prevention', `EICAR Test (${ep})`, result, testId, undefined, runId);
+                const epLabelErr = testName || `EICAR Test (${ep})`;
+                addTestResult('threat_prevention', epLabelErr, result, testId, undefined, runId);
                 results.push(result);
             }
         }

@@ -411,6 +411,44 @@ class TestOrchestrator:
                 logger.error(f"Failed to fetch dashboard for {agent_id}: {e}")
                 return {"error": str(e)}
 
+    async def _get_dns_test_name(self, agent: any, domain: str) -> str:
+        """Look up the friendly test name for a DNS domain from the security profile."""
+        try:
+            headers = {"Authorization": f"Bearer {self._generate_token()}"}
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                r = await client.get(f"{agent.api_base_url}/api/security/profile", headers=headers)
+                if r.status_code == 200:
+                    profile = r.json()
+                    items = profile.get("dns_security", {}).get("items", [])
+                    for item in items:
+                        if item.get("domain", "").rstrip(".") == domain.rstrip("."):
+                            return f"{item['name']} (MCP)"
+        except Exception:
+            pass
+        return f"{domain} (MCP)"
+
+    async def _get_url_category_name(self, agent: any, target_url: str) -> str:
+        """Look up the friendly category name for a URL from the security profile."""
+        try:
+            headers = {"Authorization": f"Bearer {self._generate_token()}"}
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                r = await client.get(f"{agent.api_base_url}/api/security/profile", headers=headers)
+                if r.status_code == 200:
+                    profile = r.json()
+                    items = profile.get("url_filtering", {}).get("items", [])
+                    for item in items:
+                        if item.get("url", "").rstrip("/") == target_url.rstrip("/"):
+                            return f"{item['name']} (MCP)"
+        except Exception:
+            pass
+        # Fallback: use domain as label
+        try:
+            from urllib.parse import urlparse
+            domain = urlparse(target_url).netloc or target_url
+            return f"{domain} (MCP)"
+        except Exception:
+            return f"{target_url} (MCP)"
+
     async def trigger_security_test(self, agent_id: str, test_type: str, target: str) -> Dict[str, Any]:
         """Trigger a security test (DNS, URL, or Threat)."""
         agent = await self.registry.get_endpoint(agent_id)
@@ -422,18 +460,20 @@ class TestOrchestrator:
         # Route mapping
         if test_type == "dns":
             url = f"{agent.api_base_url}/api/security/dns-test"
-            # Label: domain (MCP) to show target in history
-            payload = {"domain": target, "testName": f"{target} (MCP)"}
+            # Look up friendly test name from security profile
+            dns_label = await self._get_dns_test_name(agent, target)
+            payload = {"domain": target, "testName": dns_label}
         elif test_type == "url":
             url = f"{agent.api_base_url}/api/security/url-test"
-            # Label: target (MCP) to show target in history
-            payload = {"url": target, "category": f"{target} (MCP)"}
+            # Look up friendly category name from security profile
+            category_label = await self._get_url_category_name(agent, target)
+            payload = {"url": target, "category": category_label}
         elif test_type == "threat":
             url = f"{agent.api_base_url}/api/security/threat-test"
             if target.startswith("STIGIX-"): # Scenario ID
-                payload = {"scenarioId": target}
+                payload = {"scenarioId": target, "testName": "EICAR Test (MCP)"}
             else:
-                payload = {"endpoint": target}
+                payload = {"endpoint": target, "testName": "EICAR Test (MCP)"}
         else:
             return {"error": f"Unsupported security test type: {test_type}"}
             
@@ -444,10 +484,15 @@ class TestOrchestrator:
                 response = await client.post(url, json=payload, headers=headers)
                 response.raise_for_status()
                 data = response.json()
-                # Enrich with target info for MCP visibility
+                # Enrich with target info and test_id for MCP visibility
                 if isinstance(data, dict):
                     data["mcp_target"] = target
-                    data["mcp_api_url"] = url
+                    # Surface the sequential test ID prominently so Claude can reference it
+                    if "testId" in data:
+                        data["test_id"] = data["testId"]
+                    elif isinstance(data.get("results"), list) and data["results"]:
+                        # threat-test wraps results in a list
+                        data["test_id"] = data.get("testId")
                 return data
             except Exception as e:
                 logger.error(f"Security test {test_type} failed for {agent_id} on {target}: {e}")

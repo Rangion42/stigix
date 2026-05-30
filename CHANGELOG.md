@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.122] - 2026-05-30
+### Fixed
+- **mcp-server** 🔖 `orchestrator.py`: MCP security probes now resolve the **friendly category/test name** from the security profile (e.g., `Phishing (MCP)` au lieu de l'URL brute). Ajout des helpers `_get_url_category_name` et `_get_dns_test_name`.
+- **mcp-server** 🔖 `orchestrator.py`: Les tests EICAR via MCP sont désormais labellisés `EICAR Test (MCP)` au lieu de `EICAR Test (Cloud: STIGIX-EICAR-01)`.
+- **mcp-server** 🔢 `orchestrator.py`: Le `test_id` séquentiel est maintenant exposé dans la réponse MCP (`data["test_id"]`) pour permettre à Claude de référencer le numéro exact du test.
+- **web-dashboard** 🔄 `Security.tsx`: L'auto-refresh inclut désormais `fetchResults()` dans le poll de 30s — les tests lancés via MCP ou planifiés apparaissent automatiquement.
+- **web-dashboard** 🏷️ `server.ts`: L'endpoint `threat-test` accepte un champ `testName` optionnel pour stocker un label lisible sur les tests EICAR MCP.
+
 ## [v1.4.0-patch.121] - 2026-05-30
 ### Added
 - **web-dashboard** 📈 Enhanced the "Global Experience Over Time" chart:
