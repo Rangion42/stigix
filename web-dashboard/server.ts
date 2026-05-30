@@ -6875,7 +6875,7 @@ const preDnsCheck = async (url: string): Promise<{
 };
 
 app.post('/api/security/url-test', authenticateToken, async (req, res) => {
-    const { url, category } = req.body;
+    const { url, category, mcp_source } = req.body;
 
     const testId = getNextTestId();
 
@@ -6903,7 +6903,8 @@ app.post('/api/security/url-test', authenticateToken, async (req, res) => {
                 error: dnsIssue.technicalDetail,
                 likelyFirewallBlock: dnsIssue.likelyFirewallBlock,
                 reason: `${dnsIssue.errorType}: ${dnsIssue.errorDescription}`,
-                command: `nslookup -timeout=4 ${new URL(url).hostname}.`
+                command: `nslookup -timeout=4 ${new URL(url).hostname}.`,
+                ...(mcp_source && { mcp_source })
             };
             const { previousStatus } = await addTestResult('url_filtering', category || url, result, testId);
             return res.json({ ...result, previousStatus });
@@ -6950,7 +6951,8 @@ app.post('/api/security/url-test', authenticateToken, async (req, res) => {
                 command: curlCommand,
                 reason: isTestPage ? 'Legitimate Palo Alto Test Page detected' :
                     isBlockPage ? 'Security Block Page detected in response content' :
-                        (status === 'allowed') ? `Allowed (HTTP ${httpCode})` : `Blocked (HTTP ${httpCode})`
+                        (status === 'allowed') ? `Allowed (HTTP ${httpCode})` : `Blocked (HTTP ${httpCode})`,
+                ...(mcp_source && { mcp_source })
             };
 
             logTest(`[URL-TEST-${testId}] Final status: ${result.status} (HTTP ${httpCode})`);
@@ -6974,7 +6976,8 @@ app.post('/api/security/url-test', authenticateToken, async (req, res) => {
                 error: errInfo.technicalDetail,
                 likelyFirewallBlock: errInfo.likelyFirewallBlock,
                 reason: `${errInfo.errorType}: ${errInfo.errorDescription}`,
-                command: curlCmd
+                command: curlCmd,
+                ...(mcp_source && { mcp_source })
             };
 
             logTest(`[URL-TEST-${testId}] Final status: ${errInfo.status} (curl exit ${exitCode} — ${errInfo.errorType})`);
@@ -7142,7 +7145,7 @@ app.post('/api/security/url-test-batch', authenticateToken, async (req, res) => 
 
 // API: DNS Security Test
 app.post('/api/security/dns-test', authenticateToken, async (req, res) => {
-    const { domain, testName } = req.body;
+    const { domain, testName, mcp_source } = req.body;
 
     // Generate unique test ID
     const testId = getNextTestId();
@@ -7232,7 +7235,8 @@ app.post('/api/security/dns-test', authenticateToken, async (req, res) => {
                 testName,
                 output: stdout,
                 reason: status === 'sinkholed' ? `Resolved to Palo Alto Sinkhole IP: ${resolvedIp || 'Keyword detected'}` :
-                    status === 'blocked' ? 'DNS Resolution failed or returned empty' : `Resolved to IP: ${resolvedIp}`
+                    status === 'blocked' ? 'DNS Resolution failed or returned empty' : `Resolved to IP: ${resolvedIp}`,
+                ...(mcp_source && { mcp_source })
             };
 
             logTest(`[DNS-TEST-${testId}] Test result:`, { domain, status, resolved });
@@ -7251,7 +7255,8 @@ app.post('/api/security/dns-test', authenticateToken, async (req, res) => {
                     domain,
                     testName,
                     output: combinedErrorOutput,
-                    reason: 'DNS error occurred, but Palo Alto Sinkhole keyword detected in response'
+                    reason: 'DNS error occurred, but Palo Alto Sinkhole keyword detected in response',
+                    ...(mcp_source && { mcp_source })
                 };
                 const { previousStatus } = await addTestResult('dns_security', testName || domain, result, testId);
                 return res.json({ ...result, previousStatus });
@@ -7267,7 +7272,8 @@ app.post('/api/security/dns-test', authenticateToken, async (req, res) => {
                 domain,
                 testName,
                 error: dnsError.message,
-                reason: isCommandError ? 'DNS tool (dig/nslookup) not available' : `DNS Error: ${dnsError.message}`
+                reason: isCommandError ? 'DNS tool (dig/nslookup) not available' : `DNS Error: ${dnsError.message}`,
+                ...(mcp_source && { mcp_source })
             };
 
             logTest(`[DNS-TEST-${testId}] Error: ${isCommandError ? 'Command not available' : 'DNS blocked'} - ${dnsError.message}`);

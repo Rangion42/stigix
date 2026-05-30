@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.124] - 2026-05-30
+### Fixed
+- **mcp-server** 🔴 `server.py`: `get_security_test_options` était entièrement statique (5 URLs Palo Alto hardcodées). Remplacé par un appel dynamique à `get_security_profile_dynamic` — retourne maintenant les vraies catégories configurées sur le node (toutes les catégories URL + tous les domaines DNS du profil Stigix). Requiert maintenant `agent_id` en paramètre.
+- **mcp-server** 🔴 `orchestrator.py`: `get_security_profile_dynamic` avait un mapping de clés incorrect (`dns`/`url` au lieu de `dns_security.items`/`url_filtering.items`). Les listes retournées étaient vides — corrigé pour lire la vraie structure de l'API.
+- **mcp-server** 🔴 `orchestrator.py`: Pour `probe_type=threat`, retourne maintenant l'URL cloud réelle depuis `/api/security/cloud-eicar-url` au lieu d'une liste vide.
+- **mcp-server** 🔵 `orchestrator.py`: `mcp_source: "mcp"` maintenant inclus dans le payload envoyé au serveur (url-test et dns-test) — stocké dans le JSONL, permet l'affichage du badge MCP dans Security.tsx.
+- **web-dashboard** 🔵 `server.ts`: `url-test` et `dns-test` lisent `mcp_source` depuis le body et l'incluent dans tous les objets result stockés (succès, erreur curl, DNS error).
+
 ## [v1.4.0-patch.123] - 2026-05-30
 ### Fixed
 - **mcp-server** 🏷️ `orchestrator.py`: Tous les tests via MCP utilisent désormais un **nom identique au format UI** (ex: `EICAR Test (https://...)`, `Phishing`, `DNS C2 Infiltration`) — plus de suffixe `(MCP)` dans le nom.

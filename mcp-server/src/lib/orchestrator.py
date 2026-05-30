@@ -475,12 +475,12 @@ class TestOrchestrator:
             url = f"{agent.api_base_url}/api/security/dns-test"
             # Look up friendly test name from security profile
             dns_label = await self._get_dns_test_name(agent, target)
-            payload = {"domain": target, "testName": dns_label}
+            payload = {"domain": target, "testName": dns_label, "mcp_source": "mcp"}
         elif test_type == "url":
             url = f"{agent.api_base_url}/api/security/url-test"
             # Look up friendly category name from security profile
             category_label = await self._get_url_category_name(agent, target)
-            payload = {"url": target, "category": category_label}
+            payload = {"url": target, "category": category_label, "mcp_source": "mcp"}
         elif test_type == "threat":
             url = f"{agent.api_base_url}/api/security/threat-test"
             if target.startswith("STIGIX-"): # Scenario ID — resolve actual cloud URL for label
@@ -1032,7 +1032,7 @@ class TestOrchestrator:
                 return {"error": str(e)}
 
     async def get_security_profile_dynamic(self, agent_id: str, probe_type: str) -> Dict[str, Any]:
-        """Fetch the dynamic list of security test targets from the node's profile."""
+        """Fetch the dynamic list of security test targets from the node's actual security profile."""
         agent = await self.registry.get_endpoint(agent_id)
         if not agent:
             return {"error": f"Agent {agent_id} not found."}
@@ -1040,18 +1040,32 @@ class TestOrchestrator:
         headers = {"Authorization": f"Bearer {self._generate_token()}"}
         async with httpx.AsyncClient(timeout=10.0) as client:
             try:
+                if probe_type == "threat":
+                    # For threat, return the cloud EICAR URL + any configured direct endpoints
+                    r = await client.get(f"{agent.api_base_url}/api/security/cloud-eicar-url", headers=headers)
+                    cloud_data = r.json() if r.status_code == 200 else {}
+                    cloud_url = cloud_data.get("url", "")
+                    has_key = cloud_data.get("hasKey", False)
+                    options = []
+                    if cloud_url and has_key:
+                        options.append({"name": "EICAR Test (Stigix Cloud)", "target": "STIGIX-EICAR-01",
+                                        "url": cloud_url, "description": f"Cloud EICAR download from {cloud_url}"})
+                    return {"agent_id": agent_id, "probe_type": probe_type, "options": options}
+
                 r = await client.get(f"{agent.api_base_url}/api/security/profile", headers=headers)
                 r.raise_for_status()
                 profile = r.json()
-                # Extract the relevant section by probe_type
+
+                # Map the real API structure: dns_security.items / url_filtering.items
                 if probe_type == "dns":
-                    options = profile.get("dns", profile.get("dnsList", []))
+                    raw = profile.get("dns_security", {}).get("items", [])
+                    options = [{"name": item["name"], "domain": item["domain"]} for item in raw]
                 elif probe_type == "url":
-                    options = profile.get("url", profile.get("urlList", []))
-                elif probe_type == "threat":
-                    options = profile.get("threat", profile.get("threatList", []))
+                    raw = profile.get("url_filtering", {}).get("items", [])
+                    options = [{"category": item["name"], "url": item["url"]} for item in raw]
                 else:
-                    options = profile
+                    options = []
+
                 return {"agent_id": agent_id, "probe_type": probe_type, "options": options}
             except Exception as e:
                 logger.error(f"Failed to fetch security profile for {agent_id}: {e}")

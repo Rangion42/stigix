@@ -371,36 +371,17 @@ async def get_app_score(agent_id: str, app_name: str) -> dict:
 
 
 @mcp.tool()
-async def get_security_test_options(probe_type: str) -> dict:
+async def get_security_test_options(agent_id: str, probe_type: str) -> dict:
     """
-    Get a list of available security test targets/categories for a specific probe type.
-    Use this to propose destinations to the user before running a test.
-    
+    Get the LIVE list of security test targets/categories for a specific probe type,
+    fetched directly from the node's actual configured security profile.
+    Always use this before run_security_probe to get the correct URLs and domains.
+
     Args:
+        agent_id: ID of the Stigix node to query (required — options vary per node).
         probe_type: 'dns', 'url', or 'threat'.
     """
-    options = {
-        "dns": [
-            {"name": "Abortion", "domain": "test-abortion.testpanw.com"},
-            {"name": "DNS Tunneling", "domain": "test-dnstun.testpanw.com"},
-            {"name": "Malware", "domain": "test-malware.testpanw.com"},
-            {"name": "Phishing", "domain": "test-phishing.testpanw.com"},
-            {"name": "Command & Control", "domain": "test-c2.testpanw.com"},
-            {"name": "DGA (Domain Generation Algorithm)", "domain": "test-dga.testpanw.com"}
-        ],
-        "url": [
-            {"category": "Abortion", "url": "http://urlfiltering.paloaltonetworks.com/test-abortion"},
-            {"category": "Adult Content", "url": "http://urlfiltering.paloaltonetworks.com/test-adult"},
-            {"category": "Malware", "url": "http://urlfiltering.paloaltonetworks.com/test-malware"},
-            {"category": "Phishing", "url": "http://urlfiltering.paloaltonetworks.com/test-phishing"},
-            {"category": "Proxy Avoidance", "url": "http://urlfiltering.paloaltonetworks.com/test-proxy-avoidance"}
-        ],
-        "threat": [
-            {"name": "Standard EICAR Scenario", "target": "STIGIX-EICAR-01", "description": "Cloud-based EICAR test scenario"},
-            {"name": "Direct EICAR Download (Hetzner)", "target": "http://142.132.193.157:8082/eicar.com.txt", "description": "Direct file download from Hetzner node"}
-        ]
-    }
-    return {"probe_type": probe_type, "options": options.get(probe_type, [])}
+    return await orchestrator.get_security_profile_dynamic(agent_id, probe_type)
 
 
 @mcp.tool()
