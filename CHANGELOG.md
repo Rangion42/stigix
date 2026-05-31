@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.132] - 2026-05-31
+### Fixed
+- **mcp-server** 🏷️ `orchestrator.py`: Convergence tests launched via MCP now auto-derive a label from the target's registry name (`meta.site_name`) when the caller does not provide one — eliminates the "Unknown" label in the Failover dashboard history and live view.
+
+## [v1.4.0-patch.131] - 2026-05-31
+### Documentation
+- **docs** 📖 `docs/MCP_SERVER.md`: Enriched MCP server documentation with comprehensive usage examples covering all major tool categories (node status, convergence, security, VyOS chaos, DEM probes).
+
+## [v1.4.0-patch.130] - 2026-05-31
+### Changed
+- **mcp-server** 📄 `Exemple/MCP_Claude_Desktop_Test_BR8.md`: Translated MCP test plan to English, added Table of Contents, enforced stigix-lang skill for repo-facing content.
+
+## [v1.4.0-patch.129] - 2026-05-31
+### Added
+- **mcp-server** 🔁 `clone_node_config` MCP tool: copies traffic app config, DEM probes, and fabric targets from one Stigix node to another in one command. Useful for bootstrapping new branches from a reference site.
+
+## [v1.4.0-patch.128] - 2026-05-31
+### Fixed
+- **mcp-server** 🐛 `run_test` silent failure: when the backend returned a non-2xx response, the orchestrator swallowed the error and returned an empty result. Now raises and surfaces the HTTP error to Claude.
+- **docs** 📋 Updated MCP test plan with corrected `run_test` parameter examples.
+
+## [v1.4.0-patch.127] - 2026-05-31
+### Fixed
+- **web-dashboard** 🔴 `Failover.tsx`: Live active test card and history table now correctly handle tests launched from a remote MCP source agent (target IP lookup against local endpoint list). Badge and label display improvements.
+- **mcp-server** 🏷️ `orchestrator.py`: EICAR MCP badge (`mcp_source: "mcp"`) correctly propagated through the convergence result payload.
+
+## [v1.4.0-patch.126] - 2026-05-31
+### Fixed
+- **mcp-server** 🎯 `orchestrator.py` EICAR target resolution: now mirrors `Security.tsx` logic exactly — resolves cloud EICAR URL from `/api/security/cloud-eicar-url` and uses fabric target IPs from the registry for physical targets.
+
+## [v1.4.0-patch.125] - 2026-05-31
+### Fixed
+- **mcp-server** 🏷️ `orchestrator.py`: EICAR targets are now mapped to fabric target names (e.g. `DC1-Ubuntu`) instead of raw IPs when displaying test labels in the Security dashboard.
+
 ## [v1.4.0-patch.124] - 2026-05-30
 ### Fixed
 - **mcp-server** 🔴 `server.py`: `get_security_test_options` était entièrement statique (5 URLs Palo Alto hardcodées). Remplacé par un appel dynamique à `get_security_profile_dynamic` — retourne maintenant les vraies catégories configurées sur le node (toutes les catégories URL + tous les domaines DNS du profil Stigix). Requiert maintenant `agent_id` en paramètre.

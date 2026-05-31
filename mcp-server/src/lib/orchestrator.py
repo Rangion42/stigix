@@ -114,12 +114,15 @@ class TestOrchestrator:
                     }
                 elif is_convergence_profile:
                     api_url = f"{source.api_base_url}/api/convergence/start"
+                    # Auto-build a label from the target's registry name when the caller
+                    # did not provide one — avoids "Unknown" in the Failover dashboard.
+                    effective_label = label or target.meta.get("site_name") or target.id
                     payload = {
                         "target": target_ip,
                         "port": 6100, # Convergence probe port
                         # Use pps directly if provided, else fallback to bitrate or 50
                         "rate": pps if pps is not None else (int(bitrate.replace('M', '')) if bitrate and 'M' in bitrate else 50),
-                        "label": label # None defaults to native ID in backend
+                        "label": effective_label
                     }
                 else:
                     # Fallback for voice or other tests
