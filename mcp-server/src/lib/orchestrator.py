@@ -23,6 +23,10 @@ class TestOrchestrator:
         self.jwt_secret = os.getenv("JWT_SECRET", "stigix-default-secret-2026")
         self.registry = RegistryClient()
 
+    def _handle_exception(self, context: str, e: Exception) -> Dict[str, str]:
+        logger.error(f"{context} failed: {e}")
+        return {"error": str(e) or f"Operation failed: {type(e).__name__}"}
+
     def _generate_token(self) -> str:
         """Generates a JWT for agent authentication."""
         import time
@@ -906,7 +910,7 @@ class TestOrchestrator:
                         if r.status_code == 200:
                             result[key] = r.json()
                     except Exception as e:
-                        result[key] = {"error": str(e)}
+                        result[key] = {"error": str(e) or f"Connection failed: {type(e).__name__}"}
                 # Convergence status
                 try:
                     r = await client.get(f"{base}/api/convergence/status", headers=headers)
@@ -916,8 +920,7 @@ class TestOrchestrator:
                     pass
                 return result
             except Exception as e:
-                logger.error(f"Failed to fetch node status for {agent_id}: {e}")
-                return {"error": str(e)}
+                return self._handle_exception(f"Failed to fetch node status for {agent_id}", e)
 
     async def get_traffic_stats(self, agent_id: str) -> Dict[str, Any]:
         """Fetch live traffic stats (per-app requests, error rates, client count)."""
@@ -938,8 +941,7 @@ class TestOrchestrator:
                     result["traffic_status"] = traffic_r.json()
                 return result
             except Exception as e:
-                logger.error(f"Failed to fetch traffic stats for {agent_id}: {e}")
-                return {"error": str(e)}
+                return self._handle_exception(f"Failed to fetch traffic stats for {agent_id}", e)
 
     async def get_traffic_logs(self, agent_id: str, limit: int = 50) -> Dict[str, Any]:
         """Fetch recent traffic generation logs from a node."""
@@ -955,11 +957,12 @@ class TestOrchestrator:
                 data = r.json()
                 # Trim to requested limit if it's a list
                 if isinstance(data, list):
-                    data = data[-limit:]
+                    data = data[:limit]
+                elif isinstance(data, dict) and "logs" in data:
+                    data["logs"] = data["logs"][:limit]
                 return {"agent_id": agent_id, "logs": data}
             except Exception as e:
-                logger.error(f"Failed to fetch traffic logs for {agent_id}: {e}")
-                return {"error": str(e)}
+                return self._handle_exception(f"Failed to fetch traffic logs for {agent_id}", e)
 
     async def get_security_results_stats(self, agent_id: str) -> Dict[str, Any]:
         """
