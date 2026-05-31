@@ -1,450 +1,881 @@
-# Plan de Test MCP Stigix — Exhaustif
-*v1.4.0-patch.105 — 47 outils disponibles*
+# 🧪 Stigix MCP — Plan de Validation Complet
 
-> **Comment utiliser ce document**  
-> Copie-colle chaque prompt dans Claude Desktop avec le MCP Stigix configuré.  
-> Note le résultat (✅ OK / 🔴 Erreur / ⚠️ Partiel) dans la colonne statut.  
-> Remplace `BR8` par le nom exact de ton nœud si différent.
+> **Version** : v1.4.0-patch.127+  
+> **Objectif** : Valider l'ensemble des 51+ tools MCP via Claude Desktop en conditions réelles.  
+> **Format de notation** : ✅ Succès | ❌ Erreur | ⚠️ Réponse partielle
 
 ---
 
-## ✅ Déjà testés (session 29/05/2026)
+## 📖 Comment utiliser ce document
 
-| Tool | Prompt utilisé | Résultat |
-|---|---|---|
-| `list_endpoints` | List all available Stigix nodes | ✅ 10 nœuds |
-| `get_node_status` | What is the status of node BR8? | ✅ READY |
-| `get_traffic_stats` | Show me the traffic stats for BR8 | ✅ 170 req |
-| `list_dem_probes` | List all DEM probes configured on BR8 | ✅ 55 probes |
-| `list_fabric_targets` | List all fabric targets on BR8 | ✅ 10 targets |
-| `list_apps` | What apps is BR8 simulating? | ✅ 17 catégories |
-| `get_traffic_logs` | Show me the last 10 traffic logs from BR8 | ✅ |
-| `get_security_results_stats` | What is the security score for BR8? | ✅ 2840 tests |
-| `list_security_results` | Show me the last 10 security test results on BR8 | ✅ DNS batch |
-| `get_convergence_history` | Show me the last convergence tests for BR8 | ✅ 10 tests |
-| `run_eicar_test` | Run an EICAR threat prevention test on BR8 | 🔴 400 → ✅ fixé patch.105 |
-| `run_full_security_audit` | Run the full security audit on BR8 | ✅ 24/94 bloqués |
+Copiez-collez chaque question exactement dans Claude Desktop.  
+Après chaque réponse, notez ✅ (succès), ❌ (erreur), ou ⚠️ (réponse partielle).  
+Pour le troubleshooting : demandez à Claude de dumper la requête et la réponse brute du tool MCP.
 
 ---
 
-## 🔵 Phase 1 — Discovery & Read (sans effet de bord)
+## 🛠️ Commande de Debug Universelle
 
-### 1.1 Endpoints & Topology
-
-```
-List all Stigix nodes of type fabric only
-```
-→ `list_endpoints(kind="fabric")` — teste le filtre par type
+Avant de commencer, si un tool échoue, posez cette question à Claude :
 
 ```
-What is the public IP of BR8?
+Peux-tu me montrer exactement quelle requête MCP tu as envoyé et quelle réponse brute tu as reçue ?
 ```
-→ `get_public_ip` — IP WAN du nœud
-
-```
-Compare BR8 and DC1 side by side
-```
-→ `compare_nodes` — diff health/traffic/security entre 2 nœuds
-
-```
-Generate a full report for all Stigix nodes
-```
-→ `generate_report` — rapport global fabric (tous les nœuds en parallèle)
 
 ---
 
-### 1.2 Traffic & Apps
+## SECTION 1 — Discovery & Inventaire (Base)
+
+**Objectif** : Vérifier que Claude peut lister les endpoints disponibles. C'est le prérequis à tout.
+
+### Test 1.1 — Lister tous les endpoints
 
 ```
-What is the current traffic status on DC1?
+Montre-moi tous les endpoints Stigix disponibles.
 ```
-→ `get_node_status` sur un autre nœud que BR8
 
-```
-Show me the last 50 traffic logs from BR8
-```
-→ `get_traffic_logs` avec plus de lignes
-
-```
-Show me the speedtest history for BR8
-```
-→ `list_speedtest_history` — historique des XFR tests (**jamais testé**)
-
-```
-Export the application config from BR8 as JSON
-```
-→ `export_app_config` — dump JSON de la config apps (**jamais testé**)
+- **Tool attendu** : `list_endpoints()`
+- **Résultat attendu** : Liste de nœuds fabric et/ou targets internet avec leurs IDs.
+- **À noter** : Les IDs retournés sont ceux à utiliser dans tous les tests suivants.
 
 ---
 
-### 1.3 DEM & Probes
+### Test 1.2 — Filtrer par type Fabric
 
 ```
-Show me the DEM summary for BR8
+Liste uniquement les nœuds Fabric Stigix.
 ```
-→ `get_dem_summary` — vue globale santé DEM (**jamais testé**)
 
-```
-Show me the details of the probe "Cloudflare ICMP" on BR8
-```
-→ `get_probe_details` — détails d'une probe spécifique (**jamais testé**)
-
-```
-Show me the stats for the probe "Google Search" on BR8
-```
-→ `get_dem_probe_stats` — métriques historiques d'une probe (**jamais testé**)
+- **Tool attendu** : `list_endpoints(kind="fabric")`
+- **Résultat attendu** : Sous-ensemble de la liste précédente avec uniquement les nœuds internes.
 
 ---
 
-### 1.4 Security (read-only)
+### Test 1.3 — Filtrer par type Internet
 
 ```
-What security tests are available on BR8?
+Liste uniquement les targets Internet Stigix.
 ```
-→ `get_security_test_options` — liste des options de test dispo (**jamais testé**)
 
-```
-What are the available security test options on BR8 (dynamic)?
-```
-→ `get_security_test_options_dynamic` — version live depuis l'API (**jamais testé**)
-
-```
-Show me the security configuration of BR8
-```
-→ `get_security_config` — politique de sécurité active (**jamais testé**)
-
-```
-Show me the last 20 security results on BR8
-```
-→ `list_security_results(limit=20)` — plus de résultats
+- **Tool attendu** : `list_endpoints(kind="internet")`
+- **Résultat attendu** : Sous-ensemble avec les cibles externes.
 
 ---
 
-### 1.5 Diagnostics
+### Test 1.4 — Rapport global de la Fabric
 
 ```
-Run diagnostics on BR8
+Génère un rapport complet sur tous les nœuds Stigix de la fabric.
 ```
-→ `get_diagnostics` — check curl/DNS/scapy/connectivité (**jamais testé**)
 
-```
-What is the app quality score for BR8?
-```
-→ `get_app_score` — score qualité applicatif (**jamais testé**)
+- **Tool attendu** : `generate_report()`
+- **Résultat attendu** : Vue synthétique de tous les nœuds (health, version, traffic, DEM, sécurité, peers).
 
 ---
 
-### 1.6 VyOS / Scenarios
+## SECTION 2 — Node Status (Diagnostics par Nœud)
+
+**Objectif** : Valider les tools de status et diagnostic. Remplacer `<NODE_ID>` par un ID réel obtenu en Section 1.
+
+### Test 2.1 — Status complet d'un nœud
 
 ```
-List all VyOS routers managed by Stigix
+Donne-moi le statut complet du nœud <NODE_ID>.
 ```
-→ `list_vyos_routers` — routeurs VyOS détectés (**jamais testé**)
 
-```
-List all available network scenarios for BR8
-```
-→ `list_vyos_scenarios` — scénarios dispo (WAN failover, QoS...) (**jamais testé**)
-
-```
-Show me the timeline of network events on BR8
-```
-→ `get_vyos_timeline` — historique changements réseau (**jamais testé**)
+- **Tool attendu** : `get_node_status(agent_id="<NODE_ID>")`
+- **Résultat attendu** : Health, version, traffic status, site info, état convergence.
 
 ---
 
-## 🟡 Phase 2 — Tests actifs (lecture avec déclenchement)
-
-> Ces tests déclenchent des actions mais sont **non destructifs** (pas de modification de config).
-
-### 2.1 Security probes
+### Test 2.2 — Dashboard complet de diagnostics
 
 ```
-Run a URL security test on BR8 for "https://malware.testpanw.com"
+Montre-moi le dashboard de diagnostics complet du nœud <NODE_ID>.
 ```
-→ `run_security_probe(agent_id="BR8", test_type="url", target="https://malware.testpanw.com")`
 
-```
-Run a DNS security test on BR8 for "test-malware.testpanw.com"
-```
-→ `run_security_probe(agent_id="BR8", test_type="dns", target="test-malware.testpanw.com")`
-
-```
-Run a threat prevention test on BR8 for "https://secure.eicar.org/eicar.com.txt"
-```
-→ `run_security_probe(agent_id="BR8", test_type="threat", target="https://secure.eicar.org/eicar.com.txt")` (**jamais testé**)
-
-```
-Run the full URL batch security test on BR8
-```
-→ `run_security_url_batch` — batch de ~70 URLs (**jamais testé seul**)
-
-```
-Run the full DNS batch security test on BR8
-```
-→ `run_security_dns_batch` — batch de ~24 domaines DNS (**jamais testé seul**)
-
-```
-Run an EICAR test on BR8
-```
-→ `run_eicar_test` — **à retester avec patch.105**
+- **Tool attendu** : `get_diagnostics(agent_id="<NODE_ID>")`
+- **Résultat attendu** : CPU, bitrate, stats apps, voix, peers.
 
 ---
 
-### 2.2 DEM probes
+### Test 2.3 — IP publique / chemin WAN
 
 ```
-Force run all DEM probes on BR8 now
+Quelle est l'IP publique du nœud <NODE_ID> ? Par quelle route sort-il sur Internet ?
 ```
-→ `run_dem_probes_now` — déclenche toutes les probes immédiatement (**jamais testé**)
+
+- **Tool attendu** : `get_public_ip(agent_id="<NODE_ID>")`
+- **Résultat attendu** : IP WAN du nœud.
 
 ---
 
-### 2.3 Tests réseau (XFR / speedtest)
+### Test 2.4 — Comparaison de deux nœuds
 
 ```
-Run a speedtest from BR8 to DC1 for 30 seconds
+Compare les nœuds <NODE_ID_A> et <NODE_ID_B> côte-à-côte.
 ```
-→ `run_test(source_id="BR8", target_id="DC1", profile="xfr", duration="30s")` (**jamais testé**)
 
-```
-Run a speedtest from BR8 to Hetzner with 200Mbps bitrate
-```
-→ `run_test(..., bitrate="200M")`
-
-```
-Run a convergence test from BR8 to DC1
-```
-→ `run_test(..., profile="conv")` (**jamais testé**)
-
-```
-What is the status of the last test on BR8?
-```
-→ `get_test_status` (**jamais testé**)
-
-```
-Stop the current test on BR8
-```
-→ `stop_test` (**jamais testé**)
+- **Tool attendu** : `compare_nodes(agent_id_a="<NODE_ID_A>", agent_id_b="<NODE_ID_B>")`
+- **Résultat attendu** : Tableau comparatif health/version/traffic/DEM/security.
 
 ---
 
-## 🟠 Phase 3 — Modifications de configuration
+## SECTION 3 — Traffic Generation
 
-> ⚠️ Ces tests **modifient** la configuration. Teste sur BR8 ou un nœud non-prod.
+**Objectif** : Valider les tools de contrôle du trafic applicatif.
 
-### 3.1 Traffic generator
-
-```
-Stop traffic generation on BR8
-```
-→ `set_traffic_status(agent_id="BR8", enabled=False)` (**jamais testé**)
+### Test 3.1 — Stats de trafic live
 
 ```
-Start traffic generation on BR8
+Montre-moi les statistiques de génération de trafic en direct sur <NODE_ID>.
 ```
-→ `set_traffic_status(agent_id="BR8", enabled=True)` — restaure
 
-```
-Set traffic interval on BR8 to 0.5 seconds
-```
-→ `set_traffic_rate(agent_id="BR8", interval=0.5)` (**jamais testé**)
-
-```
-Set traffic client count on BR8 to 2
-```
-→ `set_traffic_client_count(agent_id="BR8", count=2)` (**jamais testé**)
-
-```
-Set traffic client count on BR8 back to 1
-```
-→ restauration
+- **Tool attendu** : `get_traffic_stats(agent_id="<NODE_ID>")`
+- **Résultat attendu** : Requêtes par app, taux d'erreur, clients actifs.
 
 ---
 
-### 3.2 Voice
+### Test 3.2 — Applications simulées
 
 ```
-Enable voice simulation on BR8
+Quelles applications sont simulées sur le nœud <NODE_ID> ?
 ```
-→ `set_voice_status(agent_id="BR8", enabled=True)` (**jamais testé**)
 
-```
-Disable voice simulation on BR8
-```
-→ `set_voice_status(agent_id="BR8", enabled=False)`
+- **Tool attendu** : `list_apps(agent_id="<NODE_ID>")`
+- **Résultat attendu** : Liste Teams, Zoom, Salesforce, etc.
 
 ---
 
-### 3.3 DEM probes (ajout/suppression)
-
-> ⚠️ Faire sur un nœud de test, vérifier avant/après avec `list_dem_probes`
+### Test 3.3 — Score d'une application spécifique
 
 ```
-Add a new HTTP probe on BR8 targeting https://stigix.io with name "Stigix Website" every 60 seconds
+Quel est le taux de succès de Teams sur le nœud <NODE_ID> ?
 ```
-→ `add_dem_probe` (**jamais testé**)
 
-```
-Remove the probe named "Stigix Website" from BR8
-```
-→ `remove_dem_probe` (**jamais testé**)
+- **Tool attendu** : `get_app_score(agent_id="<NODE_ID>", app_name="teams")`
+- **Résultat attendu** : Taux de succès %, status Healthy/Degraded/Critical.
 
 ---
 
-### 3.4 Fabric targets (ajout/suppression)
-
-> ⚠️ Très impactant — modifier la topologie fabric
+### Test 3.4 — Logs de trafic
 
 ```
-Add a new fabric target on BR8 pointing to 192.168.219.254 named "BR8-GW"
+Montre-moi les 20 derniers logs de trafic du nœud <NODE_ID>.
 ```
-→ `add_fabric_target` (**jamais testé**)
 
-```
-Disable the fabric target "BR8-GW" on BR8
-```
-→ `set_fabric_target_enabled(enabled=False)` (**jamais testé**)
-
-```
-Remove the fabric target "BR8-GW" from BR8
-```
-→ `remove_fabric_target` (**jamais testé**)
+- **Tool attendu** : `get_traffic_logs(agent_id="<NODE_ID>", limit=20)`
+- **Résultat attendu** : Entrées de log récentes.
 
 ---
 
-### 3.5 App config (import/export)
+### Test 3.5 — Démarrer le trafic
 
 ```
-Export the app config from BR8
+Démarre la génération de trafic applicatif sur le nœud <NODE_ID>.
 ```
-→ `export_app_config` (backup avant import)
 
-```
-Import the app config to DC1 from BR8's config
-```
-→ `import_app_config` — copie config d'un nœud à l'autre (**jamais testé**)
+- **Tool attendu** : `set_traffic_status(source_id="<NODE_ID>", enabled=True)`
+- **Résultat attendu** : Confirmation de démarrage.
+- ⚠️ **Vérification** : Refaire le Test 3.1 pour confirmer que le trafic tourne.
 
 ---
 
-### 3.6 VyOS scenarios
+### Test 3.6 — Ajuster la vitesse du trafic
 
 ```
-Run the scenario "wan-failover" on BR8
+Règle la vitesse de trafic sur le nœud <NODE_ID> à 0.5 secondes entre les requêtes.
 ```
-→ `run_vyos_scenario` (**jamais testé — risqué si VyOS pas configuré**)
 
-```
-Disable the scenario "wan-failover" on BR8
-```
-→ `set_vyos_scenario_status(enabled=False)` (**jamais testé**)
+- **Tool attendu** : `set_traffic_rate(agent_id="<NODE_ID>", rate=0.5)`
+- **Résultat attendu** : Confirmation du changement.
 
 ---
 
-## 🔴 Phase 4 — Tests avancés (multi-nœuds)
-
-### 4.1 Comparaisons multi-nœuds
+### Test 3.7 — Augmenter le nombre de clients simulés
 
 ```
-Compare all pairs: BR8 vs DC1, BR8 vs Hetzner, DC1 vs Hetzner
+Passe le nœud <NODE_ID> à 5 clients parallèles.
 ```
-→ 3x `compare_nodes` — différences de version, health, security
 
-```
-Generate a full report for BR8, DC1, and Hetzner only
-```
-→ `generate_report(agent_ids=["BR8", "DC1", "Hetzner"])`
+- **Tool attendu** : `set_traffic_client_count(agent_id="<NODE_ID>", client_count=5)`
+- **Résultat attendu** : Confirmation.
 
 ---
 
-### 4.2 Audit sécurité multi-nœuds
+### Test 3.8 — Arrêter le trafic
 
 ```
-Run the full security audit on DC1
+Stoppe la génération de trafic applicatif sur le nœud <NODE_ID>.
 ```
-→ comparer les scores avec BR8
 
-```
-Run an EICAR test on Hetzner
-```
-→ tester sur un autre nœud (patch.105 corrigé)
+- **Tool attendu** : `set_traffic_status(source_id="<NODE_ID>", enabled=False)`
+- **Résultat attendu** : Confirmation d'arrêt.
 
 ---
 
-### 4.3 Tests de charge
+### Test 3.9 — Export de config applicative
 
 ```
-Run a speedtest from BR8 to DC1, and simultaneously from Raspi4 to Hetzner
+Exporte la configuration des applications du nœud <NODE_ID>.
 ```
-→ 2x `run_test` en parallèle (Claude devrait lancer les 2 outils en parallèle)
+
+- **Tool attendu** : `export_app_config(agent_id="<NODE_ID>")`
+- **Résultat attendu** : Objet JSON de configuration.
 
 ---
 
-## 📊 Grille de résultats
+## SECTION 4 — Digital Experience Monitoring (DEM)
 
-*Dernière mise à jour : 30/05/2026 — patch.105*
+**Objectif** : Valider tous les tools DEM/probes de connectivité.
 
-| # | Tool | Testé ? | Résultat | Notes |
-|---|---|---|---|---|
-| 1 | `list_endpoints` | ✅ | OK | 10 nœuds, 3 managed / 7 synthesized |
-| 2 | `get_node_status` | ✅ | OK | BR8 READY, v1.4.0-patch.105, uptime 26238s |
-| 3 | `get_traffic_stats` | ✅ | OK | 11 335 req, 60+ apps |
-| 4 | `list_dem_probes` | ✅ | OK | 55 probes |
-| 5 | `list_fabric_targets` | ✅ | OK | 10 targets |
-| 6 | `list_apps` | ✅ | OK | 17 catégories |
-| 7 | `get_traffic_logs` | ✅ | OK | |
-| 8 | `get_security_results_stats` | ✅ | OK | 1 470 tests — 436 bloqués / 285 sinkholed |
-| 9 | `list_security_results` | ✅ | OK | 20 DNS results — 17 sinkholed / 3 blocked |
-| 10 | `get_convergence_history` | ✅ | OK | 7 PERFECT / 2 GOOD (Raspi4 ~5% loss) |
-| 11 | `run_eicar_test` | ✅ | fixé | 400 patch.104 → OK patch.105 |
-| 12 | `run_full_security_audit` | ✅ | OK | 24/94 bloqués |
-| 13 | `get_public_ip` | ✅ | OK | 2.13.195.58 |
-| 14 | `compare_nodes` | ✅ | OK | BR8 vs DC1 : patch 105 vs 37, 10 vs 9 peers |
-| 15 | `generate_report` | ⬜ | | |
-| 16 | `list_speedtest_history` | ✅ | OK | 50 tests — BR8→Hetzner 46.6 Mbps |
-| 17 | `export_app_config` | ⬜ | | |
-| 18 | `get_dem_summary` | ✅ | ⚠️ | globalHealth=0 — voir Limitations connues |
-| 19 | `get_probe_details` | ⬜ | | Claude a utilisé get_dem_probe_stats à la place |
-| 20 | `get_dem_probe_stats` | ✅ | OK | 73/100 — 13 HTTP endpoints, avg score 51 |
-| 21 | `get_security_test_options` | ✅ | OK | 65 URL + 24 DNS + 7 C2 + 5 AI |
-| 22 | `get_security_test_options_dynamic` | ⬜ | | |
-| 23 | `get_security_config` | ✅ | OK | Threat Prevention disabled |
-| 24 | `get_diagnostics` | ✅ | OK | RAM 33%, disk 51%, voice active (4 calls) |
-| 25 | `get_app_score` | ✅ | OK | outlook: 648 req, 0 errors — 100% |
-| 26 | `list_vyos_routers` | ⬜ | | |
-| 27 | `list_vyos_scenarios` | ⬜ | | |
-| 28 | `get_vyos_timeline` | ⬜ | | |
-| 29 | `run_security_probe` (url) | ⬜ | | |
-| 30 | `run_security_probe` (dns) | ⬜ | | |
-| 31 | `run_security_probe` (threat) | ⬜ | | |
-| 32 | `run_security_url_batch` | ⬜ | | |
-| 33 | `run_security_dns_batch` | ⬜ | | |
-| 34 | `run_dem_probes_now` | ⬜ | | |
-| 35 | `run_test` (xfr) | ⬜ | | |
-| 36 | `run_test` (conv) | ⬜ | | |
-| 37 | `get_test_status` | ⬜ | | |
-| 38 | `stop_test` | ⬜ | | |
-| 39 | `set_traffic_status` | ⬜ | | ⚠️ Modifie config |
-| 40 | `set_traffic_rate` | ⬜ | | ⚠️ Modifie config |
-| 41 | `set_traffic_client_count` | ⬜ | | ⚠️ Modifie config |
-| 42 | `set_voice_status` | ⬜ | | ⚠️ Modifie config |
-| 43 | `add_dem_probe` | ⬜ | | ⚠️ Modifie config |
-| 44 | `remove_dem_probe` | ⬜ | | ⚠️ Modifie config |
-| 45 | `add_fabric_target` | ⬜ | | ⚠️ Modifie config |
-| 46 | `remove_fabric_target` | ⬜ | | ⚠️ Modifie config |
-| 47 | `set_fabric_target_enabled` | ⬜ | | ⚠️ Modifie config |
-| 48 | `import_app_config` | ⬜ | | ⚠️ Écrase config |
-| — | `run_vyos_scenario` | ⬜ | | 🔴 Risqué |
-| — | `set_vyos_scenario_status` | ⬜ | | 🔴 Risqué |
+### Test 4.1 — Résumé DEM global
+
+```
+Donne-moi le résumé DEM du nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `get_dem_summary(agent_id="<NODE_ID>")`
+- **Résultat attendu** : Score de santé global, statuts des probes individuels.
 
 ---
 
-## ⚠️ Limitations connues & comportements attendus
+### Test 4.2 — Liste des probes DEM
 
-| Tool | Comportement | Explication |
-|---|---|---|
-| `get_dem_summary` | `globalHealth: 0` malgré probes actives | Cache `/api/admin/system/dashboard-data` pas encore agrégé. Utiliser `get_dem_probe_stats` pour le score live. |
-| `run_eicar_test` | 400 sur patch.104 | Corrigé patch.105 — payload `endpoints[]` → `endpoint` (string) |
-| Adressage nœuds | `BR8` vs `BR8-Ubuntu` | Utiliser le nom exact enregistré dans le registry (`BR8-Ubuntu`, pas `BR8`). |
-| `get_probe_details` | Claude préfère `get_dem_probe_stats` | `get_probe_details` cherche dans `lastResults` — échoue si la probe n'a pas de résultat récent. |
-| Threat Prevention | `enabled: false` par défaut | Aucun endpoint EICAR configuré localement. `run_eicar_test` fonctionne via le cloud Stigix. |
+```
+Liste toutes les probes DEM configurées sur le nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `list_dem_probes(agent_id="<NODE_ID>")`
+- **Résultat attendu** : Nom, type (HTTP/PING/DNS/TCP/UDP), target, statut enabled.
+
+---
+
+### Test 4.3 — Stats historiques des probes
+
+```
+Montre-moi les statistiques historiques des probes DEM de <NODE_ID> sur la dernière heure.
+```
+
+- **Tool attendu** : `get_dem_probe_stats(agent_id="<NODE_ID>")`
+- **Résultat attendu** : Score global, latence moyenne, fiabilité par probe.
+
+---
+
+### Test 4.4 — Détails d'une probe spécifique
+
+```
+Donne-moi les détails de performance de la probe "Google DNS" sur <NODE_ID>.
+```
+
+- **Tool attendu** : `get_probe_details(agent_id="<NODE_ID>", probe_name="Google DNS")`
+- **Résultat attendu** : Score, latence totale, reachability.
+
+---
+
+### Test 4.5 — Déclencher les probes maintenant
+
+```
+Lance une exécution immédiate de toutes les probes DEM sur <NODE_ID>.
+```
+
+- **Tool attendu** : `run_dem_probes_now(agent_id="<NODE_ID>")`
+- **Résultat attendu** : RTT, status, reachability pour chaque probe.
+- ⚠️ **Note** : Peut prendre 30-60 secondes.
+
+---
+
+### Test 4.6 — Ajouter une nouvelle probe
+
+```
+Ajoute une probe PING vers 8.8.8.8 nommée "Google DNS Test" sur le nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `add_dem_probe(agent_id="<NODE_ID>", name="Google DNS Test", target="8.8.8.8", probe_type="PING")`
+- **Résultat attendu** : Confirmation d'ajout.
+- ⚠️ **Vérification** : Refaire Test 4.2 pour confirmer que la probe apparaît.
+
+---
+
+### Test 4.7 — Supprimer une probe
+
+```
+Supprime la probe "Google DNS Test" du nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `remove_dem_probe(agent_id="<NODE_ID>", probe_name="Google DNS Test")`
+- **Résultat attendu** : Confirmation de suppression.
+- ⚠️ **Vérification** : Refaire Test 4.2 pour confirmer la suppression.
+
+---
+
+## SECTION 5 — Fabric Targets (Peers)
+
+**Objectif** : Valider la gestion des peers Fabric.
+
+### Test 5.1 — Lister les fabric targets
+
+```
+Liste tous les peers Fabric configurés sur le nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `list_fabric_targets(agent_id="<NODE_ID>")`
+- **Résultat attendu** : Nom, host, capacités (xfr, voice, conv, security), statut enabled.
+
+---
+
+### Test 5.2 — Désactiver un fabric target
+
+```
+Désactive le fabric target "<TARGET_NAME>" sur le nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `set_fabric_target_enabled(agent_id="<NODE_ID>", target_name_or_host="<TARGET_NAME>", enabled=False)`
+- **Résultat attendu** : Confirmation.
+
+---
+
+### Test 5.3 — Réactiver un fabric target
+
+```
+Réactive le fabric target "<TARGET_NAME>" sur le nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `set_fabric_target_enabled(agent_id="<NODE_ID>", target_name_or_host="<TARGET_NAME>", enabled=True)`
+- **Résultat attendu** : Confirmation.
+
+---
+
+## SECTION 6 — Tests de Trafic (XFR / Speedtest / Convergence)
+
+**Objectif** : Valider le lancement et le suivi des tests de performance.
+
+### Test 6.1 — Historique speedtest
+
+```
+Montre-moi les 10 derniers speedtests du nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `list_speedtest_history(agent_id="<NODE_ID>", limit=10)`
+- **Résultat attendu** : Résultats historiques avec target, protocole, débit Mbps, RTT.
+
+---
+
+### Test 6.2 — Lancer un speedtest XFR simple
+
+```
+Lance un speedtest de 30 secondes entre <SOURCE_ID> et <TARGET_ID> en TCP.
+```
+
+- **Tool attendu** : `run_test(source_id="<SOURCE_ID>", target_id="<TARGET_ID>", profile="xfr", duration="30s", protocol="tcp")`
+- **Résultat attendu** : Test ID et statut initial.
+
+---
+
+### Test 6.3 — Vérifier le statut d'un test
+
+```
+Donne-moi le statut du test <TEST_ID>.
+```
+
+- **Tool attendu** : `get_test_status(test_id="<TEST_ID>")`
+- **Résultat attendu** : Status (running/completed/error), métriques.
+
+---
+
+### Test 6.4 — Speedtest avec débit limité
+
+```
+Lance un speedtest entre <SOURCE_ID> et <TARGET_ID> avec une limite à 100M bidirectionnel.
+```
+
+- **Tool attendu** : `run_test(source_id="<SOURCE_ID>", target_id="<TARGET_ID>", profile="xfr", bitrate="100M", direction="bidirectional")`
+- **Résultat attendu** : Lancement du test.
+
+---
+
+### Test 6.5 — Stopper un test en cours
+
+```
+Arrête le test <TEST_ID>.
+```
+
+- **Tool attendu** : `stop_test(test_id="<TEST_ID>")`
+- **Résultat attendu** : Confirmation d'arrêt + métriques finales.
+
+---
+
+### Test 6.6 — Test de convergence CONV
+
+```
+Lance un test de convergence entre <SOURCE_ID> et <TARGET_ID> avec 100 pps.
+```
+
+- **Tool attendu** : `run_test(source_id="<SOURCE_ID>", target_id="<TARGET_ID>", profile="conv", pps=100)`
+- **Résultat attendu** : Test ID convergence + Claude annonce l'ID et **attend que l'utilisateur dise "stop"**.
+- ⚠️ **Comportement attendu** : Claude NE doit PAS poller ni appeler `get_test_status` automatiquement.
+
+---
+
+### Test 6.7 — Historique de convergence
+
+```
+Montre-moi les 5 derniers tests de convergence du nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `get_convergence_history(agent_id="<NODE_ID>", limit=5)`
+- **Résultat attendu** : Résultats avec max blackout, verdict (PERFECT/GOOD/DEGRADED/BAD/CRITICAL).
+
+---
+
+## SECTION 7 — Sécurité
+
+**Objectif** : Valider tous les tools de security testing.
+
+### Test 7.1 — Config sécurité d'un nœud
+
+```
+Montre-moi la configuration de sécurité du nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `get_security_config(agent_id="<NODE_ID>")`
+- **Résultat attendu** : Modules activés, profil de test (DNS, URL, threat).
+
+---
+
+### Test 7.2 — Scorecard de sécurité (posture)
+
+```
+Quel est le score de sécurité actuel du nœud <NODE_ID> ?
+```
+
+- **Tool attendu** : `get_security_results_stats(agent_id="<NODE_ID>")`
+- **Résultat attendu** : `posture_scores` (url_filter, dns_security, threat_prevention 0-100) + trend 24h.
+
+---
+
+### Test 7.3 — Derniers résultats de tests sécurité
+
+```
+Montre-moi les 10 derniers résultats de tests de sécurité du nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `list_security_results(agent_id="<NODE_ID>", limit=10)`
+- **Résultat attendu** : Résultats URL/DNS/Threat chronologiques.
+
+---
+
+### Test 7.4 — Options de test DNS (live du nœud)
+
+```
+Quels sont les targets DNS security disponibles sur le nœud <NODE_ID> ?
+```
+
+- **Tool attendu** : `get_security_test_options(agent_id="<NODE_ID>", probe_type="dns")`
+- **Résultat attendu** : Liste des domaines de test configurés (malware, phishing, c2, etc.) issus du profil réel du nœud.
+- ℹ️ **Note** : `get_security_test_options` est maintenant **dynamique** et requiert `agent_id`. Il remplace l'ancien outil statique.
+
+---
+
+### Test 7.5 — Options de test URL (live du nœud)
+
+```
+Quelles sont les catégories URL configurées sur le nœud <NODE_ID> ?
+```
+
+- **Tool attendu** : `get_security_test_options(agent_id="<NODE_ID>", probe_type="url")`
+- **Résultat attendu** : Liste des catégories URL du profil réel du nœud (pas les URLs Palo Alto hardcodées).
+
+---
+
+### Test 7.6 — Options EICAR disponibles
+
+```
+Quelles sont les cibles EICAR disponibles sur le nœud <NODE_ID> ?
+```
+
+- **Tool attendu** : `get_security_test_options(agent_id="<NODE_ID>", probe_type="threat")`
+- **Résultat attendu** : Liste des targets EICAR : fabric targets avec `capabilities.security=true` + cloud si configuré. Avec noms lisibles (ex: "Hetzner", "DC1").
+
+---
+
+### Test 7.7 — Test DNS individuel
+
+```
+Lance un test DNS security avec le domaine de malware sur le nœud <NODE_ID>.
+```
+
+**Workflow Claude attendu** :
+1. `get_security_test_options(agent_id="<NODE_ID>", probe_type="dns")` → récupère les targets réels
+2. `run_security_probe(agent_id="<NODE_ID>", probe_type="dns", target="<domain-malware-du-profil>")` → lance le test
+
+- **Résultat attendu** : Blocked/Allowed + raison. Badge **MCP** visible dans le Security Log.
+
+---
+
+### Test 7.8 — Test URL filtering individuel
+
+```
+Teste le filtrage URL de la catégorie "Hacking" sur le nœud <NODE_ID>.
+```
+
+**Workflow Claude attendu** :
+1. `get_security_test_options(agent_id="<NODE_ID>", probe_type="url")` → récupère l'URL exacte de la catégorie
+2. `run_security_probe(agent_id="<NODE_ID>", probe_type="url", target="<url-du-profil>")` → teste
+
+- **Résultat attendu** : Blocked/Allowed. Badge **MCP** visible dans le Security Log.
+
+---
+
+### Test 7.9 — Test EICAR vers une target spécifique
+
+```
+Lance un test EICAR de prévention des menaces vers la target Hetzner depuis le nœud <NODE_ID>.
+```
+
+**Workflow Claude attendu** :
+1. `get_security_test_options(agent_id="<NODE_ID>", probe_type="threat")` → voit la liste (Hetzner, DC1, Cloud...)
+2. Sélectionne la target "Hetzner"
+3. `run_security_probe(agent_id="<NODE_ID>", probe_type="threat", target="http://<ip-hetzner>:8082/eicar.com.txt")`
+
+- **Résultat attendu** : Blocked 🟢 (IPS actif) ou Allowed 🔴 (problème). Badge **MCP** visible.
+
+---
+
+### Test 7.10 — Batch DNS complet
+
+```
+Lance un audit DNS security complet sur le nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `run_security_dns_batch(agent_id="<NODE_ID>")`
+- **Résultat attendu** : Résumé (blocked/allowed/unknown) par domaine.
+- ⚠️ **Note** : Peut prendre 3 minutes.
+
+---
+
+### Test 7.11 — Batch URL complet
+
+```
+Lance un audit URL filtering complet sur le nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `run_security_url_batch(agent_id="<NODE_ID>")`
+- **Résultat attendu** : Résumé par catégorie URL.
+- ⚠️ **Note** : Peut prendre 3 minutes.
+
+---
+
+### Test 7.12 — Audit sécurité complet (les 3 phases)
+
+```
+Lance un audit de sécurité complet sur le nœud <NODE_ID> — URL, DNS, et EICAR.
+```
+
+- **Tool attendu** : `run_full_security_audit(agent_id="<NODE_ID>")`
+- **Résultat attendu** : Résultats des 3 phases + résumé global.
+- ⚠️ **Note** : Peut prendre 7-10 minutes.
+
+---
+
+## SECTION 8 — VyOS Network Chaos
+
+**Objectif** : Valider les tools de manipulation réseau VyOS.  
+⚠️ **Section délicate** — bien confirmer les actions avant exécution.
+
+### Test 8.1 — Lister les routeurs VyOS
+
+```
+Liste les routeurs VyOS gérés par le nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `list_vyos_routers(agent_id="<NODE_ID>")`
+- **Résultat attendu** : Liste des routeurs avec leurs IDs.
+
+---
+
+### Test 8.2 — Lister les scénarios disponibles
+
+```
+Quels scénarios VyOS sont disponibles sur le nœud <NODE_ID> ?
+```
+
+- **Tool attendu** : `list_vyos_scenarios(agent_id="<NODE_ID>")`
+- **Résultat attendu** : Liste des séquences (failover, etc.).
+
+---
+
+### Test 8.3 — Lister les interfaces chaos-eligible
+
+```
+Montre-moi les interfaces réseau disponibles pour le chaos engineering sur le nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `get_vyos_interfaces(agent_id="<NODE_ID>")`
+- **Résultat attendu** : Interfaces avec description, IP, statut up/down. Seulement les interfaces avec description sont retournées.
+
+---
+
+### Test 8.4 — État live d'un routeur VyOS
+
+```
+Quel est l'état actuel du routeur <ROUTER_ID> géré par le nœud <NODE_ID> ?
+```
+
+- **Tool attendu** : `get_vyos_router_state(agent_id="<NODE_ID>", router_id="<ROUTER_ID>")`
+- **Résultat attendu** : Interfaces (up/down), QoS active, blocs IP actifs.
+
+---
+
+### Test 8.5 — Historique des changements VyOS
+
+```
+Montre-moi les 10 derniers changements VyOS effectués via le nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `get_vyos_timeline(agent_id="<NODE_ID>", limit=10)`
+- **Résultat attendu** : Historique des actions.
+
+---
+
+### Test 8.6 — Ajouter de la latence (flux NL → confirmation)
+
+```
+Ajoute 100ms de latence sur le lien MPLS de BR1 via le nœud <NODE_ID>.
+```
+
+**Workflow attendu de Claude** :
+1. `get_vyos_interfaces(agent_id="<NODE_ID>")` → trouve l'interface MPLS de BR1
+2. Présente : "J'ai trouvé eth1 (BR1-MPLS-197) sur vyosrouter. Voulez-vous appliquer 100ms ? (oui/non)"
+3. Sur confirmation → `vyos_execute_action(agent_id, router_id, "set-impairment", interface="eth1", latency_ms=100)`
+
+- ⚠️ **IMPORTANT** : Claude NE doit PAS appliquer l'action sans confirmation explicite.
+
+---
+
+### Test 8.7 — Ajouter perte de paquets
+
+```
+Ajoute 5% de perte de paquets sur l'interface WAN du routeur <ROUTER_ID> sur <NODE_ID>.
+```
+
+- **Workflow attendu** : Même flow NL → identification → confirmation → `set-impairment` avec `loss_pct=5`.
+
+---
+
+### Test 8.8 — Effacer le QoS sur une interface
+
+```
+Supprime le QoS sur eth1 du routeur <ROUTER_ID> géré par <NODE_ID>.
+```
+
+- **Tool attendu** : `vyos_execute_action(agent_id, router_id, "clear-qos", interface="eth1")`
+
+---
+
+### Test 8.9 — Reset global QoS
+
+```
+Efface tout le QoS actif sur le routeur <ROUTER_ID> géré par <NODE_ID>.
+```
+
+- **Tool attendu** : `vyos_bulk_reset(agent_id="<NODE_ID>", router_id="<ROUTER_ID>", scope="all-qos")`
+- **Résultat attendu** : Liste des actions exécutées.
+
+---
+
+### Test 8.10 — Reset complet (full-reset)
+
+```
+Fais un reset complet du routeur <ROUTER_ID> — QoS, IP blocks, et interfaces down.
+```
+
+- **Tool attendu** : `vyos_bulk_reset(agent_id="<NODE_ID>", router_id="<ROUTER_ID>", scope="full-reset")`
+
+---
+
+### Test 8.11 — Bloquer une IP
+
+```
+Bloque le trafic vers 1.2.3.4 sur le routeur <ROUTER_ID> géré par <NODE_ID>.
+```
+
+- **Tool attendu** : `vyos_execute_action(agent_id, router_id, "deny-traffic", ip="1.2.3.4")`
+- ⚠️ **IMPORTANT** : Claude doit demander confirmation avant d'exécuter.
+
+---
+
+### Test 8.12 — Débloquer une IP
+
+```
+Débloque le trafic vers 1.2.3.4 sur le routeur <ROUTER_ID> géré par <NODE_ID>.
+```
+
+- **Tool attendu** : `vyos_execute_action(agent_id, router_id, "allow-traffic", ip="1.2.3.4")`
+
+---
+
+### Test 8.13 — Exécuter un scénario VyOS
+
+```
+Lance le scénario "<SCENARIO_ID>" sur le nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `run_vyos_scenario(agent_id="<NODE_ID>", scenario_id="<SCENARIO_ID>")`
+
+---
+
+### Test 8.14 — Activer/Désactiver un scénario cyclic
+
+```
+Désactive le scénario "<SCENARIO_ID>" qui tourne en boucle sur <NODE_ID>.
+```
+
+- **Tool attendu** : `set_vyos_scenario_status(agent_id="<NODE_ID>", scenario_id="<SCENARIO_ID>", enabled=False)`
+
+---
+
+## SECTION 9 — Voice Simulation
+
+### Test 9.1 — Démarrer la simulation voix
+
+```
+Démarre la simulation voix sur le nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `set_voice_status(source_id="<NODE_ID>", enabled=True)`
+- **Résultat attendu** : Confirmation.
+- ⚠️ **Note** : Le nœud doit être de type fabric.
+
+---
+
+### Test 9.2 — Arrêter la simulation voix
+
+```
+Arrête la simulation voix sur le nœud <NODE_ID>.
+```
+
+- **Tool attendu** : `set_voice_status(source_id="<NODE_ID>", enabled=False)`
+
+---
+
+## SECTION 10 — Tests Avancés & Edge Cases
+
+### Test 10.1 — Node ID inexistant (test d'erreur)
+
+```
+Donne-moi le statut du nœud "NODE-QUI-NEXISTE-PAS".
+```
+
+- **Résultat attendu** : Erreur propre de Claude (pas un crash), message clair que le nœud n'existe pas.
+
+---
+
+### Test 10.2 — Résolution NL de site VyOS ambigu
+
+```
+Ajoute 200ms de latence sur le lien Internet de BR2 via <NODE_ID>.
+```
+
+**Workflow attendu de Claude** :
+1. Appelle `get_vyos_interfaces`
+2. Trouve PLUSIEURS liens Internet sur BR2 (ou ambiguïté)
+3. Liste les candidats et demande à l'utilisateur de choisir
+4. N'exécute PAS sans choix explicite
+
+---
+
+### Test 10.3 — Import de configuration applicative
+
+```
+Copie la configuration d'applications du nœud <NODE_ID_SOURCE> vers <NODE_ID_DEST>.
+```
+
+**Workflow attendu de Claude** :
+1. `export_app_config(agent_id="<NODE_ID_SOURCE>")` → récupère la config JSON
+2. Avertit que l'import écrase la config existante
+3. Sur confirmation → `import_app_config(agent_id="<NODE_ID_DEST>", config=<JSON>)`
+
+---
+
+## 📊 Tableau de Suivi des Résultats
+
+| # | Tool | Status | Note |
+|---|------|--------|------|
+| 1.1 | `list_endpoints` | ⬜ | |
+| 1.2 | `list_endpoints(kind=fabric)` | ⬜ | |
+| 1.3 | `list_endpoints(kind=internet)` | ⬜ | |
+| 1.4 | `generate_report` | ⬜ | |
+| 2.1 | `get_node_status` | ⬜ | |
+| 2.2 | `get_diagnostics` | ⬜ | |
+| 2.3 | `get_public_ip` | ⬜ | |
+| 2.4 | `compare_nodes` | ⬜ | |
+| 3.1 | `get_traffic_stats` | ⬜ | |
+| 3.2 | `list_apps` | ⬜ | |
+| 3.3 | `get_app_score` | ⬜ | |
+| 3.4 | `get_traffic_logs` | ⬜ | |
+| 3.5 | `set_traffic_status(start)` | ⬜ | |
+| 3.6 | `set_traffic_rate` | ⬜ | |
+| 3.7 | `set_traffic_client_count` | ⬜ | |
+| 3.8 | `set_traffic_status(stop)` | ⬜ | |
+| 3.9 | `export_app_config` | ⬜ | |
+| 4.1 | `get_dem_summary` | ⬜ | |
+| 4.2 | `list_dem_probes` | ⬜ | |
+| 4.3 | `get_dem_probe_stats` | ⬜ | |
+| 4.4 | `get_probe_details` | ⬜ | |
+| 4.5 | `run_dem_probes_now` | ⬜ | |
+| 4.6 | `add_dem_probe` | ⬜ | |
+| 4.7 | `remove_dem_probe` | ⬜ | |
+| 5.1 | `list_fabric_targets` | ⬜ | |
+| 5.2 | `set_fabric_target_enabled(disable)` | ⬜ | |
+| 5.3 | `set_fabric_target_enabled(enable)` | ⬜ | |
+| 6.1 | `list_speedtest_history` | ⬜ | |
+| 6.2 | `run_test(xfr)` | ⬜ | |
+| 6.3 | `get_test_status` | ⬜ | |
+| 6.4 | `run_test(xfr+bitrate)` | ⬜ | |
+| 6.5 | `stop_test` | ⬜ | |
+| 6.6 | `run_test(conv)` — start/stop | ⬜ | Claude doit attendre "stop" |
+| 6.7 | `get_convergence_history` | ⬜ | |
+| 7.1 | `get_security_config` | ⬜ | |
+| 7.2 | `get_security_results_stats` | ⬜ | |
+| 7.3 | `list_security_results` | ⬜ | |
+| 7.4 | `get_security_test_options(agent_id, dns)` | ⬜ | Dynamique — requiert agent_id |
+| 7.5 | `get_security_test_options(agent_id, url)` | ⬜ | Dynamique — requiert agent_id |
+| 7.6 | `get_security_test_options(agent_id, threat)` | ⬜ | Retourne targets fabric.security |
+| 7.7 | `run_security_probe(dns)` + badge MCP | ⬜ | |
+| 7.8 | `run_security_probe(url)` + badge MCP | ⬜ | |
+| 7.9 | `run_security_probe(threat/eicar)` + badge MCP | ⬜ | |
+| 7.10 | `run_security_dns_batch` | ⬜ | |
+| 7.11 | `run_security_url_batch` | ⬜ | |
+| 7.12 | `run_full_security_audit` | ⬜ | |
+| 8.1 | `list_vyos_routers` | ⬜ | |
+| 8.2 | `list_vyos_scenarios` | ⬜ | |
+| 8.3 | `get_vyos_interfaces` | ⬜ | |
+| 8.4 | `get_vyos_router_state` | ⬜ | |
+| 8.5 | `get_vyos_timeline` | ⬜ | |
+| 8.6 | `vyos_execute_action(set-impairment+latency)` | ⬜ | Confirmation obligatoire |
+| 8.7 | `vyos_execute_action(set-impairment+loss)` | ⬜ | Confirmation obligatoire |
+| 8.8 | `vyos_execute_action(clear-qos)` | ⬜ | |
+| 8.9 | `vyos_bulk_reset(all-qos)` | ⬜ | |
+| 8.10 | `vyos_bulk_reset(full-reset)` | ⬜ | |
+| 8.11 | `vyos_execute_action(deny-traffic)` | ⬜ | Confirmation obligatoire |
+| 8.12 | `vyos_execute_action(allow-traffic)` | ⬜ | |
+| 8.13 | `run_vyos_scenario` | ⬜ | |
+| 8.14 | `set_vyos_scenario_status` | ⬜ | |
+| 9.1 | `set_voice_status(start)` | ⬜ | |
+| 9.2 | `set_voice_status(stop)` | ⬜ | |
+| 10.1 | Erreur node inexistant | ⬜ | |
+| 10.2 | Ambiguïté VyOS NL | ⬜ | |
+| 10.3 | `export→import_app_config` | ⬜ | |
+
+---
+
+## 🔍 Questions de Debug Clé
+
+Si un tool retourne une erreur, posez ces questions à Claude :
+
+1. "Montre-moi la réponse brute JSON que tu as reçue du tool MCP."
+2. "Quel était le paramètre exact que tu as passé au tool ?"
+3. "Est-ce que le tool a retourné un champ `error` ou une exception Python ?"
+4. "Peux-tu réessayer avec l'ID exact `<NODE_ID>` tel que retourné par `list_endpoints` ?"
+5. "Y a-t-il un message dans les logs du container MCP ? (`docker logs stigix-mcp-server --tail 50`)"

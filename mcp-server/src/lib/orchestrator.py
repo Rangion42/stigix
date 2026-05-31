@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 class TestOrchestrator:
     """
-    Orchestrates tests between Stigix endpoints.
-    v2: Real implementation sending commands to source agents.
+    Orchestrates traffic tests between Stigix endpoints.
+    Drives real API calls to source agents for each target.
     """
     
     def __init__(self):
@@ -164,7 +164,20 @@ class TestOrchestrator:
                     ))
                 except Exception as e:
                     logger.error(f"Failed to trigger test on agent {source.id} for target {target.id}: {e}")
-                    # We might want to continue for other targets
+                    # Return an error entry so Claude always has something to report
+                    test_runs.append(TestRun(
+                        id=global_id,
+                        local_id="ERROR",
+                        start_time=datetime.now(),
+                        source_id=source.id,
+                        target_id=target.id,
+                        profile=profile,
+                        duration=duration,
+                        bitrate=bitrate or "",
+                        label=label,
+                        status="error",
+                        error=str(e)
+                    ))
         
         return test_runs
 
