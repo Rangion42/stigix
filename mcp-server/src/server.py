@@ -1272,6 +1272,42 @@ async def generate_report(agent_ids: Optional[List[str]] = None) -> dict:
 
 
 # -----------------------------------------------------------------------------
+# Node Config Clone (Tool #52)
+# -----------------------------------------------------------------------------
+
+@mcp.tool()
+async def clone_node_config(
+    source_id: str,
+    target_id: str,
+    scope: Optional[List[str]] = None
+) -> dict:
+    """
+    Clone configuration from one Stigix node to another.
+    Reads config from source_id and writes it to target_id for each selected component.
+    Each component is processed independently — partial success is reported.
+
+    ⚠️  This is a WRITE operation — it OVERWRITES the target node's config for each scope item.
+    Always confirm with the user before executing.
+
+    Scope (optional, defaults to ALL):
+    - 'apps'             : Application traffic simulation profile (URLs, apps, weights)
+    - 'dem_probes'       : Custom DEM / connectivity probes (HTTP, HTTPS, PING, DNS...)
+    - 'security_profile' : Vendor security test profile (URL categories, DNS domains)
+    - 'vyos_scenarios'   : VyOS failover sequences
+
+    Example use cases:
+    - "Copie la config de BR8 vers BR5" → clone all components
+    - "Clone seulement les probes DEM de BR8 vers DC1" → scope=['dem_probes']
+
+    Args:
+        source_id: Exact node ID from list_endpoints() (source).
+        target_id: Exact node ID from list_endpoints() (destination).
+        scope: Components to clone. Defaults to ['apps', 'dem_probes', 'security_profile', 'vyos_scenarios'].
+    """
+    return await orchestrator.clone_node_config(source_id, target_id, scope)
+
+
+# -----------------------------------------------------------------------------
 # Main Entry Point
 # -----------------------------------------------------------------------------
 

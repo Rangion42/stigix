@@ -1721,8 +1721,158 @@ class TestOrchestrator:
                 return {"error": str(e)}
 
     # -------------------------------------------------------------------------
+    # Node Config Clone
+    # -------------------------------------------------------------------------
+
+    async def clone_node_config(
+        self, source_id: str, target_id: str,
+        scope: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Clone configuration from one Stigix node to another.
+
+        Copies selected configuration components from source_id to target_id.
+        Each component is cloned independently — partial success is possible.
+
+        Scope options (default: all):
+        - 'apps'             : Application traffic simulation profile
+        - 'dem_probes'       : DEM / custom connectivity probes
+        - 'security_profile' : Vendor security test profile (URL/DNS categories)
+        - 'vyos_scenarios'   : VyOS failover scenarios/sequences
+
+        Args:
+            source_id: ID of the source node (e.g., 'BR8-Ubuntu')
+            target_id: ID of the target node (e.g., 'ubuntubr5')
+            scope: List of components to clone. Defaults to all components.
+        """
+        ALL_SCOPES = ["apps", "dem_probes", "security_profile", "vyos_scenarios"]
+        if scope is None:
+            scope = ALL_SCOPES
+
+        unknown = [s for s in scope if s not in ALL_SCOPES]
+        if unknown:
+            return {"error": f"Unknown scope(s): {unknown}. Valid: {ALL_SCOPES}"}
+
+        source = await self.registry.get_endpoint(source_id)
+        if not source:
+            return {"error": f"Source node '{source_id}' not found."}
+        target = await self.registry.get_endpoint(target_id)
+        if not target:
+            return {"error": f"Target node '{target_id}' not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        results: Dict[str, Any] = {"source": source_id, "target": target_id, "components": {}}
+
+        async with httpx.AsyncClient(timeout=20.0) as client:
+
+            # --- Apps ---
+            if "apps" in scope:
+                try:
+                    r = await client.get(
+                        f"{source.api_base_url}/api/config/applications/export?format=json",
+                        headers=headers
+                    )
+                    r.raise_for_status()
+                    config_data = r.json()
+                    import json as _json
+                    content = _json.dumps(config_data) if not isinstance(config_data, str) else config_data
+                    r2 = await client.post(
+                        f"{target.api_base_url}/api/config/applications/import",
+                        json={"content": content},
+                        headers=headers
+                    )
+                    r2.raise_for_status()
+                    results["components"]["apps"] = {"status": "ok", "message": "Application config cloned."}
+                except Exception as e:
+                    results["components"]["apps"] = {"status": "error", "error": str(e)}
+
+            # --- DEM Probes ---
+            if "dem_probes" in scope:
+                try:
+                    r = await client.get(f"{source.api_base_url}/api/connectivity/custom", headers=headers)
+                    r.raise_for_status()
+                    data = r.json()
+                    probes = data if isinstance(data, list) else data.get("targets", [])
+                    r2 = await client.post(
+                        f"{target.api_base_url}/api/connectivity/custom",
+                        json={"endpoints": probes},
+                        headers=headers
+                    )
+                    r2.raise_for_status()
+                    results["components"]["dem_probes"] = {"status": "ok", "count": len(probes), "message": f"{len(probes)} DEM probe(s) cloned."}
+                except Exception as e:
+                    results["components"]["dem_probes"] = {"status": "error", "error": str(e)}
+
+            # --- Security Profile ---
+            if "security_profile" in scope:
+                try:
+                    r = await client.get(f"{source.api_base_url}/api/security/profile", headers=headers)
+                    r.raise_for_status()
+                    profile = r.json()
+                    r2 = await client.post(
+                        f"{target.api_base_url}/api/security/profile",
+                        json=profile,
+                        headers=headers
+                    )
+                    r2.raise_for_status()
+                    url_count = len(profile.get("url_filtering", {}).get("items", []))
+                    dns_count = len(profile.get("dns_security", {}).get("items", []))
+                    results["components"]["security_profile"] = {
+                        "status": "ok",
+                        "vendor": profile.get("vendor", "unknown"),
+                        "url_categories": url_count,
+                        "dns_domains": dns_count,
+                        "message": f"Security profile ({profile.get('vendor', '?')}) cloned: {url_count} URL categories, {dns_count} DNS domains."
+                    }
+                except Exception as e:
+                    results["components"]["security_profile"] = {"status": "error", "error": str(e)}
+
+            # --- VyOS Scenarios ---
+            if "vyos_scenarios" in scope:
+                try:
+                    r = await client.get(f"{source.api_base_url}/api/vyos/sequences", headers=headers)
+                    r.raise_for_status()
+                    data = r.json()
+                    sequences = data if isinstance(data, list) else data.get("sequences", [])
+                    cloned = 0
+                    errors = []
+                    for seq in sequences:
+                        try:
+                            r2 = await client.post(
+                                f"{target.api_base_url}/api/vyos/sequences",
+                                json=seq,
+                                headers=headers
+                            )
+                            if r2.status_code in [200, 201]:
+                                cloned += 1
+                            else:
+                                errors.append(seq.get("name", "?"))
+                        except Exception as ex:
+                            errors.append(f"{seq.get('name', '?')}: {ex}")
+                    results["components"]["vyos_scenarios"] = {
+                        "status": "ok" if not errors else "partial",
+                        "cloned": cloned,
+                        "errors": errors,
+                        "message": f"{cloned}/{len(sequences)} VyOS scenarios cloned."
+                    }
+                except Exception as e:
+                    results["components"]["vyos_scenarios"] = {"status": "error", "error": str(e)}
+
+        # Summary
+        statuses = [v.get("status") for v in results["components"].values()]
+        if all(s == "ok" for s in statuses):
+            results["summary"] = "✅ All components cloned successfully."
+        elif any(s == "ok" for s in statuses):
+            results["summary"] = "⚠️ Partial clone — some components failed."
+        else:
+            results["summary"] = "❌ Clone failed for all components."
+
+        return results
+
+    # -------------------------------------------------------------------------
     # Phase 4 Additions
     # -------------------------------------------------------------------------
+
 
     async def get_convergence_history(self, agent_id: str, limit: int = 10) -> Dict[str, Any]:
         """Fetch the convergence/failover test history for a node."""

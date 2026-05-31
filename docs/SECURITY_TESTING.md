@@ -76,6 +76,7 @@ The Security Testing feature enables controlled testing of Palo Alto Networks / 
 9. [Persistent Logging](#persistent-logging)
 10. [EDL Testing](#edl-testing)
 11. [Maintenance](#maintenance)
+12. [Multi-Vendor Security Profiles](#multi-vendor-security-profiles)
 
 ---
 
@@ -1741,6 +1742,157 @@ When enabled, all 5 scenarios run sequentially with 1 second between each test. 
 
 ---
 
-**Document Version:** 3.1
-**Feature Version:** 1.4.0-patch.78
-**Last Updated:** 2026-05-28
+**Document Version:** 3.2
+**Feature Version:** 1.4.0-patch.128
+**Last Updated:** 2026-05-31
+
+---
+
+## Multi-Vendor Security Profiles
+
+> [!NOTE]
+> By default, Stigix ships with a **Palo Alto Networks** security profile. If you are testing a different firewall vendor (Fortinet, Check Point, Cisco, etc.), you can replace the profile with custom test URLs and DNS domains adapted to your vendor's category naming convention.
+
+### Overview
+
+The security profile is stored in `config/security-profile.json`. It defines:
+- **URL filtering categories** — test URLs and their category labels
+- **DNS security domains** — test domains and their threat category
+- **C2 and AI scenarios** — advanced attack simulation scenarios (optional)
+
+The profile is loaded by the backend at runtime and used by:
+- The Security Testing UI (URL / DNS / Threat tabs)
+- The MCP tools (`get_security_test_options`, `run_security_probe`, batch tests)
+
+### Profile Schema
+
+```json
+{
+  "version": "1.0",
+  "vendor": "paloalto",
+  "url_filtering": {
+    "items": [
+      {
+        "id": "malware",
+        "name": "Malware",
+        "url": "http://urlfiltering.paloaltonetworks.com/test-malware"
+      },
+      {
+        "id": "phishing",
+        "name": "Phishing",
+        "url": "http://urlfiltering.paloaltonetworks.com/test-phishing"
+      }
+    ]
+  },
+  "dns_security": {
+    "items": [
+      {
+        "id": "malware",
+        "name": "Malware",
+        "domain": "test-malware.testpanw.com",
+        "category": "basic"
+      },
+      {
+        "id": "dns-tunneling",
+        "name": "DNS Tunneling",
+        "domain": "dns-tunnel.testpanw.com",
+        "category": "advanced"
+      }
+    ]
+  },
+  "c2_scenarios": [],
+  "ai_security_scenarios": []
+}
+```
+
+### Profile Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `vendor` | `string` | Vendor identifier (informational: `"paloalto"`, `"fortinet"`, `"checkpoint"`, `"cisco"`, etc.) |
+| `url_filtering.items` | `array` | List of URL test entries |
+| `url_filtering.items[].id` | `string` | Unique category ID (used for filtering and scoring) |
+| `url_filtering.items[].name` | `string` | Human-readable category name |
+| `url_filtering.items[].url` | `string` | Test URL — the firewall must block this URL for the test to pass |
+| `dns_security.items` | `array` | List of DNS test domains |
+| `dns_security.items[].id` | `string` | Unique domain test ID |
+| `dns_security.items[].name` | `string` | Human-readable label |
+| `dns_security.items[].domain` | `string` | FQDN to resolve — should return NXDOMAIN if the firewall blocks it |
+| `dns_security.items[].category` | `"basic" \| "advanced"` | Display grouping in the UI |
+
+### How to Switch Vendor Profile
+
+#### Option 1 — Import via the UI
+
+1. Go to **Security** tab → **Security Profile** section
+2. Click **Import Profile**
+3. Upload your custom `security-profile.json` file
+4. The UI and MCP tools immediately switch to the new profile
+
+#### Option 2 — Import via API
+
+```bash
+curl -X POST http://<NODE_IP>:8080/api/security/profile \
+  -H "Authorization: Bearer <JWT>" \
+  -H "Content-Type: application/json" \
+  -d @my-custom-profile.json
+```
+
+#### Option 3 — Direct file edit
+
+```bash
+# On the Stigix host
+cp my-custom-profile.json ~/stigix/config/security-profile.json
+# No restart needed — file is read on each request
+```
+
+### Creating a Fortinet Profile (Example)
+
+For FortiGate URL filtering, the test page format is different. Example minimal profile:
+
+```json
+{
+  "version": "1.0",
+  "vendor": "fortinet",
+  "url_filtering": {
+    "items": [
+      { "id": "malicious",  "name": "Malicious",     "url": "https://www.eicar.org/download/eicar.com.txt" },
+      { "id": "phishing",   "name": "Phishing",      "url": "http://phishing.testcategory.com/test" },
+      { "id": "gambling",   "name": "Gambling",      "url": "http://gambling.testcategory.com/test" }
+    ]
+  },
+  "dns_security": {
+    "items": [
+      { "id": "botnet",     "name": "Botnet C2",     "domain": "botnet.test.fortiguard.com",  "category": "basic" },
+      { "id": "malware",    "name": "Malware",       "domain": "malware.test.fortiguard.com", "category": "basic" }
+    ]
+  },
+  "c2_scenarios": [],
+  "ai_security_scenarios": []
+}
+```
+
+> [!TIP]
+> Use your firewall vendor's documented test URLs. Most vendors publish test pages similar to Palo Alto's `urlfiltering.paloaltonetworks.com`. Adapt the domains in `dns_security.items` to use your vendor's known-bad test domains.
+
+### How the MCP Uses the Profile
+
+When Claude calls `get_security_test_options(agent_id, probe_type="url")`, the MCP fetches the active profile from `/api/security/profile` and returns the real URL list — **not a hardcoded list**. This means:
+
+- If you switch to a Fortinet profile → Claude will see and use Fortinet test URLs
+- If you switch back to Palo Alto → Claude uses Palo Alto URLs
+- No MCP restart or code change needed
+
+### Resetting to Default (Palo Alto)
+
+```bash
+# Delete the custom profile — the embedded Palo Alto default is used as fallback
+rm ~/stigix/config/security-profile.json
+```
+
+Or POST the embedded defaults:
+```bash
+curl -X GET http://<NODE_IP>:8080/api/security/profile \
+  -H "Authorization: Bearer <JWT>"
+# Returns the active profile (custom or default)
+```

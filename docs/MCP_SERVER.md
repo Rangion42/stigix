@@ -48,6 +48,30 @@ Starting with **v1.2.1-patch.204**, Stigix uses a fully distributed "Any-Node Co
 2. **Ubiquitous MCP**: Every Stigix node runs an MCP server.
 3. **Redundant Entry Points**: You can connect Claude to **any** node's IP. That node will use its synchronized registry to pilot any other node in the mesh.
 
+### ⚠️ Cross-Node Prerequisite: Shared `JWT_SECRET`
+
+For the MCP to orchestrate tests **across nodes** (e.g., launching a speedtest from BR5 via the MCP connected to BR8), **all Stigix nodes must share the same `JWT_SECRET`**.
+
+The MCP signs every cross-node API call with its own `JWT_SECRET`. If the remote node uses a different secret, it rejects the request with HTTP 401 — silently returning empty results.
+
+> [!IMPORTANT]
+> The `install.sh` script generates a **unique random secret per node**. In a multi-node fabric, you must manually synchronize this secret across all nodes.
+
+**Setup (run on each node):**
+```bash
+# Set the shared secret in .env (use the same value on all nodes)
+echo "JWT_SECRET=<your-shared-secret>" >> ~/stigix/.env
+
+# Restart to apply
+docker compose -f docker-compose-latest-beta.bridge.yml restart
+```
+
+**Verify:**
+```bash
+# Each node should show the same value
+docker exec stigix printenv JWT_SECRET
+```
+
 ---
 
 ## 🚀 Quick Start
@@ -213,7 +237,29 @@ If the server doesn't appear or shows a red error:
   ```
   If it says `"Bridge initialized. Ready for Claude"`, the python setup is correct.
 
----
+#### ⚠️ Cross-Node Tests return `tests: []` (empty)
+
+When orchestrating a test **from** one node **via** another (e.g., MCP on BR8 launching a speedtest from BR5), all nodes **must share the same `JWT_SECRET`**.
+
+The MCP server signs API calls with its own `JWT_SECRET`. If the target node uses a different `JWT_SECRET`, it rejects the call with HTTP 401 — which results in a silent `tests: []` response.
+
+**Diagnosis:**
+```bash
+# Check JWT_SECRET on each node
+docker exec stigix printenv JWT_SECRET
+```
+
+**Fix:** set the same `JWT_SECRET` in the `.env` file on every node:
+```bash
+# On each node (BR5, DC1, etc.)
+echo "JWT_SECRET=<your-shared-secret>" >> ~/stigix/.env
+docker compose -f docker-compose-latest-beta.bridge.yml restart
+```
+
+> [!IMPORTANT]
+> After patch.128, failed cross-node tests will return `status: "error"` with the actual error message instead of `tests: []`, making diagnosis much easier.
+
+
 
 ## 🛠️ Available MCP Tools (51 tools)
 

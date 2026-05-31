@@ -1,7 +1,7 @@
 # 🧪 Stigix MCP — Plan de Validation Complet
 
-> **Version** : v1.4.0-patch.127+  
-> **Objectif** : Valider l'ensemble des 51+ tools MCP via Claude Desktop en conditions réelles.  
+> **Version** : v1.4.0-patch.128+  
+> **Objectif** : Valider l'ensemble des 52+ tools MCP via Claude Desktop en conditions réelles.  
 > **Format de notation** : ✅ Succès | ❌ Erreur | ⚠️ Réponse partielle
 
 ---
@@ -866,7 +866,62 @@ Copie la configuration d'applications du nœud <NODE_ID_SOURCE> vers <NODE_ID_DE
 | 9.2 | `set_voice_status(stop)` | ⬜ | |
 | 10.1 | Erreur node inexistant | ⬜ | |
 | 10.2 | Ambiguïté VyOS NL | ⬜ | |
-| 10.3 | `export→import_app_config` | ⬜ | |
+| 10.3 | `export_app_config` | ⬜ | |
+| 10.4 | `import_app_config` | ⬜ | |
+| 11.1 | `clone_node_config` (all scope) | ⬜ | |
+| 11.2 | `clone_node_config` (scope partiel) | ⬜ | |
+| 11.3 | `clone_node_config` (JWT mismatch) | ⬜ | Doit retourner error par composant |
+
+---
+
+## 📦 SECTION 11 — Clone Node Config (Multi-Déploiement)
+
+**Objectif** : Valider le tool `clone_node_config` qui clone apps, probes DEM, security profile et VyOS scenarios d'un nœud source vers un nœud cible.
+
+> ⚠️ Prérequis : JWT_SECRET identique sur les deux nœuds. Vérifier avec `docker exec stigix printenv JWT_SECRET` sur chaque nœud.
+
+### Test 11.1 — Clone complet BR8 → BR5
+
+```
+Clone toute la configuration de BR8 vers BR5 : apps, probes DEM, security profile et scenarios VyOS.
+```
+
+- **Tool attendu** : `clone_node_config(source_id='<BR8_ID>', target_id='<BR5_ID>')`
+- **Résultat attendu** : Rapport par composant avec `status: ok` pour chaque item.
+- **Vérification** : Ouvrir l'UI de BR5 et vérifier que les apps / probes DEM correspondent à celles de BR8.
+
+---
+
+### Test 11.2 — Clone partiel (DEM probes uniquement)
+
+```
+Clone uniquement les probes DEM de BR8 vers BR5, sans toucher aux apps ni au security profile.
+```
+
+- **Tool attendu** : `clone_node_config(source_id='<BR8_ID>', target_id='<BR5_ID>', scope=['dem_probes'])`
+- **Résultat attendu** : `components.dem_probes.status: ok`, les autres composants absents du rapport.
+
+---
+
+### Test 11.3 — Clone security profile uniquement
+
+```
+Copie le security profile de BR8 vers BR5.
+```
+
+- **Tool attendu** : `clone_node_config(..., scope=['security_profile'])`
+- **Résultat attendu** : `components.security_profile.status: ok` avec `vendor`, `url_categories`, `dns_domains`.
+
+---
+
+### Test 11.4 — Clone avec nœud cible invalide
+
+```
+Clone la configuration de BR8 vers un nœud qui n'existe pas : "BR999".
+```
+
+- **Tool attendu** : `clone_node_config(source_id='<BR8_ID>', target_id='BR999')`
+- **Résultat attendu** : `{"error": "Target node 'BR999' not found."}`
 
 ---
 
@@ -879,3 +934,4 @@ Si un tool retourne une erreur, posez ces questions à Claude :
 3. "Est-ce que le tool a retourné un champ `error` ou une exception Python ?"
 4. "Peux-tu réessayer avec l'ID exact `<NODE_ID>` tel que retourné par `list_endpoints` ?"
 5. "Y a-t-il un message dans les logs du container MCP ? (`docker logs stigix-mcp-server --tail 50`)"
+6. "Est-ce que le JWT_SECRET est le même sur les deux nœuds ? (`docker exec stigix printenv JWT_SECRET`)"
