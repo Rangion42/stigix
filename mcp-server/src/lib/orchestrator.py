@@ -849,7 +849,7 @@ class TestOrchestrator:
                 return response.json()
             except Exception as e:
                 logger.error(f"Failed to fetch DEM stats for {agent_id}: {e}")
-                return {"error": str(e)}
+                return {"error": str(e) or f"Connection failed: {type(e).__name__}"}
 
     async def get_probe_performance(self, agent_id: str, probe_name: str) -> Dict[str, Any]:
         """Fetch detailed performance metrics for a specific probe."""
@@ -877,7 +877,7 @@ class TestOrchestrator:
                 return match
             except Exception as e:
                 logger.error(f"Failed to fetch probe details for {agent_id}: {e}")
-                return {"error": str(e)}
+                return {"error": str(e) or f"Connection failed: {type(e).__name__}"}
 
     # -------------------------------------------------------------------------
     # Phase 1 Additions — Aligned with stigix-cli capabilities

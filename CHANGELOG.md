@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.136] - 2026-05-31
+### Fixed
+- **mcp-server** 🏷️ `orchestrator.py`: Prevent blank error responses when remote nodes are unreachable during DEM summary or details requests. Added a fallback to type-specific error details (e.g. `Connection failed: ConnectError`) when the exception's string representation is empty.
+
 ## [v1.4.0-patch.135] - 2026-05-31
 ### Fixed
 - **mcp-server** 🔄 `bridge.py`: Added robust background reconnection and self-healing logic to the Claude local Python bridge. The bridge now keeps the STDIO session with Claude Desktop alive during remote node reboots, automatically trying to re-establish the remote SSE connection on subsequent requests instead of crashing the bridge process.
