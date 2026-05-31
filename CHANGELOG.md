@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.134] - 2026-05-31
+### Fixed
+- **mcp-server** 🐛 `orchestrator.py`: Fixed `get_dem_summary` and `get_probe_performance` returning empty stats. Updated their backend targets to query the independent `/api/connectivity/stats` endpoint instead of `/api/admin/system/dashboard-data` (where DEM data was previously removed to optimize performance).
+
 ## [v1.4.0-patch.133] - 2026-05-31
 ### Fixed
 - **web-dashboard** 🐛 `server.ts`: Fixed HTTP 500 error in the `/api/traffic/settings` endpoint (called by `set_traffic_rate` MCP tool). Refactored internal route aliasing to use a shared helper function instead of `app._router.handle`, preventing TypeError crashes in token authentication middleware.

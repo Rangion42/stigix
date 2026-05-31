@@ -840,14 +840,13 @@ class TestOrchestrator:
             return {"error": f"Agent {agent_id} not found."}
             
         headers = {"Authorization": f"Bearer {self._generate_token()}"}
-        url = f"{agent.api_base_url}/api/admin/system/dashboard-data"
+        url = f"{agent.api_base_url}/api/connectivity/stats?range=1h"
         
         async with httpx.AsyncClient(timeout=10.0) as client:
             try:
                 response = await client.get(url, headers=headers)
                 response.raise_for_status()
-                data = response.json()
-                return data.get("dem", {})
+                return response.json()
             except Exception as e:
                 logger.error(f"Failed to fetch DEM stats for {agent_id}: {e}")
                 return {"error": str(e)}
@@ -859,17 +858,14 @@ class TestOrchestrator:
             return {"error": f"Agent {agent_id} not found."}
             
         headers = {"Authorization": f"Bearer {self._generate_token()}"}
-        # In a real scenario, we might have a dedicated endpoint for rich details,
-        # but for now we'll fetch recently logged results and find the match.
-        url = f"{agent.api_base_url}/api/admin/system/dashboard-data"
+        url = f"{agent.api_base_url}/api/connectivity/stats?range=1h"
         
         async with httpx.AsyncClient(timeout=10.0) as client:
             try:
                 response = await client.get(url, headers=headers)
                 response.raise_for_status()
                 data = response.json()
-                dem = data.get("dem", {})
-                last_results = dem.get("lastResults", [])
+                last_results = data.get("lastResults", [])
                 
                 # Try exact match or fuzzy match by name/IP
                 probe_lower = probe_name.lower()
