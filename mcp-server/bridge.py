@@ -1,6 +1,7 @@
 import sys
 import asyncio
 import logging
+from contextlib import AsyncExitStack
 from mcp.client.session import ClientSession
 from mcp.client.sse import sse_client
 from mcp.server.lowlevel import Server, NotificationOptions
@@ -12,84 +13,140 @@ from mcp.server.stdio import stdio_server
 logging.basicConfig(level=logging.ERROR, stream=sys.stderr)
 logger = logging.getLogger("stigix-bridge")
 
+class SSEConnectionManager:
+    def __init__(self, sse_url: str):
+        self.sse_url = sse_url
+        self.session = None
+        self._exit_stack = None
+        self._lock = asyncio.Lock()
+
+    async def get_session(self) -> ClientSession:
+        async with self._lock:
+            if self.session is not None:
+                return self.session
+
+            print(f"Connecting to Stigix Mesh at {self.sse_url}...", file=sys.stderr)
+            try:
+                stack = AsyncExitStack()
+                read_stream, write_stream = await stack.enter_async_context(sse_client(self.sse_url))
+                session = await stack.enter_async_context(ClientSession(read_stream, write_stream))
+                await session.initialize()
+                
+                self._exit_stack = stack
+                self.session = session
+                print("SSE Connection established. Session initialized successfully.", file=sys.stderr)
+                return self.session
+            except Exception as e:
+                print(f"Connection failed to {self.sse_url}: {e}", file=sys.stderr)
+                self.session = None
+                self._exit_stack = None
+                raise
+
+    async def close(self):
+        if self._exit_stack:
+            try:
+                await self._exit_stack.aclose()
+            except Exception:
+                pass
+        self.session = None
+        self._exit_stack = None
+
+    async def handle_disconnect(self):
+        print("Handling disconnection, resetting session...", file=sys.stderr)
+        async with self._lock:
+            await self.close()
+
 async def run_bridge(sse_url: str):
     """
-    Dynamic bridge from Claude (STDIO) to Stigix (SSE) using low-level MCP Server.
+    Dynamic bridge from Claude (STDIO) to Stigix (SSE) using low-level MCP Server
+    with automatic background reconnection.
     """
-    print(f"Connecting to Stigix Mesh at {sse_url}...", file=sys.stderr)
-    
+    manager = SSEConnectionManager(sse_url)
+    server = Server("Stigix-Bridge")
+
+    # Try to connect initially to populate tools, but don't fail if unreachable.
     try:
-        async with sse_client(sse_url) as (read_stream, write_stream):
-            print(f"SSE Connection established. Initializing session...", file=sys.stderr)
-            async with ClientSession(read_stream, write_stream) as session:
-                await session.initialize()
-                print(f"Remote session initialized. Proxying tools...", file=sys.stderr)
-                
-                # Use low-level Server for dynamic proxying
-                server = Server("Stigix-Bridge")
-                
-                @server.list_tools()
-                async def handle_list_tools(request: types.ListToolsRequest) -> types.ListToolsResult:
-                    print("Claude requested list_tools, proxying to remote...", file=sys.stderr)
-                    try:
-                        res = await session.list_tools()
-                        print(f"Remote returned {len(res.tools)} tools.", file=sys.stderr)
-                        return res
-                    except Exception as e:
-                        print(f"Error listing tools: {e}", file=sys.stderr)
-                        return types.ListToolsResult(tools=[])
+        await manager.get_session()
+    except Exception:
+        print("Initial connection failed. Starting STDIO server anyway to support reconnection.", file=sys.stderr)
 
-                @server.call_tool()
-                async def handle_call_tool(name: str, arguments: dict | None) -> types.CallToolResult:
-                    print(f"Claude calling tool '{name}' with args {arguments}...", file=sys.stderr)
-                    try:
-                        res = await session.call_tool(name, arguments)
-                        print(f"Tool '{name}' executed successfully.", file=sys.stderr)
-                        return res
-                    except Exception as e:
-                        print(f"Error calling tool '{name}': {e}", file=sys.stderr)
-                        return types.CallToolResult(content=[types.TextContent(type="text", text=f"Error: {str(e)}")], isError=True)
+    @server.list_tools()
+    async def handle_list_tools(request: types.ListToolsRequest) -> types.ListToolsResult:
+        print("Claude requested list_tools, proxying to remote...", file=sys.stderr)
+        try:
+            session = await manager.get_session()
+            res = await session.list_tools()
+            print(f"Remote returned {len(res.tools)} tools.", file=sys.stderr)
+            return res
+        except Exception as e:
+            print(f"Error listing tools: {e}", file=sys.stderr)
+            await manager.handle_disconnect()
+            return types.ListToolsResult(tools=[])
 
-                # Also proxy resources for completeness
-                @server.list_resources()
-                async def handle_list_resources(request: types.ListResourcesRequest) -> types.ListResourcesResult:
-                    print("Claude requested list_resources, proxying to remote...", file=sys.stderr)
-                    try:
-                        return await session.list_resources()
-                    except Exception as e:
-                        print(f"Error listing resources: {e}", file=sys.stderr)
-                        return types.ListResourcesResult(resources=[])
-
-                @server.read_resource()
-                async def handle_read_resource(uri) -> types.ReadResourceResult:
-                    print(f"Claude reading resource '{uri}'...", file=sys.stderr)
-                    try:
-                        return await session.read_resource(uri)
-                    except Exception as e:
-                        print(f"Error reading resource '{uri}': {e}", file=sys.stderr)
-                        raise
-
-                print("Bridge initialized. Ready for Claude.", file=sys.stderr)
-                
-                async with stdio_server() as (read, write):
-                    print("Starting STDIO server loop...", file=sys.stderr)
-                    await server.run(
-                        read,
-                        write,
-                        server.create_initialization_options(
-                            notification_options=NotificationOptions(),
-                            experimental_capabilities={},
-                        ),
+    @server.call_tool()
+    async def handle_call_tool(name: str, arguments: dict | None) -> types.CallToolResult:
+        print(f"Claude calling tool '{name}' with args {arguments}...", file=sys.stderr)
+        try:
+            session = await manager.get_session()
+            res = await session.call_tool(name, arguments)
+            print(f"Tool '{name}' executed successfully.", file=sys.stderr)
+            return res
+        except Exception as e:
+            print(f"Error calling tool '{name}': {e}", file=sys.stderr)
+            await manager.handle_disconnect()
+            return types.CallToolResult(
+                content=[
+                    types.TextContent(
+                        type="text",
+                        text=f"Error: Stigix agent at {manager.sse_url} is currently offline or rebooting. "
+                             f"Please wait a few seconds and try again. (Details: {e})"
                     )
+                ],
+                isError=True
+            )
 
-    except Exception as e:
-        import traceback
-        traceback.print_exc(file=sys.stderr)
-        sys.exit(1)
+    @server.list_resources()
+    async def handle_list_resources(request: types.ListResourcesRequest) -> types.ListResourcesResult:
+        print("Claude requested list_resources, proxying to remote...", file=sys.stderr)
+        try:
+            session = await manager.get_session()
+            return await session.list_resources()
+        except Exception as e:
+            print(f"Error listing resources: {e}", file=sys.stderr)
+            await manager.handle_disconnect()
+            return types.ListResourcesResult(resources=[])
+
+    @server.read_resource()
+    async def handle_read_resource(uri) -> types.ReadResourceResult:
+        print(f"Claude reading resource '{uri}'...", file=sys.stderr)
+        try:
+            session = await manager.get_session()
+            return await session.read_resource(uri)
+        except Exception as e:
+            print(f"Error reading resource '{uri}': {e}", file=sys.stderr)
+            await manager.handle_disconnect()
+            raise
+
+    print("Bridge initialized. Starting STDIO server loop...", file=sys.stderr)
+    try:
+        async with stdio_server() as (read, write):
+            await server.run(
+                read,
+                write,
+                server.create_initialization_options(
+                    notification_options=NotificationOptions(),
+                    experimental_capabilities={},
+                ),
+            )
+    finally:
+        await manager.close()
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python3 bridge.py <SSE_URL>", file=sys.stderr)
         sys.exit(1)
     
-    asyncio.run(run_bridge(sys.argv[1]))
+    try:
+        asyncio.run(run_bridge(sys.argv[1]))
+    except KeyboardInterrupt:
+        sys.exit(0)
