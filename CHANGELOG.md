@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.133] - 2026-05-31
+### Fixed
+- **web-dashboard** 🐛 `server.ts`: Fixed HTTP 500 error in the `/api/traffic/settings` endpoint (called by `set_traffic_rate` MCP tool). Refactored internal route aliasing to use a shared helper function instead of `app._router.handle`, preventing TypeError crashes in token authentication middleware.
+
 ## [v1.4.0-patch.132] - 2026-05-31
 ### Fixed
 - **mcp-server** 🏷️ `orchestrator.py`: Convergence tests launched via MCP now auto-derive a label from the target's registry name (`meta.site_name`) when the caller does not provide one — eliminates the "Unknown" label in the Failover dashboard history and live view.

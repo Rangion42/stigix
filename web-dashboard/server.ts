@@ -3183,12 +3183,9 @@ app.post('/api/traffic/stop', (req, res) => {
     res.json({ success: true, running: false, sleep_interval: config.control.sleep_interval, client_count: 1 });
 });
 
-// API: Traffic Control - Settings
-// API: Traffic Control - Set Rate & Client Count
-app.post('/api/traffic/rate', authenticateToken, (req, res) => {
-    const { rate, client_count } = req.body;
+// Helper to update traffic configuration
+const updateTrafficConfig = (rate: any, client_count: any) => {
     const defaultInterval = parseFloat(process.env.SLEEP_BETWEEN_REQUESTS || '1.0');
-
     let config: any = { control: { enabled: false, sleep_interval: defaultInterval, client_count: 1 }, applications: [] };
 
     if (fs.existsSync(APPLICATIONS_CONFIG_FILE)) {
@@ -3203,15 +3200,30 @@ app.post('/api/traffic/rate', authenticateToken, (req, res) => {
     
     fs.writeFileSync(APPLICATIONS_CONFIG_FILE, JSON.stringify(config, null, 2), 'utf8');
     console.log(`Traffic updated: rate=${config.control.sleep_interval}s, clients=${config.control.client_count}`);
-    res.json({ success: true, settings: config.control });
+    return config.control;
+};
+
+// API: Traffic Control - Settings
+// API: Traffic Control - Set Rate & Client Count
+app.post('/api/traffic/rate', authenticateToken, (req, res) => {
+    try {
+        const { rate, client_count } = req.body;
+        const control = updateTrafficConfig(rate, client_count);
+        res.json({ success: true, settings: control });
+    } catch (e: any) {
+        res.status(500).json({ success: false, error: e.message });
+    }
 });
 
 // Alias for legacy support
 app.post('/api/traffic/settings', authenticateToken, (req, res) => {
-    const { sleep_interval } = req.body;
-    req.body.rate = sleep_interval;
-    // @ts-ignore
-    return app._router.handle({ method: 'POST', url: '/api/traffic/rate', body: req.body }, res);
+    try {
+        const { sleep_interval, client_count } = req.body;
+        const control = updateTrafficConfig(sleep_interval, client_count);
+        res.json({ success: true, settings: control });
+    } catch (e: any) {
+        res.status(500).json({ success: false, error: e.message });
+    }
 });
 
 // API: Voice Control - Status
