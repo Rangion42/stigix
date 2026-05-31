@@ -13,7 +13,7 @@ The Stigix MCP Server provides a **natural language interface** to orchestrate y
 ✅ **Mesh-Ready Orchestration** - Control any node in the mesh from any other node via distributed discovery.  
 ✅ **Natural Language** - Command your infrastructure in plain English or French.  
 ✅ **Distributed Control** - The MCP server runs on every Stigix instance, providing total redundancy.  
-✅ **Full Toolset** - 51 tools covering 100% of stigix-cli capabilities: traffic, security, DEM probes, fabric targets, VyOS, and analytics.  
+✅ **Full Toolset** - 52 tools covering 100% of stigix-cli capabilities: traffic, security, DEM probes, fabric targets, VyOS, config clone, and analytics.  
 ✅ **SSE Transport** - Native support for Server-Sent Events (SSE) for easy remote access.  
 
 ---
@@ -374,125 +374,457 @@ docker compose -f docker-compose-latest-beta.bridge.yml restart
 
 ## 💡 Usage Examples
 
-### 1. Target Compatibility Rules (Important)
-Before launching a test, ensure the target endpoint supports the requested profile:
-
-- **`xfr` (Speedtest)**: Requires a Stigix node or a dedicated XFR target.
-- **`conv` (Convergence)**: Requires a Stigix Fabric node (uses internal probing daemons).
-- **`voice` (VoIP)**: Requires a Stigix Fabric node (uses the Voice Echo server).
-- **`iot` (Data)**: Requires a Stigix Fabric node.
-
 > [!TIP]
-> Use `list_endpoints` to check the `kind` and `capabilities` of each node before proposing a test.
-
-### 2. Performance Investigation
-**User:** *"Teams quality is bad at the Paris site, can you investigate?"*
-```
-get_node_status("Paris-BR1")
-get_app_score("Paris-BR1", app_name="Teams")
-get_dem_summary("Paris-BR1")
-get_probe_details("Paris-BR1", probe_name="Microsoft 365")
-```
-
-### 3. Full Security Audit
-**User:** *"Run a complete security audit on BR8."*
-```
-run_full_security_audit("BR8")
-→ Runs URL batch (all categories) + DNS batch (all domains) + EICAR threat test
-→ Returns per-phase results + global score (e.g., "14/15 blocked")
-```
-
-### 4. Node Comparison
-**User:** *"Why is Paris behaving differently from BR8?"*
-```
-compare_nodes("Paris-BR1", "BR8")
-→ Returns side-by-side: version, traffic running, DEM health, security %, peer count
-→ Highlights differences automatically in the "diff" section
-```
-
-### 5. Network Orchestration (VyOS)
-**User:** *"Main link is down in Paris, failover to 4G."*
-```
-list_vyos_scenarios("Paris-BR1")
-run_vyos_scenario("Paris-BR1", scenario_id="force-4g-failover")
-get_vyos_timeline("Paris-BR1")
-```
-
-### 6. Traffic Stress Test
-**User:** *"I want to stress the network from London."*
-```
-set_traffic_client_count("London", client_count=20)
-set_traffic_rate("London", rate=0.1)
-run_test(source_id="London", target_id="Paris,DC1", profile="xfr", bitrate="200M")
-```
-
-### 7. Fabric-Wide Overview
-**User:** *"Give me a status report of all my nodes."*
-```
-generate_report()
-→ Fetches all nodes in parallel, returns health, traffic, DEM, security, peer count per node
-→ Global summary: healthy/unhealthy count, traffic running count
-```
-
-### 8. DEM Probe Management
-**User:** *"Add a probe to monitor our Azure endpoint from BR8."*
-```
-add_dem_probe("BR8", name="Azure West", target="https://azure.microsoft.com", probe_type="HTTPS")
-run_dem_probes_now("BR8")
-```
-
-### 9. VyOS Natural Language Control
-**User:** *"Simulate a WAN outage on BR1 — shut the MPLS link, then restore after 30 seconds."*
-```
-get_vyos_interfaces("BR1")
-→ eth0: WAN-Internet-Bouygues
-→ eth1: MPLS-Link-DC1          ← match
-→ eth2: LAN-Users-Branch
-
-vyos_execute_action("BR1", router_id="vyos-br1", command="interface-down", interface="eth1")
-→ CLI: set interfaces ethernet eth1 disable + commit
-→ Returns: {success: true, cli_equivalent: ["set interfaces...", "commit"]}
-
-# ... wait 30s ...
-
-vyos_execute_action("BR1", router_id="vyos-br1", command="interface-up", interface="eth1")
-→ CLI: delete interfaces ethernet eth1 disable + commit
-```
-
-**User:** *"Add 200ms latency and 3% loss on the WAN of BR8, then block 10.0.0.5."*
-```
-get_vyos_interfaces("BR8")    → eth0 = WAN-Internet-*
-vyos_execute_action("BR8", router_id="...", command="set-impairment", interface="eth0", latency_ms=200, loss_pct=3)
-vyos_execute_action("BR8", router_id="...", command="deny-traffic", ip="10.0.0.5")
-```
-
-### 10. VyOS Live State Audit + Bulk Reset
-**User:** *"What is the current state of the VyOS routers on BR8?"*
-```
-get_vyos_router_state("BR8", router_id="vyosrouter")
-→ Interface eth0 (ALL-MPLS-190): 🟢 up
-→ Interface eth1 (BR1-MPLS-197): 🟢 up  +150ms delay  (qos_active)
-→ Interface eth7 (BR2-INET-226): 🔴 down  (admin disabled)
-→ Interface eth8 (BR2-MPLS-196): 🟢 up
-→ IP Blocks: 192.168.1.100/32 (tag-999)
-```
-
-**User:** *"Clear everything — remove QoS, blocks, and restore down interfaces."*
-```
-# Claude proposes plan:
-# • clear-qos eth1 (BR1-MPLS-197)
-# • clear-blocks: 1 IP block
-# • no-shut eth7 (BR2-INET-226)
-# User confirms →
-vyos_bulk_reset("BR8", router_id="vyosrouter", scope="full-reset")
-→ { actions_taken: ["clear-qos: eth1", "clear-blocks: 1 IP", "no-shut: eth7"], errors: [] }
-```
-
-> [!IMPORTANT]
-> Interface descriptions must be configured on the VyOS router for natural language targeting to work.
-> If Claude reports "no descriptions found", see [VYOS_CONTROL.md](VYOS_CONTROL.md) → *Interface Naming Best Practices*.
+> Copy-paste these prompts directly into Claude Desktop. Replace `<NODE_ID>` with an actual node ID from `list_endpoints()`.
 
 ---
+
+### 1. Discovery & Inventory
+
+**List all nodes in the fabric:**
+```
+Show me all available Stigix endpoints.
+```
+→ `list_endpoints()` — Returns all fabric nodes and internet targets with their IDs.
+
+**Filter by type:**
+```
+List only Stigix Fabric nodes.
+List only Internet targets.
+```
+→ `list_endpoints(kind="fabric")` / `list_endpoints(kind="internet")`
+
+**Fabric-wide report:**
+```
+Generate a full report across all Stigix nodes.
+```
+→ `generate_report()` — Fetches all nodes in parallel: health, version, traffic, DEM, security %, peer count + global summary.
+
+---
+
+### 2. Node Status & Diagnostics
+
+**Full status of a node:**
+```
+Give me the full status of node <NODE_ID>.
+```
+→ `get_node_status(agent_id="<NODE_ID>")` — Health, version, traffic status, site info, convergence state.
+
+**Full diagnostics dashboard:**
+```
+Show me the full diagnostics dashboard for node <NODE_ID>.
+```
+→ `get_diagnostics(agent_id="<NODE_ID>")` — CPU, bitrate, app stats, voice, peers.
+
+**Public IP / WAN path:**
+```
+What is the public IP of node <NODE_ID>? What WAN path does it use?
+```
+→ `get_public_ip(agent_id="<NODE_ID>")`
+
+**Side-by-side comparison:**
+```
+Compare nodes <NODE_ID_A> and <NODE_ID_B> side by side.
+```
+→ `compare_nodes(agent_id_a="<NODE_ID_A>", agent_id_b="<NODE_ID_B>")` — Health / version / traffic / DEM / security diff table.
+
+---
+
+### 3. Traffic Generation
+
+**Start / stop traffic:**
+```
+Start application traffic generation on node <NODE_ID>.
+Stop application traffic generation on node <NODE_ID>.
+```
+→ `set_traffic_status(source_id="<NODE_ID>", enabled=True/False)`
+
+**Tune traffic intensity:**
+```
+Set the traffic rate on node <NODE_ID> to 0.5 seconds between requests.
+Set node <NODE_ID> to 5 parallel simulated clients.
+```
+→ `set_traffic_rate(agent_id="<NODE_ID>", rate=0.5)` / `set_traffic_client_count(agent_id="<NODE_ID>", client_count=5)`
+
+**Check simulated applications:**
+```
+Which applications are being simulated on node <NODE_ID>?
+```
+→ `list_apps(agent_id="<NODE_ID>")` — e.g. Teams, Zoom, Salesforce, …
+
+**App-specific success rate:**
+```
+What is the success rate of Teams on node <NODE_ID>?
+```
+→ `get_app_score(agent_id="<NODE_ID>", app_name="teams")` — Success rate %, Healthy/Degraded/Critical.
+
+**Recent traffic logs:**
+```
+Show me the last 20 traffic logs for node <NODE_ID>.
+```
+→ `get_traffic_logs(agent_id="<NODE_ID>", limit=20)`
+
+---
+
+### 4. Digital Experience Monitoring (DEM)
+
+**DEM health overview:**
+```
+Give me the DEM summary for node <NODE_ID>.
+```
+→ `get_dem_summary(agent_id="<NODE_ID>")` — Global health score + per-probe status.
+
+**List all probes:**
+```
+List all DEM probes configured on node <NODE_ID>.
+```
+→ `list_dem_probes(agent_id="<NODE_ID>")` — Name, type (HTTP/PING/DNS/TCP/UDP), target, enabled status.
+
+**Historical probe stats (last hour):**
+```
+Show me historical DEM probe stats for node <NODE_ID> over the last hour.
+```
+→ `get_dem_probe_stats(agent_id="<NODE_ID>")` — Global score, average latency, reliability per probe.
+
+**Details for a specific probe:**
+```
+Give me the performance details for the "Google DNS" probe on node <NODE_ID>.
+```
+→ `get_probe_details(agent_id="<NODE_ID>", probe_name="Google DNS")` — Score, latency, reachability.
+
+**Trigger probes immediately:**
+```
+Trigger an immediate run of all DEM probes on node <NODE_ID>.
+```
+→ `run_dem_probes_now(agent_id="<NODE_ID>")` — Live RTT + status per probe. *May take 30–60 s.*
+
+**Add a probe:**
+```
+Add a PING probe to 8.8.8.8 named "Google DNS Test" on node <NODE_ID>.
+```
+→ `add_dem_probe(agent_id="<NODE_ID>", name="Google DNS Test", target="8.8.8.8", probe_type="PING")`  
+Valid types: `HTTP`, `HTTPS`, `PING`, `TCP`, `UDP`, `DNS`.
+
+**Remove a probe:**
+```
+Remove the "Google DNS Test" probe from node <NODE_ID>.
+```
+→ `remove_dem_probe(agent_id="<NODE_ID>", probe_name="Google DNS Test")`
+
+---
+
+### 5. Fabric Targets (Peers)
+
+**List peers:**
+```
+List all Fabric peers configured on node <NODE_ID>.
+```
+→ `list_fabric_targets(agent_id="<NODE_ID>")` — Name, host, capabilities (xfr, voice, conv, security), enabled status.
+
+**Enable / disable a peer:**
+```
+Disable the fabric target "<TARGET_NAME>" on node <NODE_ID>.
+Re-enable the fabric target "<TARGET_NAME>" on node <NODE_ID>.
+```
+→ `set_fabric_target_enabled(agent_id="<NODE_ID>", target_name_or_host="<TARGET_NAME>", enabled=False/True)`
+
+---
+
+### 6. Traffic Tests (XFR Speedtest & Convergence)
+
+**Target compatibility rules:**
+- **`xfr`** (Speedtest): Stigix node or dedicated XFR target.
+- **`conv`** (Convergence): Stigix Fabric node only.
+- **`voice`** / **`iot`**: Stigix Fabric node only.
+
+> [!TIP]
+> Use `list_endpoints` to check the `kind` and `capabilities` of each node before launching a test.
+
+**Speedtest history:**
+```
+Show me the last 10 speedtests from node <NODE_ID>.
+```
+→ `list_speedtest_history(agent_id="<NODE_ID>", limit=10)` — Target, protocol, throughput Mbps, RTT.
+
+**Launch a speedtest:**
+```
+Run a 30-second speedtest between <SOURCE_ID> and <TARGET_ID> using TCP.
+```
+→ `run_test(source_id="<SOURCE_ID>", target_id="<TARGET_ID>", profile="xfr", duration="30s", protocol="tcp")`  
+Returns a test ID to poll with `get_test_status`.
+
+**Launch with bitrate cap:**
+```
+Run a speedtest between <SOURCE_ID> and <TARGET_ID> capped at 100M bidirectional.
+```
+→ `run_test(..., bitrate="100M", direction="bidirectional")`
+
+**Check test status:**
+```
+What is the status of test <TEST_ID>?
+```
+→ `get_test_status(test_id="<TEST_ID>")` — Status (running/completed/error) + metrics.
+
+**Stop a test:**
+```
+Stop test <TEST_ID>.
+```
+→ `stop_test(test_id="<TEST_ID>")` — Stop confirmation + final metrics.
+
+**Convergence test:**
+```
+Start a convergence test between <SOURCE_ID> and <TARGET_ID> at 100 pps.
+```
+→ `run_test(source_id="<SOURCE_ID>", target_id="<TARGET_ID>", profile="conv", pps=100)`  
+⚠️ Claude announces the test ID and **waits for you to say "stop"** — it does not poll automatically.
+
+**Convergence history:**
+```
+Show me the last 5 convergence tests for node <NODE_ID>.
+```
+→ `get_convergence_history(agent_id="<NODE_ID>", limit=5)` — Max blackout (ms) + verdict: PERFECT / GOOD / DEGRADED / BAD / CRITICAL.
+
+---
+
+### 7. Security Testing
+
+**Security configuration:**
+```
+Show me the security configuration for node <NODE_ID>.
+```
+→ `get_security_config(agent_id="<NODE_ID>")` — Enabled modules, test profile (DNS, URL, threat).
+
+**Security scorecard:**
+```
+What is the current security score for node <NODE_ID>?
+```
+→ `get_security_results_stats(agent_id="<NODE_ID>")` — `posture_scores` (url_filter, dns_security, threat_prevention 0–100) + 24 h trend.
+
+**Recent security test results:**
+```
+Show me the last 10 security test results for node <NODE_ID>.
+```
+→ `list_security_results(agent_id="<NODE_ID>", limit=10)` — Chronological URL/DNS/Threat results.
+
+**Discover available test targets (dynamic, from the node's active profile):**
+```
+What DNS security targets are available on node <NODE_ID>?
+What URL categories are configured on node <NODE_ID>?
+What EICAR targets are available on node <NODE_ID>?
+```
+→ `get_security_test_options(agent_id="<NODE_ID>", probe_type="dns"|"url"|"threat")`  
+ℹ️ This tool is **dynamic** — it reads the node's active security profile. Switching the vendor profile (e.g. to Fortinet) instantly updates what Claude sees here.
+
+**Single DNS test (Claude 2-step workflow):**
+```
+Run a DNS security test for the malware domain on node <NODE_ID>.
+```
+1. `get_security_test_options(agent_id="<NODE_ID>", probe_type="dns")` → fetches real domain list
+2. `run_security_probe(agent_id="<NODE_ID>", probe_type="dns", target="<malware-domain>")` → runs the test
+
+→ Returns Blocked/Allowed + reason. **MCP** badge appears in the Security Log.
+
+**Single URL filtering test (Claude 2-step workflow):**
+```
+Test URL filtering for the "Hacking" category on node <NODE_ID>.
+```
+1. `get_security_test_options(agent_id="<NODE_ID>", probe_type="url")` → finds the exact URL
+2. `run_security_probe(agent_id="<NODE_ID>", probe_type="url", target="<url>")` → tests it
+
+**EICAR test against a specific target (Claude 3-step workflow):**
+```
+Run an EICAR threat prevention test against the Hetzner target from node <NODE_ID>.
+```
+1. `get_security_test_options(agent_id="<NODE_ID>", probe_type="threat")` → sees list (Hetzner, DC1, …)
+2. Selects "Hetzner"
+3. `run_security_probe(agent_id="<NODE_ID>", probe_type="threat", target="http://<hetzner-ip>:8082/eicar.com.txt")`
+
+→ Blocked 🟢 (IPS active) or Allowed 🔴 (policy issue).
+
+**Full batch audits:**
+```
+Run a full DNS security audit on node <NODE_ID>.      ← ~3 min
+Run a full URL filtering audit on node <NODE_ID>.     ← ~3 min
+Run a full security audit on node <NODE_ID>.          ← ~7-10 min (URL + DNS + EICAR)
+```
+→ `run_security_dns_batch` / `run_security_url_batch` / `run_full_security_audit`  
+All return a per-test summary (blocked/allowed/unknown) + global count.
+
+---
+
+### 8. VyOS Network Chaos
+
+> [!IMPORTANT]
+> `get_vyos_interfaces` reads interface **descriptions** to resolve natural language intent. For prompts like *"shut the MPLS link"* to work, descriptions must be set on the VyOS router (e.g., `set interfaces ethernet eth1 description "MPLS-Link-DC1"`). See [VYOS_CONTROL.md](VYOS_CONTROL.md).
+
+**List managed routers:**
+```
+List the VyOS routers managed by node <NODE_ID>.
+```
+→ `list_vyos_routers(agent_id="<NODE_ID>")`
+
+**List available scenarios:**
+```
+What VyOS scenarios are available on node <NODE_ID>?
+```
+→ `list_vyos_scenarios(agent_id="<NODE_ID>")`
+
+**List chaos-eligible interfaces:**
+```
+Show me the network interfaces available for chaos engineering on node <NODE_ID>.
+```
+→ `get_vyos_interfaces(agent_id="<NODE_ID>")` — Interfaces with description, IP, up/down status.
+
+**Live router state:**
+```
+What is the current state of router <ROUTER_ID> managed by node <NODE_ID>?
+```
+→ `get_vyos_router_state(agent_id="<NODE_ID>", router_id="<ROUTER_ID>")`:
+```
+Interface eth0 (ALL-MPLS-190): 🟢 up
+Interface eth1 (BR1-MPLS-197): 🟢 up  +150ms delay  (qos_active)
+Interface eth7 (BR2-INET-226): 🔴 down  (admin disabled)
+IP Blocks: 192.168.1.100/32 (tag-999)
+```
+
+**Add latency (NL → confirmation → execute):**
+```
+Add 100ms of latency on the MPLS link of BR1 via node <NODE_ID>.
+```
+Claude workflow:
+1. `get_vyos_interfaces(agent_id="<NODE_ID>")` → finds the MPLS interface for BR1
+2. Presents: *"I found eth1 (BR1-MPLS-197). Apply 100ms? (yes/no)"*
+3. On confirmation → `vyos_execute_action(agent_id, router_id, "set-impairment", interface="eth1", latency_ms=100)`
+
+⚠️ Claude **must not** apply the action without explicit confirmation.
+
+**Add packet loss:**
+```
+Add 5% packet loss on the WAN interface of router <ROUTER_ID> on node <NODE_ID>.
+```
+→ Same flow → `set-impairment` with `loss_pct=5`.
+
+**Clear QoS / bulk reset / full reset:**
+```
+Remove QoS on eth1 of router <ROUTER_ID> managed by node <NODE_ID>.
+Clear all active QoS on router <ROUTER_ID> managed by node <NODE_ID>.
+Do a full reset of router <ROUTER_ID> — QoS, IP blocks, and downed interfaces.
+```
+→ `vyos_execute_action(..., "clear-qos", interface="eth1")`  
+→ `vyos_bulk_reset(..., scope="all-qos")`  
+→ `vyos_bulk_reset(..., scope="full-reset")`
+
+**Block / unblock an IP:**
+```
+Block traffic to 1.2.3.4 on router <ROUTER_ID> managed by node <NODE_ID>.
+Unblock traffic to 1.2.3.4 on router <ROUTER_ID> managed by node <NODE_ID>.
+```
+→ `vyos_execute_action(agent_id, router_id, "deny-traffic"|"allow-traffic", ip="1.2.3.4")`  
+⚠️ Claude asks for confirmation before blocking.
+
+**Run a VyOS scenario / toggle cyclic:**
+```
+Run scenario "<SCENARIO_ID>" on node <NODE_ID>.
+Disable the cyclic scenario "<SCENARIO_ID>" running on node <NODE_ID>.
+```
+→ `run_vyos_scenario(...)` / `set_vyos_scenario_status(..., enabled=False)`
+
+**Change history:**
+```
+Show me the last 10 VyOS changes applied via node <NODE_ID>.
+```
+→ `get_vyos_timeline(agent_id="<NODE_ID>", limit=10)`
+
+---
+
+### 9. Voice Simulation
+
+```
+Start voice simulation on node <NODE_ID>.
+Stop voice simulation on node <NODE_ID>.
+```
+→ `set_voice_status(source_id="<NODE_ID>", enabled=True/False)`  
+⚠️ Node must be of fabric type.
+
+---
+
+### 10. Config Export, Import & Multi-Deployment Clone
+
+**Export application config:**
+```
+Export the application configuration from node <NODE_ID>.
+```
+→ `export_app_config(agent_id="<NODE_ID>")` — Returns a JSON config object.
+
+**Copy application config to another node:**
+```
+Copy the application configuration from node <SOURCE_ID> to <DEST_ID>.
+```
+Claude workflow:
+1. `export_app_config(agent_id="<SOURCE_ID>")` → fetches JSON
+2. Warns that import will overwrite the existing config
+3. On confirmation → `import_app_config(agent_id="<DEST_ID>", config=<JSON>)`
+
+**Full node clone (multi-deployment):**
+```
+Clone the full configuration from BR8 to BR5: apps, DEM probes, security profile, and VyOS scenarios.
+```
+→ `clone_node_config(source_id="<BR8_ID>", target_id="<BR5_ID>")`  
+Returns a per-component report:
+```json
+{
+  "source": "BR8-Ubuntu",
+  "target": "ubuntubr5",
+  "components": {
+    "apps":             { "status": "ok", "message": "Application config cloned." },
+    "dem_probes":       { "status": "ok", "count": 6, "message": "6 DEM probe(s) cloned." },
+    "security_profile": { "status": "ok", "vendor": "paloalto", "url_categories": 65, "dns_domains": 11 },
+    "vyos_scenarios":   { "status": "ok", "cloned": 3, "message": "3/3 VyOS scenarios cloned." }
+  },
+  "summary": "✅ All components cloned successfully."
+}
+```
+
+**Partial clone (one or more components):**
+```
+Clone only the DEM probes from BR8 to BR5, without touching apps or the security profile.
+Copy the security profile from BR8 to BR5.
+```
+→ `clone_node_config(source_id="<BR8_ID>", target_id="<BR5_ID>", scope=["dem_probes"])`  
+→ `clone_node_config(source_id="<BR8_ID>", target_id="<BR5_ID>", scope=["security_profile"])`
+
+Available scope values: `apps`, `dem_probes`, `security_profile`, `vyos_scenarios`.
+
+> [!IMPORTANT]
+> `clone_node_config` is a **write operation** — it overwrites the target node's config for each selected component. Claude will always ask for confirmation before executing.
+
+> [!WARNING]
+> Prerequisite: `JWT_SECRET` must be identical on both nodes. Verify with:
+> ```bash
+> docker exec stigix printenv JWT_SECRET   # run on each node
+> ```
+
+---
+
+### 11. Edge Cases & Error Handling
+
+**Non-existent node (expected clean error):**
+```
+Give me the status of node "NODE-THAT-DOES-NOT-EXIST".
+```
+→ Claude returns a clean error message — no crash, no empty response.
+
+**Ambiguous VyOS NL resolution:**
+```
+Add 200ms of latency on the Internet link of BR2 via node <NODE_ID>.
+```
+If multiple Internet links exist on BR2, Claude:
+1. Lists all candidates with their descriptions
+2. Asks you to pick one explicitly
+3. Does **not** apply any action until a choice is made
+
+---
+
 
 ## 🔄 Keeping MCP Tools Up-to-Date
 
@@ -586,5 +918,6 @@ This also means:
 
 ---
 
-*Last Updated: v1.4.0-patch.108 — 2026-05-30*
+*Last Updated: v1.4.0-patch.131 — 2026-05-31*
+
 
