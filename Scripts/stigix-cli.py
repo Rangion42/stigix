@@ -648,6 +648,157 @@ def cmd_status(args):
         if running:
             ok(f"Failover running: {', '.join(t.get('testId','?') for t in running)}")
 
+def cmd_flows(args):
+    if not require_auth(): return
+    if not args or args[0] in ("--help", "-h", "help"):
+        _help_section("FLOWS", [
+            ("flows query [options]", "Query the Prisma SD-WAN Flow Browser"),
+            ("  Options:", ""),
+            ("    --site <name>", "Site name (e.g. BR8)"),
+            ("    --protocol <tcp|udp|icmp|number>", "Filter by protocol"),
+            ("    --src-ip <ip>", "Filter by source IP"),
+            ("    --dst-ip <ip>", "Filter by destination IP"),
+            ("    --src-port <port>", "Filter by TCP/UDP source port"),
+            ("    --dst-port <port>", "Filter by TCP/UDP destination port"),
+            ("    --minutes <N>", "Minutes to look back (default: 15)"),
+            ("    --fast", "Skip path resolution to speed up query"),
+        ])
+        return
+
+    sub = args[0]
+    if sub != "query":
+        err(f"Unknown flows subcommand: {sub}")
+        return
+
+    # Parse arguments
+    site_name = None
+    protocol = None
+    src_ip = None
+    dst_ip = None
+    src_port = None
+    dst_port = None
+    minutes = 15
+    fast = False
+
+    i = 1
+    while i < len(args):
+        arg = args[i]
+        if arg == "--site" and i + 1 < len(args):
+            site_name = args[i+1]
+            i += 2
+        elif arg == "--protocol" and i + 1 < len(args):
+            proto_str = args[i+1].lower()
+            if proto_str == "tcp": protocol = 6
+            elif proto_str == "udp": protocol = 17
+            elif proto_str == "icmp": protocol = 1
+            else:
+                try: protocol = int(proto_str)
+                except ValueError: pass
+            i += 2
+        elif arg == "--src-ip" and i + 1 < len(args):
+            src_ip = args[i+1]
+            i += 2
+        elif arg == "--dst-ip" and i + 1 < len(args):
+            dst_ip = args[i+1]
+            i += 2
+        elif arg == "--src-port" and i + 1 < len(args):
+            try: src_port = int(args[i+1])
+            except ValueError: err("Invalid source port")
+            i += 2
+        elif arg == "--dst-port" and i + 1 < len(args):
+            try: dst_port = int(args[i+1])
+            except ValueError: err("Invalid destination port")
+            i += 2
+        elif arg == "--minutes" and i + 1 < len(args):
+            try: minutes = int(args[i+1])
+            except ValueError: err("Invalid minutes")
+            i += 2
+        elif arg == "--fast":
+            fast = True
+            i += 1
+        else:
+            err(f"Unrecognized argument: {arg}")
+            return
+
+    # Prepare payload
+    body = {
+        "site_name": site_name,
+        "protocol": protocol,
+        "src_ip": src_ip,
+        "dst_ip": dst_ip,
+        "minutes": minutes,
+        "fast": fast
+    }
+    
+    # Map TCP/UDP specific ports
+    if protocol == 6:
+        if src_port: body["tcp_src_port"] = src_port
+        if dst_port: body["tcp_dst_port"] = dst_port
+    elif protocol == 17 or (not protocol and (src_port or dst_port)):
+        # Default to UDP if not specified but ports are provided
+        if src_port: body["udp_src_port"] = src_port
+        if dst_port: body["udp_dst_port"] = dst_port
+        if not protocol:
+            body["protocol"] = 17
+
+    # Run API query
+    def do_query():
+        return api_post("/api/prisma/flows", body)
+
+    res = _spin_while("Querying Prisma Flow Browser...", do_query)
+
+    if not res:
+        return
+
+    if not res.get("success", True) == True or "error" in res:
+        err(res.get("error", "Flow query failed"))
+        return
+
+    flows = res.get("flows", [])
+    if not flows:
+        info("No matching flows found.")
+        return
+
+    ok(f"Found {len(flows)} flows:")
+    
+    headers = ["Start Time", "Source", "Destination", "Proto", "Bytes (C2S/S2C)", "Packets (C2S/S2C)", "Path", "App ID"]
+    rows = []
+    
+    for f in flows:
+        # Convert start time timestamp (ms) to string
+        start_ms = f.get("flow_start_time_ms")
+        start_time_str = "?"
+        if start_ms:
+            try:
+                start_time_str = datetime.fromtimestamp(start_ms / 1000).strftime("%Y-%m-%d %H:%M:%S")
+            except:
+                pass
+        
+        src = f"{f.get('source_ip')}:{f.get('source_port')}"
+        dst = f"{f.get('destination_ip')}:{f.get('destination_port')}"
+        
+        proto_num = f.get("protocol")
+        proto_map = {6: "TCP", 17: "UDP", 1: "ICMP"}
+        proto = proto_map.get(proto_num, str(proto_num))
+        
+        bytes_str = f"{f.get('bytes_c2s') or 0} / {f.get('bytes_s2c') or 0}"
+        packets_str = f"{f.get('packets_c2s') or 0} / {f.get('packets_s2c') or 0}"
+        path_name = f.get("egress_path") or f.get("path_type") or "?"
+        app = f.get("app_id") or "?"
+        
+        rows.append([
+            start_time_str,
+            src,
+            dst,
+            proto,
+            bytes_str,
+            packets_str,
+            path_name,
+            app
+        ])
+        
+    table(headers, rows)
+
 PREV_STATS = {"total_requests": None, "timestamp": None}
 
 def get_app_groups():
@@ -4198,6 +4349,7 @@ DISPATCH = {
     "convergence": cmd_failover,
     "vyos":        cmd_vyos,
     "voice":       cmd_voice,
+    "flows":       cmd_flows,
     "iot":         cmd_iot,
     "system":      cmd_system,
     "connect":     cmd_connect,
@@ -4210,6 +4362,12 @@ DISPATCH = {
 
 COMPLETER_TREE = {
     "auth":        {"login": None, "logout": None, "status": None},
+    "flows":       {"query": {
+        "--site": None, "--protocol": {"tcp", "udp", "icmp"},
+        "--src-ip": None, "--dst-ip": None,
+        "--src-port": None, "--dst-port": None,
+        "--minutes": None, "--fast": None
+    }},
     "status":      None,
     "connect":     {"list": None, "save": None, "forget": None},
     "history":     {"list": None, "dump": None, "save": None, "clear": None},

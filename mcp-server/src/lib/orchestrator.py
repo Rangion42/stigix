@@ -2123,3 +2123,24 @@ class TestOrchestrator:
             "nodes": nodes
         }
         return report
+
+    async def query_prisma_flows(self, agent_id: str, body: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Query the Prisma SD-WAN Flow Browser via the Stigix node's local API.
+        """
+        agent = await self.registry.get_endpoint(agent_id)
+        if not agent:
+            return {"error": f"Agent {agent_id} not found."}
+
+        headers = {"Authorization": f"Bearer {self._generate_token()}"}
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            try:
+                r = await client.post(
+                    f"{agent.api_base_url}/api/prisma/flows",
+                    json=body,
+                    headers=headers
+                )
+                r.raise_for_status()
+                return r.json()
+            except Exception as e:
+                return self._handle_exception(f"Prisma flow query on {agent_id}", e)

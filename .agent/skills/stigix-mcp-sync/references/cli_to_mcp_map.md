@@ -1,8 +1,8 @@
 # Stigix CLI → MCP Tool Registry
 
-> **Last synced:** v1.4.0-patch.100 (2026-05-29)  
-> **MCP tools total:** 44  
-> **Coverage:** ~95% of CLI capabilities
+> **Last synced:** v1.4.0-patch.142 (2026-06-01)  
+> **MCP tools total:** 48  
+> **Coverage:** ~96% of CLI capabilities
 
 This is the living reference file for the `stigix-mcp-sync` skill.
 Update this file every time you add, fix, or remove MCP tools.
@@ -153,8 +153,16 @@ Update this file every time you add, fix, or remove MCP tools.
 |---|---|---|---|
 | `diagnostics` → `/api/admin/system/dashboard-data` | `get_diagnostics` | ✅ MAPPED | CPU, bitrate, app stats, voice, peers |
 | `app score <app>` | `get_app_score` | ✅ MAPPED | Fuzzy match on app name |
-| Node comparison (two nodes) | — | ❌ NOT MAPPED | **Phase 4 target** |
-| Summary report (fabric-wide) | — | ❌ NOT MAPPED | **Phase 4 target** |
+| Node comparison (two nodes) | `compare_nodes` | ✅ MAPPED | Side-by-side node comparison |
+| Summary report (fabric-wide) | `generate_report` | ✅ MAPPED | Fabric-wide status report |
+
+---
+
+## Prisma Flow Browser
+
+| CLI Command / API | MCP Tool | Status | Notes |
+|---|---|---|---|
+| `flows query` → `/api/prisma/flows` | `get_prisma_flows` | ✅ MAPPED | Filter by ports, IPs, protocol, minutes |
 
 ---
 
@@ -163,8 +171,6 @@ Update this file every time you add, fix, or remove MCP tools.
 | Missing Tool | CLI Equivalent | API | Priority |
 |---|---|---|---|
 | `get_convergence_history` | `convergence history` | `/api/convergence/history` | 🔴 High |
-| `compare_nodes` | (manual/compound) | Multiple endpoints | 🟡 Medium |
-| `generate_report` | (manual/compound) | Multiple endpoints | 🟡 Medium |
 | `configure_vyos_router` | `vyos configure` | `/api/vyos/routers` (PUT) | 🟢 Low |
 | `list_security_results` | `security results <n>` | `/api/security/results?limit=N` | 🟢 Low |
 | `reset_stats` | `traffic reset` | `DELETE /api/stats` | 🟢 Low |

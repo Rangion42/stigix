@@ -2815,6 +2815,100 @@ app.get('/api/topology', authenticateToken, async (req, res) => {
     }
 });
 
+// --- Query Flow Browser API ---
+app.post('/api/prisma/flows', authenticateToken, async (req, res) => {
+    const {
+        site_name,
+        site_id,
+        protocol,
+        udp_src_port,
+        udp_dst_port,
+        tcp_src_port,
+        tcp_dst_port,
+        src_ip,
+        dst_ip,
+        minutes,
+        hours,
+        fast,
+        page_size
+    } = req.body;
+
+    try {
+        const scriptPath = path.join(PROJECT_ROOT, 'engines', 'getflow.py');
+        if (!fs.existsSync(scriptPath)) {
+            return res.status(404).json({ success: false, error: 'getflow.py script not found' });
+        }
+
+        const args = [scriptPath, '--json'];
+
+        if (site_name) { args.push('--site-name', String(site_name)); }
+        if (site_id) { args.push('--site-id', String(site_id)); }
+        if (protocol) { args.push('--protocol', String(protocol)); }
+        if (udp_src_port) { args.push('--udp-src-port', String(udp_src_port)); }
+        if (udp_dst_port) { args.push('--udp-dst-port', String(udp_dst_port)); }
+        if (tcp_src_port) { args.push('--tcp-src-port', String(tcp_src_port)); }
+        if (tcp_dst_port) { args.push('--tcp-dst-port', String(tcp_dst_port)); }
+        if (src_ip) { args.push('--src-ip', String(src_ip)); }
+        if (dst_ip) { args.push('--dst-ip', String(dst_ip)); }
+        if (minutes) { args.push('--minutes', String(minutes)); }
+        if (hours) { args.push('--hours', String(hours)); }
+        if (fast) { args.push('--fast'); }
+        if (page_size) { args.push('--page-size', String(page_size)); }
+
+        // Determine region and inject it if needed
+        const region = process.env.PRISMA_SDWAN_REGION || 'de';
+        if (region) {
+            args.push('--region', region === 'eu' || region === 'europe' || region === 'Germany' ? 'de' : 'us');
+        }
+
+        log('SYSTEM', `Spawning flow query: python3 ${args.join(' ')}`);
+
+        // Spawn process
+        const proc = spawn(PYTHON_PATH, args, {
+            cwd: path.join(PROJECT_ROOT, 'engines'),
+            timeout: 45_000,
+            env: {
+                ...process.env,
+                PYTHONUNBUFFERED: '1',
+                PRISMA_SDWAN_TSG_ID: process.env.PRISMA_SDWAN_TSGID || process.env.PRISMA_SDWAN_TSG_ID
+            }
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        proc.stdout.on('data', (d) => { stdout += d.toString(); });
+        proc.stderr.on('data', (d) => { stderr += d.toString(); });
+
+        proc.on('close', (code) => {
+            if (code === 0) {
+                try {
+                    const data = JSON.parse(stdout);
+                    res.json(data);
+                } catch (e) {
+                    res.status(500).json({ success: false, error: 'Failed to parse flow data JSON response', raw: stdout });
+                }
+            } else {
+                let errorMsg = 'Flow query failed';
+                const combined = (stderr || '') + (stdout || '');
+                if (combined.includes('login_secret returned False') || combined.includes('invalid_client')) {
+                    errorMsg = 'Prisma SASE authentication failed. Check credentials.';
+                } else if (stderr) {
+                    errorMsg = stderr.substring(0, 200).trim();
+                }
+                res.status(500).json({ success: false, error: errorMsg });
+            }
+        });
+
+        proc.on('error', (err) => {
+            res.status(500).json({ success: false, error: `Failed to execute flow engine: ${err.message}` });
+        });
+
+    } catch (e: any) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 // API: Get Version (Public endpoint)
 app.get('/api/version', (req, res) => {
 

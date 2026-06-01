@@ -1308,6 +1308,67 @@ async def clone_node_config(
 
 
 # -----------------------------------------------------------------------------
+# Prisma Flow Browser (Tool #53)
+# -----------------------------------------------------------------------------
+
+@mcp.tool()
+async def get_prisma_flows(
+    agent_id: str,
+    site_name: Optional[str] = None,
+    site_id: Optional[str] = None,
+    protocol: Optional[int] = None,
+    udp_src_port: Optional[int] = None,
+    udp_dst_port: Optional[int] = None,
+    tcp_src_port: Optional[int] = None,
+    tcp_dst_port: Optional[int] = None,
+    src_ip: Optional[str] = None,
+    dst_ip: Optional[str] = None,
+    minutes: Optional[int] = 15,
+    hours: Optional[int] = None,
+    fast: Optional[bool] = False,
+    page_size: Optional[int] = 10
+) -> dict:
+    """
+    Query the Prisma SD-WAN Flow Browser to retrieve paths and stats for specific flows.
+    Fetches the flows from the target site with filtering options.
+
+    Args:
+        agent_id: ID of the Stigix node executing the query (local backend).
+        site_name: Name of the site to query flows for (alternative to site_id, e.g. 'BR8').
+        site_id: UUID of the site to query.
+        protocol: Filter by protocol number (6=TCP, 17=UDP, 1=ICMP).
+        udp_src_port: Filter by UDP source port.
+        udp_dst_port: Filter by UDP destination port.
+        tcp_src_port: Filter by TCP source port.
+        tcp_dst_port: Filter by TCP destination port.
+        src_ip: Filter by source IP.
+        dst_ip: Filter by destination IP.
+        minutes: Number of minutes to look back (default: 15).
+        hours: Number of hours to look back (overrides minutes).
+        fast: Skip detailed VPN path name resolution to speed up execution.
+        page_size: Maximum number of flow records to return.
+    """
+    body = {
+        "site_name": site_name,
+        "site_id": site_id,
+        "protocol": protocol,
+        "udp_src_port": udp_src_port,
+        "udp_dst_port": udp_dst_port,
+        "tcp_src_port": tcp_src_port,
+        "tcp_dst_port": tcp_dst_port,
+        "src_ip": src_ip,
+        "dst_ip": dst_ip,
+        "minutes": minutes,
+        "hours": hours,
+        "fast": fast,
+        "page_size": page_size
+    }
+    # Clean None values
+    body = {k: v for k, v in body.items() if v is not None}
+    return await orchestrator.query_prisma_flows(agent_id, body)
+
+
+# -----------------------------------------------------------------------------
 # Main Entry Point
 # -----------------------------------------------------------------------------
 

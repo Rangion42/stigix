@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.142] - 2026-06-01
+### Added
+- **web-dashboard** 🌐 `server.ts`: Added `/api/prisma/flows` POST API endpoint to run `getflow.py` and query flow browser records dynamically using stored Prisma credentials.
+- **stigix-cli** 🚦 `Scripts/stigix-cli.py`: Integrated `flows query` command with formatted table reporting total bytes, packets, path IDs, and friendly timestamps.
+- **mcp-server** 🤖 Exposed `get_prisma_flows` MCP tool to allow querying Prisma Flow Browser via Claude.
+
 ## [v1.4.0-patch.141] - 2026-06-01
 ### Added
 - **getflow** 🆕 `/app/engines/getflow.py` and `Scripts/getflow.py`: Added support for `--tcp-src-port` and `--tcp-dst-port` parameters to allow filtering flow queries by TCP ports (maps protocol automatically to 6).
