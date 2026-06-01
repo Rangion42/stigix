@@ -3,7 +3,7 @@ import {
     RefreshCw, Download, AlertCircle, CheckCircle, Clock, Shield, Globe, Lock, Terminal,
     Network, Sliders, ChevronDown, ChevronRight, Server, CheckCircle2, Upload, Power,
     Settings as SettingsIcon, Database, Activity, Cpu, Plus, Edit2, Trash2, MapPin, Zap, Info, XCircle, ShieldAlert, Layers,
-    Clipboard, ExternalLink, BarChart3, AlertTriangle, Gauge, Bug, TrendingUp
+    Clipboard, ExternalLink, BarChart3, AlertTriangle, Gauge, Bug, TrendingUp, Search
 } from 'lucide-react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
@@ -490,6 +490,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
     const [prismaTestResult, setPrismaTestResult] = useState<{ success?: boolean; error?: string } | null>(null);
     const [prismaDirty, setPrismaDirty] = useState(false);
     const [probeFilterType, setProbeFilterType] = useState('ALL');
+    const [probeSearchQuery, setProbeSearchQuery] = useState('');
     const [maxCaptures, setMaxCaptures] = useState(uiConfig?.maxCaptures || 10);
     const ALL_PROBE_TYPES = ['HTTP', 'HTTPS', 'PING', 'DNS', 'UDP', 'TCP', 'CLOUD'];
     const [globalScoreTypes, setGlobalScoreTypes] = useState<string[]>(uiConfig?.globalScoreTypes || ALL_PROBE_TYPES);
@@ -1575,6 +1576,18 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                     </button>
                                 ))}
                             </div>
+                            <div className="relative flex-grow max-w-md">
+                                <input
+                                    type="text"
+                                    placeholder="Search probes (name or target)..."
+                                    value={probeSearchQuery}
+                                    onChange={(e) => setProbeSearchQuery(e.target.value)}
+                                    className="w-full bg-card-secondary border border-border text-text-primary rounded-xl pl-10 pr-4 py-2 text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+                                />
+                                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted opacity-50">
+                                    <Search size={14} />
+                                </div>
+                            </div>
                         </div>
 
                         <div className="space-y-4">
@@ -1613,9 +1626,24 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
 
                                     {customProbes
                                         .filter(probe => {
-                                            if (probeFilterType === 'ALL') return true;
-                                            if (probeFilterType === 'PRISMA') return (probe as any).source === 'discovery';
-                                            return probe.type === probeFilterType;
+                                            // 1. Type Filter
+                                            let matchesType = true;
+                                            if (probeFilterType === 'PRISMA') {
+                                                matchesType = (probe as any).source === 'discovery';
+                                            } else if (probeFilterType !== 'ALL') {
+                                                matchesType = probe.type === probeFilterType;
+                                            }
+                                            
+                                            // 2. Search Query Filter
+                                            let matchesSearch = true;
+                                            if (probeSearchQuery.trim() !== '') {
+                                                const query = probeSearchQuery.toLowerCase();
+                                                const nameMatch = (probe.name || '').toLowerCase().includes(query);
+                                                const targetMatch = (probe.target || '').toLowerCase().includes(query);
+                                                matchesSearch = nameMatch || targetMatch;
+                                            }
+                                            
+                                            return matchesType && matchesSearch;
                                         })
                                         .map((probe) => {
                                         const isDiscovery = (probe as any).source === 'discovery';

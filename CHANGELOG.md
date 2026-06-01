@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.138] - 2026-06-01
+### Added
+- **docs** 📖 `docs/GETFLOW_ENGINE.md`: Added comprehensive user documentation for the `getflow.py` integration engine (roles in Stigix, command-line arguments, standalone usage examples, and troubleshooting).
+- **web-dashboard** 🔍 `Settings.tsx`: Added an interactive search probe input field in the Synthetic Probes tab to filter custom probes by name or target with case-insensitive pattern matching.
+
 ## [v1.4.0-patch.137] - 2026-05-31
 ### Fixed
 - **mcp-server** 🏷️ `orchestrator.py`: Implemented a centralized exception helper `_handle_exception` and updated `get_node_status`, `get_traffic_stats`, and `get_traffic_logs` to ensure all remote agent connection failures consistently output descriptive exception details instead of returning empty error strings.
