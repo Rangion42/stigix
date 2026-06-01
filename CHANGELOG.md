@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.143] - 2026-06-01
+### Added
+- **stigix-cli** 🚦 `Scripts/stigix-cli.py`: Added interactive prompting to `flows query` when run without parameters. Features auto-detection of local site name and local IP as defaults, optional port prompts, and prints the equivalent full CLI command at the end for easy copy-paste.
+
 ## [v1.4.0-patch.142] - 2026-06-01
 ### Added
 - **web-dashboard** 🌐 `server.ts`: Added `/api/prisma/flows` POST API endpoint to run `getflow.py` and query flow browser records dynamically using stored Prisma credentials.

@@ -680,45 +680,138 @@ def cmd_flows(args):
     minutes = 15
     fast = False
 
-    i = 1
-    while i < len(args):
-        arg = args[i]
-        if arg == "--site" and i + 1 < len(args):
-            site_name = args[i+1]
-            i += 2
-        elif arg == "--protocol" and i + 1 < len(args):
-            proto_str = args[i+1].lower()
-            if proto_str == "tcp": protocol = 6
-            elif proto_str == "udp": protocol = 17
-            elif proto_str == "icmp": protocol = 1
-            else:
-                try: protocol = int(proto_str)
-                except ValueError: pass
-            i += 2
-        elif arg == "--src-ip" and i + 1 < len(args):
-            src_ip = args[i+1]
-            i += 2
-        elif arg == "--dst-ip" and i + 1 < len(args):
-            dst_ip = args[i+1]
-            i += 2
-        elif arg == "--src-port" and i + 1 < len(args):
-            try: src_port = int(args[i+1])
-            except ValueError: err("Invalid source port")
-            i += 2
-        elif arg == "--dst-port" and i + 1 < len(args):
-            try: dst_port = int(args[i+1])
-            except ValueError: err("Invalid destination port")
-            i += 2
-        elif arg == "--minutes" and i + 1 < len(args):
-            try: minutes = int(args[i+1])
-            except ValueError: err("Invalid minutes")
-            i += 2
-        elif arg == "--fast":
-            fast = True
-            i += 1
+    if len(args) == 1:
+        # Interactive mode
+        # 1. Detect site name
+        default_site = None
+        site = api_get("/api/siteinfo")
+        if site:
+            default_site = site.get("detected_site_name") or site.get("siteName")
+        
+        site_prompt = f"Site name (e.g. BR8) [{default_site}]: " if default_site else "Site name (e.g. BR8): "
+        site_name = input(site_prompt).strip()
+        if not site_name and default_site:
+            site_name = default_site
+
+        # 2. Protocol
+        proto_input = input("Protocol (tcp, udp, icmp) [tcp]: ").strip().lower() or "tcp"
+        if proto_input == "tcp": protocol = 6
+        elif proto_input == "udp": protocol = 17
+        elif proto_input == "icmp": protocol = 1
         else:
-            err(f"Unrecognized argument: {arg}")
-            return
+            try: protocol = int(proto_input)
+            except ValueError: protocol = 6 # default fallback
+
+        # 3. Source IP
+        default_ip = None
+        ifaces_data = api_get("/api/system/interfaces")
+        if ifaces_data:
+            default_iface = ifaces_data.get("default_interface")
+            iface_list = ifaces_data.get("interfaces", [])
+            for iface in iface_list:
+                if iface.get("is_default") or iface.get("name") == default_iface:
+                    default_ip = iface.get("ip")
+                    break
+            if not default_ip and iface_list:
+                default_ip = iface_list[0].get("ip")
+
+        src_ip_prompt = f"Source IP [{default_ip}]: " if default_ip else "Source IP: "
+        src_ip = input(src_ip_prompt).strip()
+        if not src_ip and default_ip:
+            src_ip = default_ip
+
+        # 4. Source Port
+        src_port_input = input("Source Port (optional): ").strip()
+        if src_port_input:
+            try: src_port = int(src_port_input)
+            except ValueError: err("Invalid source port")
+
+        # 5. Destination IP
+        dst_ip = input("Destination IP (optional): ").strip() or None
+
+        # 6. Destination Port
+        dst_port_input = input("Destination Port (optional): ").strip()
+        if dst_port_input:
+            try: dst_port = int(dst_port_input)
+            except ValueError: err("Invalid destination port")
+
+        # 7. Minutes
+        minutes_input = input("Minutes lookback [5]: ").strip()
+        if minutes_input:
+            try: minutes = int(minutes_input)
+            except ValueError:
+                err("Invalid minutes, defaulting to 5")
+                minutes = 5
+        else:
+            minutes = 5
+
+        # 8. Fast
+        fast_input = input("Fast mode (skip VPN path resolution) [y/N]: ").strip().lower()
+        fast = fast_input in ("y", "yes")
+
+        # Print equivalent CLI syntax
+        equivalent_args = []
+        if site_name:
+            equivalent_args.append(f"--site {site_name}")
+        proto_name = "tcp" if protocol == 6 else "udp" if protocol == 17 else "icmp" if protocol == 1 else str(protocol)
+        equivalent_args.append(f"--protocol {proto_name}")
+        if src_ip:
+            equivalent_args.append(f"--src-ip {src_ip}")
+        if src_port:
+            equivalent_args.append(f"--src-port {src_port}")
+        if dst_ip:
+            equivalent_args.append(f"--dst-ip {dst_ip}")
+        if dst_port:
+            equivalent_args.append(f"--dst-port {dst_port}")
+        if minutes != 15:
+            equivalent_args.append(f"--minutes {minutes}")
+        if fast:
+            equivalent_args.append("--fast")
+        
+        eq_str = "flows query " + " ".join(equivalent_args)
+        info("--------------------------------------------------------------------------------")
+        info(f"Equivalent CLI command (copy & paste to reuse):\n  {eq_str}")
+        info("--------------------------------------------------------------------------------")
+    else:
+        i = 1
+        while i < len(args):
+            arg = args[i]
+            if arg == "--site" and i + 1 < len(args):
+                site_name = args[i+1]
+                i += 2
+            elif arg == "--protocol" and i + 1 < len(args):
+                proto_str = args[i+1].lower()
+                if proto_str == "tcp": protocol = 6
+                elif proto_str == "udp": protocol = 17
+                elif proto_str == "icmp": protocol = 1
+                else:
+                    try: protocol = int(proto_str)
+                    except ValueError: pass
+                i += 2
+            elif arg == "--src-ip" and i + 1 < len(args):
+                src_ip = args[i+1]
+                i += 2
+            elif arg == "--dst-ip" and i + 1 < len(args):
+                dst_ip = args[i+1]
+                i += 2
+            elif arg == "--src-port" and i + 1 < len(args):
+                try: src_port = int(args[i+1])
+                except ValueError: err("Invalid source port")
+                i += 2
+            elif arg == "--dst-port" and i + 1 < len(args):
+                try: dst_port = int(args[i+1])
+                except ValueError: err("Invalid destination port")
+                i += 2
+            elif arg == "--minutes" and i + 1 < len(args):
+                try: minutes = int(args[i+1])
+                except ValueError: err("Invalid minutes")
+                i += 2
+            elif arg == "--fast":
+                fast = True
+                i += 1
+            else:
+                err(f"Unrecognized argument: {arg}")
+                return
 
     # Prepare payload
     body = {
