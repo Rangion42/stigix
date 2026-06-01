@@ -531,11 +531,13 @@ def main():
     # Authenticate
     log_output("\n🔐 Authenticating...", json_mode)
     try:
-        sdk.interactive.login_secret(
+        login_success = sdk.interactive.login_secret(
             client_id=creds['client_id'],
             client_secret=creds['client_secret'],
             tsg_id=creds['tsg_id']
         )
+        if not login_success:
+            raise ValueError("API login_secret returned False. Check credentials and TSG ID.")
         log_output("✓ Authenticated successfully", json_mode)
     except Exception as e:
         error_msg = {"error": f"Authentication failed: {e}"}

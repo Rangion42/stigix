@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.139] - 2026-06-01
+### Fixed
+- **getflow** 🐛 `/app/engines/getflow.py` and `Scripts/getflow.py`: Fixed silent authentication failures. Raised ValueError if `sdk.interactive.login_secret` returns `False` to prevent execution from proceeding with uninitialized token objects and crashing on missing `'jwt_expires_at'` attribute.
+
 ## [v1.4.0-patch.138] - 2026-06-01
 ### Added
 - **docs** 📖 `docs/GETFLOW_ENGINE.md`: Added comprehensive user documentation for the `getflow.py` integration engine (roles in Stigix, command-line arguments, standalone usage examples, and troubleshooting).
