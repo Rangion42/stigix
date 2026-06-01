@@ -13,7 +13,7 @@ The Stigix MCP Server provides a **natural language interface** to orchestrate y
 ✅ **Mesh-Ready Orchestration** - Control any node in the mesh from any other node via distributed discovery.  
 ✅ **Natural Language** - Command your infrastructure in plain English or French.  
 ✅ **Distributed Control** - The MCP server runs on every Stigix instance, providing total redundancy.  
-✅ **Full Toolset** - 52 tools covering 100% of stigix-cli capabilities: traffic, security, DEM probes, fabric targets, VyOS, config clone, and analytics.  
+✅ **Full Toolset** - 53 tools covering 100% of stigix-cli capabilities: traffic, security, DEM probes, fabric targets, VyOS, config clone, and analytics.  
 ✅ **SSE Transport** - Native support for Server-Sent Events (SSE) for easy remote access.  
 
 ---
@@ -261,7 +261,7 @@ docker compose -f docker-compose-latest-beta.bridge.yml restart
 
 
 
-## 🛠️ Available MCP Tools (51 tools)
+## 🛠️ Available MCP Tools (53 tools)
 
 > [!TIP]
 > All tools that target a specific node accept an `agent_id` parameter — this is the node's name as shown in `list_endpoints` (e.g., `"BR8"`, `"Paris"`, `"Hetzner"`).
@@ -352,6 +352,7 @@ docker compose -f docker-compose-latest-beta.bridge.yml restart
 |---|---|---|
 | `get_diagnostics` | Full node dashboard: CPU, bitrate, app stats, voice, peers | *"Health of BR8", "CPU/RAM Paris"* |
 | `get_app_score` | Success rate for a specific application | *"Teams score on BR8?"* |
+| `get_prisma_flows` | Query Prisma SD-WAN Flow Browser for path/session details | *"Query Prisma flows on BR8 for UDP port 30075"* |
 
 ### VyOS Router Management
 
@@ -806,7 +807,17 @@ Available scope values: `apps`, `dem_probes`, `security_profile`, `vyos_scenario
 
 ---
 
-### 11. Edge Cases & Error Handling
+### 11. Prisma Flow Browser
+
+**Query flows for specific criteria:**
+```
+Query the Prisma Flow Browser on BR8 for TCP port 8082 sessions to 192.168.203.100 over the last 15 minutes.
+```
+→ `get_prisma_flows(agent_id="BR8", site_name="BR8", protocol=6, tcp_dst_port=8082, dst_ip="192.168.203.100", minutes=15)`
+
+---
+
+### 12. Edge Cases & Error Handling
 
 **Non-existent node (expected clean error):**
 ```
@@ -918,6 +929,6 @@ This also means:
 
 ---
 
-*Last Updated: v1.4.0-patch.131 — 2026-05-31*
+*Last Updated: v1.4.0-patch.142 — 2026-06-01*
 
 

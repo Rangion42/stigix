@@ -263,6 +263,21 @@ Run iPerf3/XFR speedtests to evaluate path bandwidth, latency, and packet loss.
 
 ---
 
+### 12. SD-WAN Flow Browser Queries (`flows`)
+Query Palo Alto Networks SASE Prisma SD-WAN Flow Browser for path and bandwidth details of active/recent sessions.
+
+*   `flows query --site <site_name>` — Run a flow query for a given site.
+    *   **Options**:
+        *   `--protocol <tcp|udp|icmp>`: Filter by protocol.
+        *   `--src-ip <ip>`: Filter by source IP address.
+        *   `--dst-ip <ip>`: Filter by destination IP address.
+        *   `--src-port <port>`: Filter by TCP/UDP source port.
+        *   `--dst-port <port>`: Filter by TCP/UDP destination port.
+        *   `--minutes <mins>`: Lookback window (defaults to 15 minutes).
+        *   `--fast`: Skip detailed VPN path resolution.
+
+---
+
 ## 📊 Command Output Examples
 
 Here are some examples of CLI commands run via Docker against a live Stigix instance:
@@ -277,7 +292,7 @@ docker exec -it stigix stigix-cli --exec "status"
 ┃                    Stigix Status Overview                    ┃
 ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
 ┃  Backend     : [READY]  uptime: 1h 24m 5s                    ┃
-┃  Version     : v1.4.0-patch.88                               ┃
+┃  Version     : v1.4.0-patch.142                              ┃
 ┃  Traffic Gen : [RUNNING]                                     ┃
 ┃  Prisma Site : BR8                                           ┃
 ┣──────────────────────────────────────────────────────────────┫
@@ -342,4 +357,16 @@ docker exec -it stigix stigix-cli --exec "speedtest run 142.132.193.157 --durati
   Tx: 1.0 Mbps   Rx: 0.0 Mbps   RTT: 235.4ms   Loss: 0.0%
 
 ✓ Speedtest COMPLETED successfully!
+```
+
+### 5. Query Flow Browser Records
+```bash
+docker exec -it stigix stigix-cli --exec "flows query --site BR8 --protocol tcp --dst-port 8082 --dst-ip 192.168.203.100 --minutes 15"
+```
+**Output:**
+```text
+✓ Found 1 flows:
+  Start Time           Source             Destination           Proto  Bytes (C2S/S2C)  Packets (C2S/S2C)  Path                    App ID
+  ───────────────────  ─────────────────  ────────────────────  ─────  ───────────────  ─────────────────  ──────────────────────  ───────────────────
+  2026-06-01 13:38:44  192.168.219.1:527  192.168.203.100:8082  TCP    409 / 455        5 / 5              BR8-INET1 to DC1-INET   1776351610017000045
 ```
