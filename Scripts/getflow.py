@@ -79,6 +79,19 @@ Examples:
     )
     
     parser.add_argument(
+        '--tcp-src-port',
+        type=int,
+        help='TCP source port to filter'
+    )
+    
+    parser.add_argument(
+        '--tcp-dst-port',
+        type=int,
+        help='TCP destination port to filter'
+    )
+
+    
+    parser.add_argument(
         '--src-ip',
         help='Source IP address to filter'
     )
@@ -739,10 +752,16 @@ def main():
         log_output(f"   - Protocol: {proto_name}", json_mode)
     elif args.udp_src_port or args.udp_dst_port:
         log_output("   - Protocol: UDP", json_mode)
+    elif args.tcp_src_port or args.tcp_dst_port:
+        log_output("   - Protocol: TCP", json_mode)
     if args.udp_src_port:
-        log_output(f"   - Source Port: {args.udp_src_port}", json_mode)
+        log_output(f"   - Source Port (UDP): {args.udp_src_port}", json_mode)
     if args.udp_dst_port:
-        log_output(f"   - Destination Port: {args.udp_dst_port}", json_mode)
+        log_output(f"   - Destination Port (UDP): {args.udp_dst_port}", json_mode)
+    if args.tcp_src_port:
+        log_output(f"   - Source Port (TCP): {args.tcp_src_port}", json_mode)
+    if args.tcp_dst_port:
+        log_output(f"   - Destination Port (TCP): {args.tcp_dst_port}", json_mode)
     if args.src_ip:
         log_output(f"   - Source IP: {args.src_ip}", json_mode)
     if args.dst_ip:
@@ -774,12 +793,16 @@ def main():
         query_payload["filter"]["flow"]["protocol"] = args.protocol
     elif args.udp_src_port or args.udp_dst_port:
         query_payload["filter"]["flow"]["protocol"] = 17
+    elif args.tcp_src_port or args.tcp_dst_port:
+        query_payload["filter"]["flow"]["protocol"] = 6
     
-    if args.udp_src_port:
-        query_payload["filter"]["flow"]["source_port"] = [args.udp_src_port]
+    if args.udp_src_port or args.tcp_src_port:
+        port_val = args.udp_src_port if args.udp_src_port else args.tcp_src_port
+        query_payload["filter"]["flow"]["source_port"] = [port_val]
     
-    if args.udp_dst_port:
-        query_payload["filter"]["flow"]["destination_port"] = [args.udp_dst_port]
+    if args.udp_dst_port or args.tcp_dst_port:
+        port_val = args.udp_dst_port if args.udp_dst_port else args.tcp_dst_port
+        query_payload["filter"]["flow"]["destination_port"] = [port_val]
     
     if args.src_ip:
         query_payload["filter"]["flow"]["source_ip"] = [args.src_ip]
