@@ -4277,6 +4277,9 @@ def cmd_help(args):
     iot import <file>      Import config/CSV
     iot export [file]      Export config to JSON
 
+  {c('1','SD-WAN FLOWS')}
+    flows query            Query SD-WAN Flow Browser (interactive or flags)
+
   {c('1','SYSTEM')}
     system info            Health, memory, disk
     system interfaces      Network interfaces
