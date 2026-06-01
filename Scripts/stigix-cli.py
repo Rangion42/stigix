@@ -836,7 +836,7 @@ def cmd_flows(args):
 
     # Run API query
     def do_query():
-        return api_post("/api/prisma/flows", body)
+        return api_post("/api/prisma/flows", body, timeout=60)
 
     res = _spin_while("Querying Prisma Flow Browser...", do_query)
 
