@@ -68,7 +68,7 @@ fi
 # -------------------------------------------------------------------
 # Pattern 5 — Generic: private key header
 # -------------------------------------------------------------------
-MATCHES=$(git diff --cached -U0 | grep "+" | grep -E "BEGIN (RSA |EC |OPENSSH |)PRIVATE KEY")
+MATCHES=$(git diff --cached -U0 | grep "+" | grep -E "BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY")
 if [ -n "$MATCHES" ]; then
     echo ""
     printf "${RED}🚨 BLOCKED — Private key content detected:${NC}\n"
