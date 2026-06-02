@@ -2,73 +2,94 @@
 
 This guide provides network and system engineers with a step-by-step blueprint for deploying **Stigix** across diverse infrastructure environments. Stigix is designed to test and validate SD-WAN path selection, security efficacy, application experience (DEM), and failover convergence.
 
-## 🗺️ Stigix High-Level Secure Network Architecture
+### 🗺️ Stigix High-Level Secure Network Architecture
 
 Below is the conceptual Global Secure Network Architecture for a Stigix deployment:
 
-![Stigix Global Secure Network Architecture](assets/stigix_topology_diagram.png)
+![Stigix Global Secure Network Architecture](assets/stigix_hld_detailed.png)
 
-### Stigix Functional Component Diagram
+### Stigix Functional Component & Traffic Flow Diagram
 
-The following diagram illustrates how user interfaces (Web UI, CLI, Claude Desktop via MCP) interact with Stigix instances and how those instances communicate across the network fabric and integrate with VyOS chaos routers:
+The following diagram illustrates how user interfaces (Web UI, CLI, Claude Desktop via MCP) interact with Stigix instances, how those instances are deployed on physical hosts or virtual machines separate from the SD-WAN routers, and the detailed traffic paths they generate:
 
 ```mermaid
 graph TD
     %% User Interfaces / Tools
-    subgraph UI ["User Interfaces & Control"]
-        WebUI["Web Dashboard (Port 8080)"]
+    subgraph UI ["Management & Orchestration"]
+        WebUI["Stigix Web UI (Port 8080)"]
         CLI["Stigix CLI (docker exec)"]
-        Claude["Claude Desktop (AI Orchestration)"]
+        Claude["Claude Desktop (MCP SSE Port 3100)"]
     end
 
-    %% Control Plane / MCP
-    Claude -- "JSON-RPC over SSE (Port 3100)" --> MCP["Stigix MCP Server (Any Node)"]
-    WebUI -- "REST API (Port 8080)" --> API["Stigix Backend API"]
-    CLI -- "REST API / HTTP" --> API
-
-    %% Stigix Nodes
-    subgraph Sites ["Distributed Deployment Mesh"]
-        subgraph BranchSite ["Branch Site (e.g. BR8)"]
-            NodeBR8["Stigix Node (Unified)"]
-            RouterION["Prisma SD-WAN ION Router"]
-            NodeBR8 --- RouterION
+    %% Distributed Sites
+    subgraph Mesh ["Stigix Deployment Mesh & Flows"]
+        
+        %% Branch Site
+        subgraph Branch ["Branch Site (e.g. BR8)"]
+            subgraph BranchHost ["Branch Host System"]
+                StigixBR8["Stigix Container (Unified Mode)<br/>Running on: Raspberry Pi 5 / Intel NUC / PC"]
+            end
+            RouterION1200["Prisma SD-WAN ION 1200 / 1200-S"]
+            StigixBR8 -- "Local LAN Segment" --> RouterION1200
         end
 
-        subgraph DCSite ["Data Center / Hub (e.g. DC1)"]
-            NodeDC1["Stigix Node (Unified)"]
-            RouterVyOS["VyOS Chaos Router (Lab Impairments)"]
-            NodeDC1 --- RouterVyOS
+        %% Data Center Site
+        subgraph DC ["Data Center / Hub (DC1)"]
+            subgraph DCHost ["DC Virtualization Host"]
+                StigixDC1["Stigix Container (Unified Mode)<br/>Running on: VMware ESXi / Proxmox VM"]
+            end
+            RouterION9200["Prisma SD-WAN ION 9200"]
+            StigixDC1 -- "Core LAN Segment" --> RouterION9200
         end
 
-        subgraph CloudSite ["Public Cloud (AWS/Azure)"]
-            NodeCloud["Stigix Node (Unified)"]
+        %% Public Cloud Site
+        subgraph Cloud ["Public Cloud (AWS/Azure)"]
+            subgraph CloudHost ["Cloud VM Instance"]
+                StigixCloud["Stigix Container (Unified Mode)<br/>Running on: EC2 / Azure VM"]
+            end
+            RouterION7108["Prisma SD-WAN ION 7108 (vCPE)"]
+            StigixCloud -- "VPC/VNet Subnet" --> RouterION7108
         end
     end
 
-    %% Orchestrator Control of VyOS
-    API -- "SSH / API (Impairments: Delay/Loss/Block)" --> RouterVyOS
+    %% Network & WAN Tunnels
+    RouterION1200 -- "SD-WAN VPN Tunnel (VPN Path)" --> RouterION9200
+    RouterION1200 -- "Direct Internet Access (DIA)" --> Internet["Public Internet / SaaS"]
+    RouterION1200 -- "Security Egress Tunnel" --> PrismaAccess["Prisma Access (SSE Gateway)"]
+    RouterION7108 -- "SD-WAN Tunnel" --> RouterION9200
 
-    %% Data Plane Paths
-    RouterION -- "SD-WAN VPN Path / MPLS" --> RouterVyOS
-    RouterION -- "Direct Internet Access (DIA)" --> Internet["Public Internet"]
-    RouterION -- "Security Egress / VPN" --> PrismaAccess["Prisma Access (SSE Gateway)"]
+    %% Traffic Generation & Probes Flows (Stigix Outputs)
+    StigixBR8 -. "1. iPerf3 / XFR Speedtest (Port 9000/5201)" .-> StigixDC1
+    StigixBR8 -. "2. VoIP RTP Simulation (Port 6100-6101)" .-> StigixDC1
+    StigixBR8 -. "3. SLA Convergence Probes (Port 6200)" .-> StigixDC1
     
-    %% Traffic flows
-    NodeBR8 -- "iPerf3, Voice (RTP), HTTP, DNS, SLA Probes" --> NodeDC1
-    NodeBR8 -- "Cloud Probes / EICAR" --> NodeCloud
-    Internet --> NodeCloud
-    PrismaAccess --> SaaS["SaaS Apps / Internet"]
+    StigixBR8 -. "4. Active DEM Probes (HTTP/HTTPS/Ping)" .-> Internet
+    StigixBR8 -. "5. SaaS Simulation (Office365, Zoom, GWorkspace)" .-> Internet
+    StigixBR8 -. "6. Security Efficacy (DNS Security & URLs)" .-> PrismaAccess
+    StigixBR8 -. "7. IoT Device Simulation (DHCP/ARP MAC Spoofing)" .-> RouterION1200
+    
+    StigixCloud -. "Cloud Probes & Echo Responding" .-> StigixBR8
+
+    %% VyOS Integration (Lab Impairments)
+    subgraph LabImpair ["Lab Environment Network Chaos (Optional)"]
+        RouterVyOS["VyOS Router (Simulating WAN links)"]
+        RouterION1200 -- "Physical WAN Link (MPLS/INET)" --> RouterVyOS
+        RouterVyOS -- "WAN links" --> RouterION9200
+    end
+    WebUI -- "SSH/API Chaos Injection" --> RouterVyOS
 
     %% Styling
     classDef uiStyle fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
-    classDef siteStyle fill:#f1f8e9,stroke:#558b2f,stroke-width:2px;
+    classDef hostStyle fill:#ffffff,stroke:#78909c,stroke-width:2px;
+    classDef stigixStyle fill:#f1f8e9,stroke:#558b2f,stroke-width:2px;
     classDef routerStyle fill:#fff3e0,stroke:#ef6c00,stroke-width:2px;
-    classDef pathStyle fill:#fafafa,stroke:#37474f,stroke-width:2px,stroke-dasharray: 5 5;
+    classDef netStyle fill:#fafafa,stroke:#37474f,stroke-width:2px;
     
     class WebUI,CLI,Claude uiStyle;
-    class NodeBR8,NodeDC1,NodeCloud siteStyle;
-    class RouterION,RouterVyOS routerStyle;
-    class Internet,PrismaAccess,SaaS pathStyle;
+    class BranchHost,DCHost,CloudHost hostStyle;
+    class StigixBR8,StigixDC1,StigixCloud stigixStyle;
+    class RouterION1200,RouterION9200,RouterION7108,RouterVyOS routerStyle;
+    class Internet,PrismaAccess,LabImpair netStyle;
 ```
 
 ---
