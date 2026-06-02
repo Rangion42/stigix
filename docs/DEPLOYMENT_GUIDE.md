@@ -2,6 +2,75 @@
 
 This guide provides network and system engineers with a step-by-step blueprint for deploying **Stigix** across diverse infrastructure environments. Stigix is designed to test and validate SD-WAN path selection, security efficacy, application experience (DEM), and failover convergence.
 
+## 🗺️ Stigix High-Level Secure Network Architecture
+
+Below is the conceptual Global Secure Network Architecture for a Stigix deployment:
+
+![Stigix Global Secure Network Architecture](assets/stigix_topology_diagram.png)
+
+### Stigix Functional Component Diagram
+
+The following diagram illustrates how user interfaces (Web UI, CLI, Claude Desktop via MCP) interact with Stigix instances and how those instances communicate across the network fabric and integrate with VyOS chaos routers:
+
+```mermaid
+graph TD
+    %% User Interfaces / Tools
+    subgraph UI ["User Interfaces & Control"]
+        WebUI["Web Dashboard (Port 8080)"]
+        CLI["Stigix CLI (docker exec)"]
+        Claude["Claude Desktop (AI Orchestration)"]
+    end
+
+    %% Control Plane / MCP
+    Claude -- "JSON-RPC over SSE (Port 3100)" --> MCP["Stigix MCP Server (Any Node)"]
+    WebUI -- "REST API (Port 8080)" --> API["Stigix Backend API"]
+    CLI -- "REST API / HTTP" --> API
+
+    %% Stigix Nodes
+    subgraph Sites ["Distributed Deployment Mesh"]
+        subgraph BranchSite ["Branch Site (e.g. BR8)"]
+            NodeBR8["Stigix Node (Unified)"]
+            RouterION["Prisma SD-WAN ION Router"]
+            NodeBR8 --- RouterION
+        end
+
+        subgraph DCSite ["Data Center / Hub (e.g. DC1)"]
+            NodeDC1["Stigix Node (Unified)"]
+            RouterVyOS["VyOS Chaos Router (Lab Impairments)"]
+            NodeDC1 --- RouterVyOS
+        end
+
+        subgraph CloudSite ["Public Cloud (AWS/Azure)"]
+            NodeCloud["Stigix Node (Unified)"]
+        end
+    end
+
+    %% Orchestrator Control of VyOS
+    API -- "SSH / API (Impairments: Delay/Loss/Block)" --> RouterVyOS
+
+    %% Data Plane Paths
+    RouterION -- "SD-WAN VPN Path / MPLS" --> RouterVyOS
+    RouterION -- "Direct Internet Access (DIA)" --> Internet["Public Internet"]
+    RouterION -- "Security Egress / VPN" --> PrismaAccess["Prisma Access (SSE Gateway)"]
+    
+    %% Traffic flows
+    NodeBR8 -- "iPerf3, Voice (RTP), HTTP, DNS, SLA Probes" --> NodeDC1
+    NodeBR8 -- "Cloud Probes / EICAR" --> NodeCloud
+    Internet --> NodeCloud
+    PrismaAccess --> SaaS["SaaS Apps / Internet"]
+
+    %% Styling
+    classDef uiStyle fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef siteStyle fill:#f1f8e9,stroke:#558b2f,stroke-width:2px;
+    classDef routerStyle fill:#fff3e0,stroke:#ef6c00,stroke-width:2px;
+    classDef pathStyle fill:#fafafa,stroke:#37474f,stroke-width:2px,stroke-dasharray: 5 5;
+    
+    class WebUI,CLI,Claude uiStyle;
+    class NodeBR8,NodeDC1,NodeCloud siteStyle;
+    class RouterION,RouterVyOS routerStyle;
+    class Internet,PrismaAccess,SaaS pathStyle;
+```
+
 ---
 
 ## 🎯 1. Overview & Capabilities
