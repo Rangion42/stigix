@@ -2403,6 +2403,28 @@ app.post('/api/vyos/routers/:id/reset', authenticateToken, async (req, res) => {
             if (downIfaces.length === 0) actions_taken.push('no-shut: all interfaces already up');
         }
 
+        // Write a CLEANUP trace to vyos-history.jsonl for each action performed
+        const vyosHistoryFile = path.join(APP_CONFIG.logDir, 'vyos-history.jsonl');
+        const razRunId = `RAZ-${Date.now()}`;
+        for (const actionLabel of actions_taken) {
+            const entry = {
+                timestamp: Date.now(),
+                sequence_id: razRunId,
+                sequence_name: `RAZ / ${scope}`,
+                action_id: `raz-${Date.now()}`,
+                run_id: razRunId,
+                router_id: routerId,
+                interface: null,
+                command: 'cleanup',
+                parameters: { label: actionLabel },
+                status: errors.length === 0 ? 'success' : 'failed',
+                duration_ms: null,
+                error: errors.length > 0 ? errors.join('; ') : undefined,
+                cli_equivalent: []
+            };
+            try { fs.appendFileSync(vyosHistoryFile, JSON.stringify(entry) + '\n'); } catch (_) {}
+        }
+
         res.json({
             success: errors.length === 0,
             scope,

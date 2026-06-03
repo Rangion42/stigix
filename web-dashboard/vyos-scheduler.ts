@@ -250,7 +250,7 @@ export class VyosScheduler extends EventEmitter {
         }
     }
 
-    // NEW: Pause a running sequence
+    // Pause a running sequence — actually clears all timers to stop execution
     pauseSequence(id: string) {
         const seq = this.sequences.get(id);
         if (!seq) throw new Error('Sequence not found');
@@ -260,33 +260,32 @@ export class VyosScheduler extends EventEmitter {
             throw new Error('Sequence is not running');
         }
 
-        // Move timers to paused state
-        this.pausedTimers.set(id, timers);
+        // Actually stop the timers — moving references alone does NOT stop execution
+        timers.forEach(t => { clearTimeout(t); clearInterval(t); });
         this.activeTimers.delete(id);
+        this.pausedTimers.delete(id); // clean any stale paused refs
 
         seq.paused = true;
         this.saveSequences();
 
-        log('VYOS-SCHED', `Paused sequence "${seq.name}"`);
+        log('VYOS-SCHED', `Paused sequence "${seq.name}" — timers cleared`);
     }
 
-    // NEW: Resume a paused sequence
+    // Resume a paused sequence — restarts timers from the current cycle
     resumeSequence(id: string) {
         const seq = this.sequences.get(id);
         if (!seq) throw new Error('Sequence not found');
         if (!seq.paused) throw new Error('Sequence is not paused');
 
-        const timers = this.pausedTimers.get(id);
-        if (!timers) throw new Error('No paused timers found');
-
-        // Restore timers to active state
-        this.activeTimers.set(id, timers);
-        this.pausedTimers.delete(id);
-
         seq.paused = false;
         this.saveSequences();
 
-        log('VYOS-SCHED', `Resumed sequence "${seq.name}"`);
+        // Restart scheduled timers from scratch (timers were cleared on pause)
+        if (seq.enabled && seq.cycle_duration > 0) {
+            this.startScheduled(seq);
+        }
+
+        log('VYOS-SCHED', `Resumed sequence "${seq.name}" — timers restarted`);
     }
 
     // NEW: Stop a running sequence (reset to beginning)

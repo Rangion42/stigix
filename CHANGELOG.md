@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.147] - 2026-06-03
+### Added
+- **web-dashboard** 🌐 `server.ts`: Write a trace of VyOS RAZ (cleanup) events to `vyos-history.jsonl` so they are fully traceable. 🧹
+- **web-dashboard** 🌐 `Vyos.tsx`: Redesigned History table to fit single-line entries. Split action column into distinct Command and Parameter columns, added relative time format with full timestamp tooltips, and truncated long sequence names. ⏱️
+
+### Fixed
+- **web-dashboard** 🌐 `vyos-scheduler.ts`: Fixed `pauseSequence` to actually clear/cancel active timers (instead of just deleting references), and `resumeSequence` to restart timers cleanly. ⏱️
+
 ## [v1.4.0-patch.146] - 2026-06-03
 ### Fixed
 - **web-dashboard** 🌐 `server.ts` & `target-manager.ts`: Pass configured timeout (`endpoint.timeout`) to CLOUD target probes instead of using the hardcoded 15-second timeout. ⏱️

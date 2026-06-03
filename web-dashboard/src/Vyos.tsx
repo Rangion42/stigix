@@ -19,6 +19,7 @@ const COMMAND_METADATA: Record<string, { label: string, icon: any, color: string
     'allow-traffic': { label: 'Allow Traffic', icon: ShieldCheck, color: 'text-green-500', emoji: '✅' },
     'show-denied': { label: 'Show Denied', icon: Eye, color: 'text-blue-500', emoji: '📋' },
     'clear-all-blocks': { label: 'Clear All Blocks', icon: Eraser, color: 'text-amber-500', emoji: '🧹' },
+    'cleanup': { label: 'Cleanup / RAZ', icon: Eraser, color: 'text-amber-400', emoji: '🧹' },
 };
 
 function getCommandDisplayName(command: string): string {
@@ -45,9 +46,26 @@ function formatActionParameters(command: string, parameters: any): string {
             if (parameters.latency) parts.push(`${parameters.latency}ms latency`);
             if (parameters.loss) parts.push(`${parameters.loss}% loss`);
             return parts.join(', ');
+        case 'cleanup':
+            return parameters.label || '';
         default:
             return '';
     }
+}
+
+// Format timestamp as relative label + time on a single line
+function formatRelativeTime(ts: number): string {
+    const d = new Date(ts);
+    const now = new Date();
+    const time = d.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const isToday = d.toDateString() === now.toDateString();
+    const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+    const isYesterday = d.toDateString() === yesterday.toDateString();
+    if (isToday) return `Today · ${time}`;
+    if (isYesterday) return `Yesterday · ${time}`;
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm} · ${time}`;
 }
 
 const socket = io();
@@ -1527,10 +1545,11 @@ export default function Vyos(props: VyosProps) {
                     <div className="bg-card border border-border rounded-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300 shadow-sm">
                         <table className="w-full text-left text-xs border-collapse table-fixed">
                             <colgroup>
-                                <col className="w-[100px]" />
-                                <col className="w-[300px]" />
-                                <col className="w-[160px]" />
-                                <col className="w-[200px]" />
+                                <col className="w-[150px]" />
+                                <col className="w-[220px]" />
+                                <col className="w-[150px]" />
+                                <col className="w-[130px]" />
+                                <col className="w-[170px]" />
                                 <col className="w-auto" />
                             </colgroup>
                             <thead className="bg-card-secondary/80 border-b border-border sticky top-0">
@@ -1539,6 +1558,7 @@ export default function Vyos(props: VyosProps) {
                                     <th className="px-4 py-3 font-semibold text-text-muted text-[10px] uppercase tracking-wider">Sequence</th>
                                     <th className="px-4 py-3 font-semibold text-text-muted text-[10px] uppercase tracking-wider">Router</th>
                                     <th className="px-4 py-3 font-semibold text-text-muted text-[10px] uppercase tracking-wider">Action</th>
+                                    <th className="px-4 py-3 font-semibold text-text-muted text-[10px] uppercase tracking-wider">Params</th>
                                     <th className="px-4 py-3 font-semibold text-text-muted text-[10px] uppercase tracking-wider">Result</th>
                                 </tr>
                             </thead>
@@ -1585,7 +1605,7 @@ export default function Vyos(props: VyosProps) {
                                         return groups.map((group, gIdx) => (
                                             <React.Fragment key={gIdx}>
                                                 <tr className="bg-background/40">
-                                                    <td colSpan={5} className="px-6 py-2 border-b border-border/30">
+                                                    <td colSpan={6} className="px-6 py-2 border-b border-border/30">
                                                         <div className="flex items-center gap-3">
                                                             <span className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em]">Run Sequence: {group[0].sequence_name}</span>
                                                             <div className="h-px flex-1 bg-border/20" />
@@ -1605,8 +1625,8 @@ export default function Vyos(props: VyosProps) {
                                                                 className={`transition-colors cursor-pointer select-none ${isExpanded ? 'bg-[#0a0f1a]/60' : 'hover:bg-card-secondary/30'}`}
                                                                 onClick={() => setExpandedHistoryRow(isExpanded ? null : rowKey)}
                                                             >
-                                                                <td className="px-6 py-4 pl-12 border-l-2 border-border/50">
-                                                                    <div className="text-text-muted font-mono font-bold text-xs tracking-tight">{new Date(log.timestamp).toLocaleTimeString()}</div>
+                                                                <td className="px-6 py-4 pl-12 border-l-2 border-border/50 whitespace-nowrap">
+                                                                    <span className="text-text-muted font-mono font-bold text-xs tracking-tight" title={new Date(log.timestamp).toLocaleString()}>{formatRelativeTime(log.timestamp)}</span>
                                                                 </td>
                                                                 <td className="px-6 py-4">
                                                                     <div className="flex items-center gap-2">
@@ -1634,16 +1654,16 @@ export default function Vyos(props: VyosProps) {
                                                                         )}
                                                                     </div>
                                                                 </td>
-                                                                <td className="px-6 py-4">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="px-2 py-0.5 bg-card-secondary rounded text-text-secondary font-black uppercase text-[9px] tracking-widest border border-border/50">{log.command}</span>
-                                                                        {(() => {
-                                                                            const paramDisplay = formatActionParameters(log.command, log.parameters);
-                                                                            return paramDisplay ? (
-                                                                                <span className="text-[9px] text-blue-400 font-mono">{paramDisplay}</span>
-                                                                            ) : null;
-                                                                        })()}
-                                                                    </div>
+                                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                                    <span className="px-2 py-0.5 bg-card-secondary rounded text-text-secondary font-black uppercase text-[9px] tracking-widest border border-border/50">{log.command}</span>
+                                                                </td>
+                                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                                    {(() => {
+                                                                        const paramDisplay = formatActionParameters(log.command, log.parameters);
+                                                                        return paramDisplay
+                                                                            ? <span className="text-[9px] text-blue-400 font-mono">{paramDisplay}</span>
+                                                                            : <span className="text-text-muted/20 text-[9px]">—</span>;
+                                                                    })()}
                                                                 </td>
                                                                 <td className="px-6 py-4">
                                                                     <div className="flex items-center gap-2">
@@ -1664,7 +1684,7 @@ export default function Vyos(props: VyosProps) {
                                                             </tr>
                                                             {isExpanded && (
                                                                 <tr className="bg-[#070c14]">
-                                                                    <td colSpan={5} className="px-0 py-0">
+                                                                    <td colSpan={6} className="px-0 py-0">
                                                                         <div className="border-b border-green-500/10 animate-in slide-in-from-top-1 duration-150">
                                                                             <div className="flex items-center justify-between px-5 py-2 bg-[#0a1020] border-b border-green-500/10">
                                                                                 <span className="text-[8px] font-black tracking-[0.25em] text-cyan-400 uppercase flex items-center gap-1.5">
@@ -1708,20 +1728,17 @@ export default function Vyos(props: VyosProps) {
                                                     onClick={() => setExpandedHistoryRow(isExpanded ? null : rowKey)}
                                                 >
                                                     <td className="px-4 py-2.5 whitespace-nowrap">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-text-primary font-mono text-[11px] font-medium">{new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-                                                            <span className="text-text-muted font-mono text-[9px] opacity-40">{new Date(log.timestamp).toLocaleDateString()}</span>
-                                                        </div>
+                                                        <span className="text-text-primary font-mono text-[11px] font-medium" title={new Date(log.timestamp).toLocaleString()}>{formatRelativeTime(log.timestamp)}</span>
                                                     </td>
                                                     <td className="px-4 py-2.5">
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-2 min-w-0">
                                                             <div className="p-1 bg-purple-500/10 rounded flex-shrink-0">
                                                                 {getCommandIcon(log.command, 12)}
                                                             </div>
                                                             {(log.sequence_name && log.sequence_name !== 'Unknown') ? (
-                                                                <span className="text-text-primary font-medium text-[11px]" title={log.sequence_name}>{log.sequence_name}</span>
+                                                                <span className="text-text-primary font-medium text-[11px] truncate" title={log.sequence_name}>{log.sequence_name}</span>
                                                             ) : (
-                                                                <span className="text-text-muted font-mono text-[10px] opacity-60" title={log.sequence_id}>{log.sequence_id || '—'}</span>
+                                                                <span className="text-text-muted font-mono text-[10px] opacity-60 truncate" title={log.sequence_id}>{log.sequence_id || '—'}</span>
                                                             )}
                                                         </div>
                                                     </td>
@@ -1733,16 +1750,16 @@ export default function Vyos(props: VyosProps) {
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-2.5">
-                                                        <div className="flex items-center gap-2 flex-wrap">
-                                                            <span className="px-2 py-0.5 bg-card-secondary rounded text-text-secondary font-medium text-[10px] border border-border/50 whitespace-nowrap">{getCommandDisplayName(log.command)}</span>
-                                                            {(() => {
-                                                                const paramDisplay = formatActionParameters(log.command, log.parameters);
-                                                                return paramDisplay ? (
-                                                                    <span className="text-[10px] text-blue-400 font-mono truncate">{paramDisplay}</span>
-                                                                ) : null;
-                                                            })()}
-                                                        </div>
+                                                    <td className="px-4 py-2.5 whitespace-nowrap">
+                                                        <span className="px-2 py-0.5 bg-card-secondary rounded text-text-secondary font-medium text-[10px] border border-border/50">{getCommandDisplayName(log.command)}</span>
+                                                    </td>
+                                                    <td className="px-4 py-2.5 whitespace-nowrap">
+                                                        {(() => {
+                                                            const paramDisplay = formatActionParameters(log.command, log.parameters);
+                                                            return paramDisplay
+                                                                ? <span className="text-[10px] text-blue-400 font-mono">{paramDisplay}</span>
+                                                                : <span className="text-text-muted/20 text-[10px]">—</span>;
+                                                        })()}
                                                     </td>
                                                     <td className="px-4 py-2.5">
                                                         <div className="flex items-center gap-2">
@@ -1770,7 +1787,7 @@ export default function Vyos(props: VyosProps) {
                                                 {/* ── CLI Accordion ───────────────────────────────────────── */}
                                                 {isExpanded && (
                                                     <tr className="bg-[#070c14]">
-                                                        <td colSpan={5} className="px-0 py-0">
+                                                        <td colSpan={6} className="px-0 py-0">
                                                             <div className="border-b border-green-500/10 animate-in slide-in-from-top-1 duration-150">
                                                                 <div className="flex items-center justify-between px-5 py-2 bg-[#0a1020] border-b border-green-500/10">
                                                                     <span className="text-[8px] font-black tracking-[0.25em] text-cyan-400 uppercase flex items-center gap-1.5">
