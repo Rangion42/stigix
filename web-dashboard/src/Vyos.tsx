@@ -53,16 +53,9 @@ function formatActionParameters(command: string, parameters: any): string {
     }
 }
 
-// Format timestamp as relative label + time on a single line
 function formatRelativeTime(ts: number): string {
     const d = new Date(ts);
-    const now = new Date();
     const time = d.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const isToday = d.toDateString() === now.toDateString();
-    const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
-    const isYesterday = d.toDateString() === yesterday.toDateString();
-    if (isToday) return `Today · ${time}`;
-    if (isYesterday) return `Yesterday · ${time}`;
     const dd = String(d.getDate()).padStart(2, '0');
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     return `${dd}/${mm} · ${time}`;
@@ -1545,11 +1538,11 @@ export default function Vyos(props: VyosProps) {
                     <div className="bg-card border border-border rounded-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300 shadow-sm">
                         <table className="w-full text-left text-xs border-collapse table-fixed">
                             <colgroup>
-                                <col className="w-[150px]" />
-                                <col className="w-[220px]" />
-                                <col className="w-[150px]" />
                                 <col className="w-[130px]" />
-                                <col className="w-[170px]" />
+                                <col className="w-[300px]" />
+                                <col className="w-[130px]" />
+                                <col className="w-[120px]" />
+                                <col className="w-[180px]" />
                                 <col className="w-auto" />
                             </colgroup>
                             <thead className="bg-card-secondary/80 border-b border-border sticky top-0">

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.148] - 2026-06-03
+### Changed
+- **web-dashboard** 🌐 `Vyos.tsx`: Replaced relative "Today" and "Yesterday" date labels with standardized `DD/MM` format in History table. ⏱️
+- **web-dashboard** 🌐 `Vyos.tsx`: Increased horizontal width of the Sequence column in the History table to reduce truncation of long sequence names. 📐
+
 ## [v1.4.0-patch.147] - 2026-06-03
 ### Added
 - **web-dashboard** 🌐 `server.ts`: Write a trace of VyOS RAZ (cleanup) events to `vyos-history.jsonl` so they are fully traceable. 🧹
