@@ -1539,7 +1539,7 @@ export default function Vyos(props: VyosProps) {
                         <table className="w-full text-left text-xs border-collapse table-fixed">
                             <colgroup>
                                 <col className="w-[130px]" />
-                                <col className="w-[300px]" />
+                                <col className="w-[360px]" />
                                 <col className="w-[130px]" />
                                 <col className="w-[120px]" />
                                 <col className="w-[180px]" />
