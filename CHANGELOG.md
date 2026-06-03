@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.146] - 2026-06-03
+### Fixed
+- **web-dashboard** 🌐 `server.ts` & `target-manager.ts`: Pass configured timeout (`endpoint.timeout`) to CLOUD target probes instead of using the hardcoded 15-second timeout. ⏱️
+
 ## [v1.4.0-patch.145] - 2026-06-01
 ### Added
 - **stigix-cli** 🚦 `Scripts/stigix-cli.py`: Added the `SD-WAN FLOWS` section and `flows query` command to the main help / description screen.

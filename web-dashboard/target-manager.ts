@@ -287,7 +287,7 @@ export class TargetManager {
     /**
      * Executes a scenario as a probe and returns a standardized result.
      */
-    async runProbe(scenarioId: string): Promise<TargetProbeResult> {
+    async runProbe(scenarioId: string, timeoutMs?: number): Promise<TargetProbeResult> {
         const { url: signedUrl, scenario } = this.getEffectiveUrl(scenarioId);
 
         if (!signedUrl || !scenario) {
@@ -300,8 +300,9 @@ export class TargetManager {
             const execPromise = promisify(exec);
             tmpFile = path.join(os.tmpdir(), `stigix_cloud_${Date.now()}_${Math.random().toString(36).substring(7)}.tmp`);
             
+            const timeoutSec = timeoutMs ? Math.max(1, Math.floor(timeoutMs / 1000)) : 15;
             // Output only metrics to stdout, save body to temp file
-            const curlCmd = `curl -s -L -w "%{time_namelookup},%{time_connect},%{time_appconnect},%{time_starttransfer},%{time_total},%{http_code},%{size_download},%{speed_download},%{remote_ip},%{remote_port}" -o "${tmpFile}" --max-time 15 "${signedUrl}"`;
+            const curlCmd = `curl -s -L -w "%{time_namelookup},%{time_connect},%{time_appconnect},%{time_starttransfer},%{time_total},%{http_code},%{size_download},%{speed_download},%{remote_ip},%{remote_port}" -o "${tmpFile}" --max-time ${timeoutSec} "${signedUrl}"`;
             
             log('TARGET', `[CLOUD PROBE] Executing: ${curlCmd}`, 'debug');
             const { stdout } = await execPromise(curlCmd, { maxBuffer: 1024 * 1024 });
