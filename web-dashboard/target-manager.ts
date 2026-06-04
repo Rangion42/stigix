@@ -301,11 +301,36 @@ export class TargetManager {
             tmpFile = path.join(os.tmpdir(), `stigix_cloud_${Date.now()}_${Math.random().toString(36).substring(7)}.tmp`);
             
             const timeoutSec = timeoutMs ? Math.max(1, Math.floor(timeoutMs / 1000)) : 15;
-            // Output only metrics to stdout, save body to temp file
-            const curlCmd = `curl -s -L -w "%{time_namelookup},%{time_connect},%{time_appconnect},%{time_starttransfer},%{time_total},%{http_code},%{size_download},%{speed_download},%{remote_ip},%{remote_port}" -o "${tmpFile}" --max-time ${timeoutSec} "${signedUrl}"`;
+            // Add native curl retries: -f (fail fast on HTTP error), -sS (silent but show errors to stderr for tracking retries)
+            const curlCmd = `curl -f -sS -L -w "%{time_namelookup},%{time_connect},%{time_appconnect},%{time_starttransfer},%{time_total},%{http_code},%{size_download},%{speed_download},%{remote_ip},%{remote_port}" -o "${tmpFile}" --connect-timeout 5 --max-time ${timeoutSec} --retry 2 --retry-delay 1 --retry-max-time ${timeoutSec} "${signedUrl}"`;
             
             log('TARGET', `[CLOUD PROBE] Executing: ${curlCmd}`, 'debug');
-            const { stdout } = await execPromise(curlCmd, { maxBuffer: 1024 * 1024 });
+            
+            let stdout = '';
+            let stderr = '';
+            let curlExitCode = 0;
+            
+            try {
+                const res = await execPromise(curlCmd, { maxBuffer: 1024 * 1024 });
+                stdout = res.stdout;
+                stderr = res.stderr;
+            } catch (execErr: any) {
+                // exec throws if curl exit code != 0 (e.g. 22 on HTTP 4xx/5xx due to -f, or 7/28 on network failure)
+                stdout = execErr.stdout || '';
+                stderr = execErr.stderr || '';
+                curlExitCode = execErr.code || 1;
+            }
+            
+            // Extract retry attempts from stderr. Each failed attempt logs a 'curl: (X)' line.
+            const curlErrorsCount = (stderr.match(/curl:\s*\(\d+\)/g) || []).length;
+            // If it succeeded eventually (exitCode 0), the number of retries is exactly the number of logged errors.
+            // If it completely failed (exitCode != 0), the last logged error corresponds to the final failed attempt.
+            const retries = curlExitCode === 0 ? curlErrorsCount : Math.max(0, curlErrorsCount - 1);
+            
+            // If stdout is completely empty, curl failed before even producing the -w format
+            if (!stdout.trim()) {
+                throw new Error(`Curl failed completely (Code ${curlExitCode}): ${stderr.split('\n')[0]}`);
+            }
             
             const [t_name, t_conn, t_app, t_start, t_tot, codeStr, sizeStr, speedStr, r_ip, r_port] = stdout.trim().split(',');
             const statusCode = parseInt(codeStr) || 0;
@@ -339,14 +364,17 @@ export class TargetManager {
                 return failResp;
             }
 
+            const messageSuffix = retries > 0 ? ` (Recovered after ${retries} retries)` : '';
+            const scorePenalty = retries * 20;
+
             if (scenario.category === 'info') {
                 let data: any = {};
                 try { data = JSON.parse(bodyStr); } catch { }
                 const jsonResp = {
                     success: true,
-                    score: 100, // Info doesn't really have a performance score, but it's "success"
+                    score: Math.max(0, 100 - scorePenalty), // Info doesn't really have a performance score, but it's "success"
                     latency_ms: latency,
-                    message: `Egress recognized: ${data.ip || 'Unknown'}`,
+                    message: `Egress recognized: ${data.ip || 'Unknown'}${messageSuffix}`,
                     data: {
                         ip: data.ip || 'Unknown',
                         country: data.country || 'Unknown',
@@ -360,23 +388,25 @@ export class TargetManager {
             }
 
             if (scenario.category === 'saas' || scenario.id === 'saas-slow') {
-                const score = Math.max(0, Math.min(100, Math.round(100 * (1 - (latency - 200) / 4800))));
-                const resp = { success: true, score, latency_ms: latency, message: `Response received in ${Math.round(latency)}ms`, metrics, httpCode: statusCode, remoteIp: r_ip, remotePort: parseInt(r_port) };
+                const baseScore = Math.max(0, Math.min(100, Math.round(100 * (1 - (latency - 200) / 4800))));
+                const score = Math.max(0, baseScore - scorePenalty);
+                const resp = { success: true, score, latency_ms: latency, message: `Response received in ${Math.round(latency)}ms${messageSuffix}`, metrics, httpCode: statusCode, remoteIp: r_ip, remotePort: parseInt(r_port) };
                 return resp;
             }
 
             if (scenario.category === 'download') {
-                const score = Math.max(0, Math.min(100, Math.round(100 * (1 - (latency - 1000) / 9000))));
-                const resp =  { success: true, score, latency_ms: latency, message: `Download complete`, metrics, httpCode: statusCode, remoteIp: r_ip, remotePort: parseInt(r_port) };
+                const baseScore = Math.max(0, Math.min(100, Math.round(100 * (1 - (latency - 1000) / 9000))));
+                const score = Math.max(0, baseScore - scorePenalty);
+                const resp =  { success: true, score, latency_ms: latency, message: `Download complete${messageSuffix}`, metrics, httpCode: statusCode, remoteIp: r_ip, remotePort: parseInt(r_port) };
                 return resp;
             }
 
             if (scenario.category === 'security') {
-                const resp = { success: true, score: 100, latency_ms: latency, message: 'Endpoint reachable', metrics, httpCode: statusCode, remoteIp: r_ip, remotePort: parseInt(r_port) };
+                const resp = { success: true, score: Math.max(0, 100 - scorePenalty), latency_ms: latency, message: `Endpoint reachable${messageSuffix}`, metrics, httpCode: statusCode, remoteIp: r_ip, remotePort: parseInt(r_port) };
                 return resp;
             }
 
-            const okResp = { success: true, score: 100, latency_ms: latency, message: 'OK', metrics, httpCode: statusCode, remoteIp: r_ip, remotePort: parseInt(r_port) };
+            const okResp = { success: true, score: Math.max(0, 100 - scorePenalty), latency_ms: latency, message: `OK${messageSuffix}`, metrics, httpCode: statusCode, remoteIp: r_ip, remotePort: parseInt(r_port) };
             return okResp;
 
         } catch (error: any) {

@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.150] - 2026-06-04
+### Added
+- **web-dashboard** 🔁 `server.ts`: Added retry resilience to all DEM probe types (HTTP, HTTPS, PING, TCP, DNS, UDP). A new `retryProbe()` helper retries failed probes up to 2 times (3 total attempts) with a 1-second delay. Score is reduced by 20 points per retry used to distinguish transient micro-failures from true outages. 🛡️
+- **web-dashboard** 🔁 `target-manager.ts`: Added native curl retries (`--retry 2 --retry-delay 1 --connect-timeout 5`) to CLOUD probe execution. Uses `-f -sS` flags to capture retry counts from stderr and apply the same scoring penalty logic. 🌐
+
 ## [v1.4.0-patch.149] - 2026-06-03
+
 ### Changed
 - **web-dashboard** 🌐 `Vyos.tsx`: Increased the Sequence column width in the VyOS History table by an additional 20% (now `360px`) to prevent truncation of descriptive sequence names. 📐
 

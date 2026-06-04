@@ -3710,6 +3710,27 @@ const calculateDEMScore = (type: string, reachable: boolean, httpCode: number | 
     return reachable ? 100 : 0;
 };
 
+/**
+ * Retry helper for DEM probes that do not have native retry support.
+ * Runs fn() up to maxRetries+1 times. Returns the result and number of retries consumed.
+ * A retry is only triggered if fn() throws (command failure). If it succeeds, retries = 0.
+ */
+const retryProbe = async <T>(fn: () => Promise<T>, maxRetries: number = 2, delayMs: number = 1000): Promise<{ result: T; retries: number }> => {
+    let lastError: any;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            const result = await fn();
+            return { result, retries: attempt };
+        } catch (e) {
+            lastError = e;
+            if (attempt < maxRetries) {
+                await new Promise(r => setTimeout(r, delayMs));
+            }
+        }
+    }
+    throw lastError;
+};
+
 const performConnectivityCheck = async (endpoint: any): Promise<ConnectivityResult> => {
     const startTime = Date.now();
     let result: ConnectivityResult = {
@@ -3731,10 +3752,21 @@ const performConnectivityCheck = async (endpoint: any): Promise<ConnectivityResu
             const curlCmd = `${getTimeoutCmd(15)}curl -o /dev/null -s -L -w "time_namelookup=%{time_namelookup}\\ntime_connect=%{time_connect}\\ntime_appconnect=%{time_appconnect}\\ntime_starttransfer=%{time_starttransfer}\\ntime_total=%{time_total}\\nhttp_code=%{http_code}\\nremote_ip=%{remote_ip}\\nremote_port=%{remote_port}\\nsize_download=%{size_download}\\nspeed_download=%{speed_download}\\nssl_verify_result=%{ssl_verify_result}\\n" -H 'Cache-Control: no-cache, no-store' -H 'Pragma: no-cache' --max-time ${Math.floor(endpoint.timeout / 1000)} ${ifaceFlag} "${endpoint.target}"`;
 
             if (DEBUG) log('CONNECTIVITY', `[DEBUG] Executing HTTP Probe: ${curlCmd}`, 'debug');
+            // Use curl native retries for transient network failures (not -f: we still want to capture 4xx/5xx codes)
+            let httpStdout = '';
+            let httpRetries = 0;
             try {
-                const { stdout } = await execPromise(curlCmd);
+                const res = await execPromise(curlCmd);
+                httpStdout = res.stdout;
+            } catch (execErr: any) {
+                // curl returned non-zero — capture stderr to count retries and try to parse metrics anyway
+                httpStdout = execErr.stdout || '';
+                httpRetries = (execErr.stderr || '').match(/curl:\s*\(\d+\)/g)?.length ?? 0;
+                if (DEBUG) log('CONNECTIVITY', `[DEBUG] HTTP Probe failed for ${endpoint.name}: ${execErr.message}`, 'debug');
+            }
+            if (httpStdout) {
                 const curlData: any = {};
-                stdout.split('\n').filter(l => l.includes('=')).forEach(line => {
+                httpStdout.split('\n').filter((l: string) => l.includes('=')).forEach((line: string) => {
                     const [key, value] = line.split('=');
                     if (key && value) curlData[key] = value.trim();
                 });
@@ -3755,10 +3787,9 @@ const performConnectivityCheck = async (endpoint: any): Promise<ConnectivityResu
                         speed_bps: parseFloat(curlData.speed_download),
                         ssl_verify: parseInt(curlData.ssl_verify_result)
                     };
-                    result.score = calculateDEMScore(result.endpointType, result.reachable, result.httpCode, result.metrics);
+                    const baseScore = calculateDEMScore(result.endpointType, result.reachable, result.httpCode, result.metrics);
+                    result.score = Math.max(0, baseScore - httpRetries * 20);
                 }
-            } catch (e) { 
-                if (DEBUG) log('CONNECTIVITY', `[DEBUG] HTTP Probe failed for ${endpoint.name}: ${e instanceof Error ? e.message : 'Unknown error'}`, 'debug');
             }
         } else if (endpoint.type.toLowerCase() === 'ping') {
             const iface = getInterface();
@@ -3768,15 +3799,16 @@ const performConnectivityCheck = async (endpoint: any): Promise<ConnectivityResu
             const pStart = Date.now();
             if (DEBUG) log('CONNECTIVITY', `[DEBUG] Executing PING: ${pingCommand}`, 'debug');
             try {
-                const { stdout } = await execPromise(pingCommand);
+                const { result: pingOut, retries: pingRetries } = await retryProbe(() => execPromise(pingCommand));
                 const duration = Date.now() - pStart;
-                const timeMatch = stdout.match(/time[=<](\d+\.?\d*)/);
+                const timeMatch = pingOut.stdout.match(/time[=<](\d+\.?\d*)/);
                 const pingTime = timeMatch ? parseFloat(timeMatch[1]) : duration;
                 result.reachable = true;
                 result.metrics.total_ms = Math.round(pingTime);
-                result.score = calculateDEMScore(result.endpointType, result.reachable, undefined, result.metrics);
+                const baseScore = calculateDEMScore(result.endpointType, result.reachable, undefined, result.metrics);
+                result.score = Math.max(0, baseScore - pingRetries * 20);
             } catch (e) {
-                if (DEBUG) log('CONNECTIVITY', `[DEBUG] PING failed for ${endpoint.name}: ${e instanceof Error ? e.message : 'Unknown error'}`, 'debug');
+                if (DEBUG) log('CONNECTIVITY', `[DEBUG] PING failed for ${endpoint.name} (all retries exhausted): ${e instanceof Error ? e.message : 'Unknown error'}`, 'debug');
             }
         } else if (endpoint.type.toLowerCase() === 'tcp') {
             const [ip, port] = endpoint.target.split(':');
@@ -3784,26 +3816,33 @@ const performConnectivityCheck = async (endpoint: any): Promise<ConnectivityResu
             const tStart = Date.now();
             if (DEBUG) log('CONNECTIVITY', `[DEBUG] Executing TCP Probe: ${ncCommand}`, 'debug');
             try {
-                await execPromise(ncCommand);
+                const { retries: tcpRetries } = await retryProbe(() => execPromise(ncCommand));
                 result.reachable = true;
                 result.metrics.total_ms = Date.now() - tStart;
-                result.score = calculateDEMScore(result.endpointType, result.reachable, undefined, result.metrics);
+                const baseScore = calculateDEMScore(result.endpointType, result.reachable, undefined, result.metrics);
+                result.score = Math.max(0, baseScore - tcpRetries * 20);
             } catch (e) {
-                if (DEBUG) log('CONNECTIVITY', `[DEBUG] TCP Probe failed for ${endpoint.name}: ${e instanceof Error ? e.message : 'Unknown error'}`, 'debug');
+                if (DEBUG) log('CONNECTIVITY', `[DEBUG] TCP Probe failed for ${endpoint.name} (all retries exhausted): ${e instanceof Error ? e.message : 'Unknown error'}`, 'debug');
             }
         } else if (endpoint.type.toLowerCase() === 'dns') {
             const dnsCommand = `${getTimeoutCmd(5)}dig +short +time=${Math.floor(endpoint.timeout / 1000)} google.com @${endpoint.target}`;
             const dStart = Date.now();
             if (DEBUG) log('CONNECTIVITY', `[DEBUG] Executing DNS Probe: ${dnsCommand}`, 'debug');
             try {
-                const { stdout } = await execPromise(dnsCommand);
-                if (stdout.trim().length > 0) {
-                    result.reachable = true;
-                    result.metrics.total_ms = Date.now() - dStart;
-                    result.score = calculateDEMScore(result.endpointType, result.reachable, undefined, result.metrics);
-                }
+                const { result: dnsOut, retries: dnsRetries } = await retryProbe(
+                    async () => {
+                        const r = await execPromise(dnsCommand);
+                        // dig exits 0 even with SERVFAIL — treat empty stdout as failure to trigger retry
+                        if (!r.stdout.trim()) throw new Error('dig returned empty response');
+                        return r;
+                    }
+                );
+                result.reachable = true;
+                result.metrics.total_ms = Date.now() - dStart;
+                const baseScore = calculateDEMScore(result.endpointType, result.reachable, undefined, result.metrics);
+                result.score = Math.max(0, baseScore - dnsRetries * 20);
             } catch (e) {
-                if (DEBUG) log('CONNECTIVITY', `[DEBUG] DNS Probe failed for ${endpoint.name}: ${e instanceof Error ? e.message : 'Unknown error'}`, 'debug');
+                if (DEBUG) log('CONNECTIVITY', `[DEBUG] DNS Probe failed for ${endpoint.name} (all retries exhausted): ${e instanceof Error ? e.message : 'Unknown error'}`, 'debug');
             }
         } else if (endpoint.type.toLowerCase() === 'udp') {
             const parts = endpoint.target.split(':');
@@ -3813,22 +3852,28 @@ const performConnectivityCheck = async (endpoint: any): Promise<ConnectivityResu
             const uStart = Date.now();
             if (DEBUG) log('CONNECTIVITY', `[DEBUG] Executing UDP Probe (iperf3): ${iperfCmd}`, 'debug');
             try {
-                const { stdout } = await execPromise(iperfCmd);
+                const { result: iperfOut, retries: udpRetries } = await retryProbe(
+                    async () => {
+                        const r = await execPromise(iperfCmd);
+                        const d = JSON.parse(r.stdout);
+                        if (!d.end || (!d.end.sum && !d.end.sum_received)) throw new Error('iperf3 returned no valid data');
+                        return r;
+                    }
+                );
                 const uDuration = Date.now() - uStart;
-                const data = JSON.parse(stdout);
-                if (data.end && (data.end.sum || data.end.sum_received)) {
-                    result.reachable = true;
-                    const sum = data.end.sum_received || data.end.sum;
-                    result.metrics = {
-                        total_ms: sum.delay_ms || (sum.mean_latency ? sum.mean_latency * 1000 : uDuration),
-                        jitter_ms: sum.jitter_ms || 0,
-                        loss_pct: sum.lost_percent || 0,
-                        size_bytes: sum.bytes || 0
-                    };
-                    result.score = calculateDEMScore(result.endpointType, result.reachable, undefined, result.metrics);
-                }
+                const data = JSON.parse(iperfOut.stdout);
+                result.reachable = true;
+                const sum = data.end.sum_received || data.end.sum;
+                result.metrics = {
+                    total_ms: sum.delay_ms || (sum.mean_latency ? sum.mean_latency * 1000 : uDuration),
+                    jitter_ms: sum.jitter_ms || 0,
+                    loss_pct: sum.lost_percent || 0,
+                    size_bytes: sum.bytes || 0
+                };
+                const baseScore = calculateDEMScore(result.endpointType, result.reachable, undefined, result.metrics);
+                result.score = Math.max(0, baseScore - udpRetries * 20);
             } catch (e) {
-                if (DEBUG) log('CONNECTIVITY', `[DEBUG] UDP Probe failed for ${endpoint.name}: ${e instanceof Error ? e.message : 'Unknown error'}`, 'debug');
+                if (DEBUG) log('CONNECTIVITY', `[DEBUG] UDP Probe failed for ${endpoint.name} (all retries exhausted): ${e instanceof Error ? e.message : 'Unknown error'}`, 'debug');
             }
         } else if (endpoint.type.toLowerCase() === 'cloud') {
             if (DEBUG) log('CONNECTIVITY', `[DEBUG] Executing CLOUD Probe for scenario: ${endpoint.target}`, 'debug');
