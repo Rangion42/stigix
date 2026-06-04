@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.151] - 2026-06-04
+### Changed
+- **web-dashboard** 🌐 `Vyos.tsx`: Replaced fixed column width table layout (`table-fixed`) with an auto-adjusting table layout (`table-auto`) and appropriate `min-w-` classes. Added horizontal scrolling (`overflow-x-auto`) to the container. This fixes overlapping parameter and result values, allowing columns to adjust automatically to content. 📐
+- **web-dashboard** 🌐 `Vyos.tsx`: Fixed colSpan of the empty history message from `5` to `6` to correctly span all columns. 🛠️
+
 ## [v1.4.0-patch.150] - 2026-06-04
 ### Added
 - **web-dashboard** 🔁 `server.ts`: Added retry resilience to all DEM probe types (HTTP, HTTPS, PING, TCP, DNS, UDP). A new `retryProbe()` helper retries failed probes up to 2 times (3 total attempts) with a 1-second delay. Score is reduced by 20 points per retry used to distinguish transient micro-failures from true outages. 🛡️

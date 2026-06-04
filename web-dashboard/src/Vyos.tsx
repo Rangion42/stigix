@@ -1535,24 +1535,16 @@ export default function Vyos(props: VyosProps) {
                         </div>
                     </div>
 
-                    <div className="bg-card border border-border rounded-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300 shadow-sm">
-                        <table className="w-full text-left text-xs border-collapse table-fixed">
-                            <colgroup>
-                                <col className="w-[130px]" />
-                                <col className="w-[360px]" />
-                                <col className="w-[130px]" />
-                                <col className="w-[120px]" />
-                                <col className="w-[180px]" />
-                                <col className="w-auto" />
-                            </colgroup>
+                    <div className="bg-card border border-border rounded-2xl overflow-x-auto animate-in slide-in-from-bottom-4 duration-300 shadow-sm">
+                        <table className="w-full text-left text-xs border-collapse table-auto">
                             <thead className="bg-card-secondary/80 border-b border-border sticky top-0">
                                 <tr>
-                                    <th className="px-4 py-3 font-semibold text-text-muted text-[10px] uppercase tracking-wider">Time</th>
-                                    <th className="px-4 py-3 font-semibold text-text-muted text-[10px] uppercase tracking-wider">Sequence</th>
-                                    <th className="px-4 py-3 font-semibold text-text-muted text-[10px] uppercase tracking-wider">Router</th>
-                                    <th className="px-4 py-3 font-semibold text-text-muted text-[10px] uppercase tracking-wider">Action</th>
-                                    <th className="px-4 py-3 font-semibold text-text-muted text-[10px] uppercase tracking-wider">Params</th>
-                                    <th className="px-4 py-3 font-semibold text-text-muted text-[10px] uppercase tracking-wider">Result</th>
+                                    <th className="px-4 py-3 font-semibold text-text-muted text-[10px] uppercase tracking-wider w-[130px] min-w-[130px]">Time</th>
+                                    <th className="px-4 py-3 font-semibold text-text-muted text-[10px] uppercase tracking-wider min-w-[200px]">Sequence</th>
+                                    <th className="px-4 py-3 font-semibold text-text-muted text-[10px] uppercase tracking-wider min-w-[110px]">Router</th>
+                                    <th className="px-4 py-3 font-semibold text-text-muted text-[10px] uppercase tracking-wider min-w-[110px]">Action</th>
+                                    <th className="px-4 py-3 font-semibold text-text-muted text-[10px] uppercase tracking-wider min-w-[160px]">Params</th>
+                                    <th className="px-4 py-3 font-semibold text-text-muted text-[10px] uppercase tracking-wider min-w-[150px]">Result</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border/50">
@@ -1807,7 +1799,7 @@ export default function Vyos(props: VyosProps) {
                                 })()}
                                 {history.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="px-6 py-28 text-center">
+                                        <td colSpan={6} className="px-6 py-28 text-center">
                                             <div className="flex flex-col items-center gap-4 opacity-10">
                                                 <Clock size={64} className="text-text-muted" />
                                                 <span className="text-lg font-black uppercase tracking-[0.4em] text-text-muted">Chronicle Database Empty</span>
