@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Phone, Play, Pause, BarChart2, Save, Plus, Trash2, Clock, Activity, Wifi, Search, CheckSquare, AlertCircle, Hash, Download, Upload } from 'lucide-react';
+import { Phone, Play, Pause, BarChart2, Save, Plus, Trash2, Clock, Activity, Wifi, Search, CheckSquare, AlertCircle, Hash, Download, Upload, X } from 'lucide-react';
+import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import toast from 'react-hot-toast';
@@ -119,6 +120,7 @@ export default function Voice(props: VoiceProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [qualityFilter, setQualityFilter] = useState<'all' | 'excellent' | 'fair' | 'poor'>('all');
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'timestamp', direction: 'desc' });
+    const [selectedStat, setSelectedStat] = useState<any>(null);
 
     // ── Target rows (merged registry + manual) ──
     const [targetRows, setTargetRows] = useState<TargetRow[]>([]);
@@ -956,7 +958,12 @@ export default function Voice(props: VoiceProps) {
                             </thead>
                             <tbody className="divide-y divide-border/30">
                                 {perTargetStats.map(stat => (
-                                    <tr key={stat.target} className="hover:bg-card-secondary/20 transition-all">
+                                    <tr
+                                        key={stat.target}
+                                        className="hover:bg-card-secondary/30 transition-all cursor-pointer group/row"
+                                        onClick={() => setSelectedStat(stat)}
+                                        title="Click to see quality profile"
+                                    >
                                         <td className="py-3 px-3">
                                             <div className="text-xs font-black text-text-primary">{stat.name}</div>
                                             {stat.name !== stat.target && (
@@ -1156,6 +1163,100 @@ export default function Voice(props: VoiceProps) {
                     )}
                 </div>
             </div>
+
+            {/* ─── QoS Spider Chart Modal ─── */}
+            {selectedStat && (() => {
+                const loss    = parseFloat(selectedStat.avgLoss);
+                const rtt     = parseFloat(selectedStat.avgRtt);
+                const jitter  = parseFloat(selectedStat.avgJitter);
+                const mos     = selectedStat.avgMos !== 'N/A' ? parseFloat(selectedStat.avgMos) : 3;
+                const radarData = [
+                    { metric: 'Loss',   value: Math.max(0, Math.round((1 - loss   / 10)  * 100)), raw: `${selectedStat.avgLoss}%` },
+                    { metric: 'RTT',    value: Math.max(0, Math.round((1 - rtt    / 400) * 100)), raw: `${selectedStat.avgRtt}ms` },
+                    { metric: 'MOS',    value: Math.round((mos / 5) * 100),                        raw: selectedStat.avgMos },
+                    { metric: 'Jitter', value: Math.max(0, Math.round((1 - jitter / 50)  * 100)), raw: `${selectedStat.avgJitter}ms` },
+                ];
+                const quality      = selectedStat.quality;
+                const qualityColor = quality === 'excellent' ? '#22c55e' : quality === 'fair' ? '#f97316' : '#ef4444';
+                const radarColor   = quality === 'excellent' ? '#3b82f6' : quality === 'fair' ? '#f97316' : '#ef4444';
+                return (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center"
+                        onClick={() => setSelectedStat(null)}
+                    >
+                        {/* Backdrop */}
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+                        {/* Modal card */}
+                        <div
+                            className="relative z-10 bg-card border border-border rounded-2xl shadow-2xl p-6 w-[420px] max-w-[95vw]"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="flex items-start justify-between mb-4">
+                                <div>
+                                    <h4 className="text-sm font-black text-text-primary tracking-tight">{selectedStat.name}</h4>
+                                    {selectedStat.name !== selectedStat.target && (
+                                        <p className="text-[9px] font-mono text-text-muted opacity-50 mt-0.5">{selectedStat.target}</p>
+                                    )}
+                                    <div className="flex items-center gap-1.5 mt-1.5">
+                                        <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: qualityColor }} />
+                                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: qualityColor }}>
+                                            {quality}
+                                        </span>
+                                        <span className="text-[9px] text-text-muted opacity-50 font-bold">• {selectedStat.totalCalls} call{selectedStat.totalCalls !== 1 ? 's' : ''}</span>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedStat(null)}
+                                    className="p-1.5 hover:bg-card-secondary rounded-lg transition-all text-text-muted hover:text-text-primary"
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+
+                            {/* Radar chart */}
+                            <div className="h-56">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <RadarChart data={radarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
+                                        <PolarGrid stroke="var(--border)" strokeOpacity={0.5} />
+                                        <PolarAngleAxis
+                                            dataKey="metric"
+                                            tick={({ x, y, payload }: any) => {
+                                                const d = radarData.find(r => r.metric === payload.value);
+                                                return (
+                                                    <text x={x} y={y} textAnchor="middle" dominantBaseline="central" fill="var(--text-secondary)" fontSize={10} fontWeight={700}>
+                                                        <tspan x={x} dy="0">{payload.value}</tspan>
+                                                        <tspan x={x} dy={13} fontSize={9} opacity={0.55} fill="var(--text-muted)">{d?.raw}</tspan>
+                                                    </text>
+                                                );
+                                            }}
+                                        />
+                                        <Radar
+                                            dataKey="value"
+                                            stroke={radarColor}
+                                            fill={radarColor}
+                                            fillOpacity={0.18}
+                                            strokeWidth={2}
+                                        />
+                                    </RadarChart>
+                                </ResponsiveContainer>
+                            </div>
+
+                            {/* Raw metric grid */}
+                            <div className="grid grid-cols-4 gap-2 mt-4">
+                                {radarData.map(d => (
+                                    <div key={d.metric} className="bg-card-secondary/50 border border-border rounded-xl p-2.5 text-center">
+                                        <div className="text-[8px] font-black text-text-muted uppercase tracking-widest opacity-60 mb-1">{d.metric}</div>
+                                        <div className="text-xs font-black text-text-primary">{d.raw}</div>
+                                        <div className="text-[8px] text-text-muted opacity-40 mt-0.5">{d.value}/100</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }

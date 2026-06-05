@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1-patch.3] - 2026-06-05
+### Added
+- **web-dashboard** 🕸️ `Voice.tsx`: QoS Spider Chart modal on the Per-Target QoS Statistics table. Clicking any site row opens a centered modal with a recharts RadarChart showing 4 normalized axes (Loss, RTT, MOS, Jitter, each scored 0–100). Radar color matches quality level (blue=excellent, orange=fair, red=poor). Raw metric values displayed below the chart in a 4-column card grid. Click outside or press × to dismiss. Table unchanged.
+
 ## [v1.4.1-patch.2] - 2026-06-05
 ### Changed
 - **web-dashboard** 🎨 `ConnectivityPerformance.tsx`: Visual polish on B2-inline probe table. Sub-stats (avg/min/max) now use `text-text-secondary` at `opacity-70` for better contrast in both light and dark mode. Latency values no longer show decimals (`1319ms` instead of `1319.0ms` — values are already integer-rounded in the memo). DonutRing stroke thinned from `4` to `2.5` and size increased from `28px` to `32px` for a more elegant ring appearance.
