@@ -50,7 +50,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push Stigix All-in-One (Stable)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: stigix-all-in-one/Dockerfile
@@ -119,7 +119,7 @@ jobs:
           fi
 
       - name: Build and push Stigix All-in-One
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: stigix-all-in-one/Dockerfile

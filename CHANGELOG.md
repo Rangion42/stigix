@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.152] - 2026-06-05
+### Fixed
+- **ci/cd** ⚙️ `.github/workflows/build-stigix-allinone.yml`: Upgraded `docker/build-push-action` from `v5` to `v6` to resolve Docker buildx layer blob exporting errors (`error writing layer blob: not_found`) when writing to the GitHub Actions cache. 🔄
+
 ## [v1.4.0-patch.151] - 2026-06-04
 ### Changed
 - **web-dashboard** 🌐 `Vyos.tsx`: Replaced fixed column width table layout (`table-fixed`) with an auto-adjusting table layout (`table-auto`) and appropriate `min-w-` classes. Added horizontal scrolling (`overflow-x-auto`) to the container. This fixes overlapping parameter and result values, allowing columns to adjust automatically to content. 📐
