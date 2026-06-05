@@ -3747,6 +3747,8 @@ const performConnectivityCheck = async (endpoint: any): Promise<ConnectivityResu
     try {
         const execPromise = promisify(exec);
         if (endpoint.type.toLowerCase() === 'http' || endpoint.type.toLowerCase() === 'https') {
+            const iface = getInterface();
+            const ifaceFlag = (iface && iface !== 'eth0') ? `--interface ${iface}` : '';
             const timeoutSec = Math.floor(endpoint.timeout / 1000) || 5;
             const retryDelaySec = Math.max(1, Math.min(5, Math.floor(timeoutSec / 10)));
             const curlCmd = `${getTimeoutCmd(timeoutSec + 5)}curl -o /dev/null -sS -L -w "time_namelookup=%{time_namelookup}\\ntime_connect=%{time_connect}\\ntime_appconnect=%{time_appconnect}\\ntime_starttransfer=%{time_starttransfer}\\ntime_total=%{time_total}\\nhttp_code=%{http_code}\\nremote_ip=%{remote_ip}\\nremote_port=%{remote_port}\\nsize_download=%{size_download}\\nspeed_download=%{speed_download}\\nssl_verify_result=%{ssl_verify_result}\\n" -H 'Cache-Control: no-cache, no-store' -H 'Pragma: no-cache' --connect-timeout 5 --max-time ${timeoutSec} --retry 2 --retry-delay ${retryDelaySec} --retry-max-time ${timeoutSec} ${ifaceFlag} "${endpoint.target}"`;

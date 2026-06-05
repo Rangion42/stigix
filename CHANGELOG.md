@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.155] - 2026-06-05
+### Fixed
+- **web-dashboard** 🐛 `server.ts`: Regression fix — restored missing `iface` and `ifaceFlag` variable declarations in the HTTP/HTTPS probe block (accidentally dropped in v1.4.0-patch.154 when adding retry logic). Without these, the curl command contained an undefined `${ifaceFlag}` template literal causing the HTTP/HTTPS probes to fail on non-default network interfaces.
+
 ## [v1.4.0-patch.154] - 2026-06-05
 ### Added
 - **web-dashboard** 🌐 `server.ts` & `target-manager.ts`: Implemented dynamic retry delays and command execution timeouts for all DEM probes (HTTP, HTTPS, PING, TCP, DNS, UDP, CLOUD). Timeout wrapper limits now scale with configured endpoint timeouts, and retry delays adjust automatically (e.g. from 1s up to 5s for 60s timeouts). Also added native curl retries to HTTP/HTTPS probes. ⏱️
