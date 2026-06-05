@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1-patch.2] - 2026-06-05
+### Changed
+- **web-dashboard** 🎨 `ConnectivityPerformance.tsx`: Visual polish on B2-inline probe table. Sub-stats (avg/min/max) now use `text-text-secondary` at `opacity-70` for better contrast in both light and dark mode. Latency values no longer show decimals (`1319ms` instead of `1319.0ms` — values are already integer-rounded in the memo). DonutRing stroke thinned from `4` to `2.5` and size increased from `28px` to `32px` for a more elegant ring appearance.
+
 ## [v1.4.1-patch.1] - 2026-06-05
 ### Changed
 - **web-dashboard** ✨ `ConnectivityPerformance.tsx`: Redesigned DEM probe table columns (Score, Latency, Reliability) with the B2-inline visual treatment. Score and Latency columns now each feature an inline SVG sparkline (showing recent trend) alongside a colored pill badge (current value), plus whisper-quiet AVG·MIN·MAX sub-stats on the same row. Reliability replaced by a compact 28px SVG donut ring. Row height unchanged vs previous version. No new dependencies — sparkline and donut are pure inline SVG components. Added `minLatency` and `scoreHistory`/`latencyHistory` arrays to the endpoint aggregation memo.

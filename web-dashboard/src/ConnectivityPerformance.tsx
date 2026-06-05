@@ -26,7 +26,7 @@ const Sparkline = ({ data, color, width = 80, height = 20 }: { data: number[]; c
 // ── Tiny donut ring (SVG arc) ────────────────────────────────────────────────
 const DonutRing = ({ pct, size = 34 }: { pct: number; size?: number }) => {
     const color = pct >= 95 ? '#22c55e' : pct >= 80 ? '#f97316' : '#ef4444';
-    const stroke = 4;
+    const stroke = 2.5;
     const r = (size - stroke) / 2;
     const circ = 2 * Math.PI * r;
     const dash = (pct / 100) * circ;
@@ -976,8 +976,8 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                         )}>
                                             {e.lastScore}
                                         </span>
-                                        <span className="text-[8px] text-text-muted font-bold opacity-50 tracking-tight whitespace-nowrap hidden xl:inline">
-                                            {e.avgScore}·{e.minScore}·{e.maxScore}
+                                        <span className="text-[8px] text-text-secondary font-bold opacity-70 tracking-tight whitespace-nowrap hidden xl:inline">
+                                            {e.avgScore}-{e.minScore}-{e.maxScore}
                                         </span>
                                     </div>
                                 </td>
@@ -991,17 +991,17 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                             height={14}
                                         />
                                         <span className="inline-flex items-center justify-center rounded-full px-1.5 text-[10px] font-black min-w-[46px] border text-amber-500 dark:text-amber-400 bg-amber-500/10 border-amber-500/20 font-mono leading-5">
-                                            {formatMs(e.avgLatency)}ms
+                                            {e.avgLatency}ms
                                         </span>
-                                        <span className="text-[8px] text-text-muted font-bold opacity-50 tracking-tight whitespace-nowrap hidden xl:inline">
-                                            {formatMs(e.minLatency)}·{formatMs(e.maxLatency)}ms
+                                        <span className="text-[8px] text-text-secondary font-bold opacity-70 tracking-tight whitespace-nowrap hidden xl:inline">
+                                            {e.minLatency}-{e.maxLatency}ms
                                         </span>
                                     </div>
                                 </td>
                                 {/* ── Reliability: compact donut ring ── */}
                                 <td className="px-4 py-2 text-center align-middle">
                                     <div className="flex items-center justify-center">
-                                        <DonutRing pct={e.successRate} size={28} />
+                                        <DonutRing pct={e.successRate} size={32} />
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 px-8">
