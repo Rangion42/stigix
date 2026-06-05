@@ -1,6 +1,6 @@
 # 🕸️ Stigix — Advanced Networking & Security Simulation Environment
 
-[![Version](https://img.shields.io/badge/Version-1.4.0--patch.153-blue.svg)](https://github.com/jsuzanne/stigix/releases)
+[![Version](https://img.shields.io/badge/Version-1.4.0--patch.154-blue.svg)](https://github.com/jsuzanne/stigix/releases)
 [![Docker Pulls](https://img.shields.io/docker/pulls/jlsuzanne/stigix)](https://hub.docker.com/r/jlsuzanne/stigix)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -832,7 +832,7 @@ Comprehensive guides organized by your journey with the Stigix.
 - **[Security Testing Guide](docs/SECURITY_TESTING.md)** - Comprehensive security testing documentation
   - [Security Quick Reference](docs/SECURITY_QUICK_REFERENCE.md) - Quick reference for security tests
   - [Security FAQ](docs/SECURITY_TESTING_FAQ.md) - Frequently asked questions
-- **[Connectivity Endpoints](docs/CONNECTIVITY_ENDPOINTS.md)** - System health monitoring and synthetic probes
+- **[Digital Experience Testing](docs/DIGITAL_EXPERIENCE_TESTING.md)** - System health monitoring and synthetic probes
 
 ### 🔬 Advanced Features
 - **[Voice Simulation Guide](docs/VOICE_SIMULATION.md)** - RTP packet forging and MOS scoring theory

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.154] - 2026-06-05
+### Added
+- **web-dashboard** 🌐 `server.ts` & `target-manager.ts`: Implemented dynamic retry delays and command execution timeouts for all DEM probes (HTTP, HTTPS, PING, TCP, DNS, UDP, CLOUD). Timeout wrapper limits now scale with configured endpoint timeouts, and retry delays adjust automatically (e.g. from 1s up to 5s for 60s timeouts). Also added native curl retries to HTTP/HTTPS probes. ⏱️
+- **documentation** 📚 `docs/DIGITAL_EXPERIENCE_TESTING.md`: Renamed `docs/CONNECTIVITY_ENDPOINTS.md` to `docs/DIGITAL_EXPERIENCE_TESTING.md`, updated all internal links (including in `README.md`), and added a comprehensive parameters table detailing default polling frequencies, timeouts, retries, and dynamic retry delay logic. 📖
+
 ## [v1.4.0-patch.153] - 2026-06-05
 ### Added
 - **web-dashboard** 🌐 `Vyos.tsx`: Added VyOS interface descriptions to the interface names inside both the History table logs (grouped/flat) and the Sequence list table. Also adjusted the CSS grid column width of the sequence list interface column from `90px` to `120px` to prevent text truncation. 🏷️

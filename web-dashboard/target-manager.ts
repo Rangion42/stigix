@@ -301,8 +301,9 @@ export class TargetManager {
             tmpFile = path.join(os.tmpdir(), `stigix_cloud_${Date.now()}_${Math.random().toString(36).substring(7)}.tmp`);
             
             const timeoutSec = timeoutMs ? Math.max(1, Math.floor(timeoutMs / 1000)) : 15;
+            const retryDelaySec = Math.max(1, Math.min(5, Math.floor(timeoutSec / 10)));
             // Add native curl retries: -f (fail fast on HTTP error), -sS (silent but show errors to stderr for tracking retries)
-            const curlCmd = `curl -f -sS -L -w "%{time_namelookup},%{time_connect},%{time_appconnect},%{time_starttransfer},%{time_total},%{http_code},%{size_download},%{speed_download},%{remote_ip},%{remote_port}" -o "${tmpFile}" --connect-timeout 5 --max-time ${timeoutSec} --retry 2 --retry-delay 1 --retry-max-time ${timeoutSec} "${signedUrl}"`;
+            const curlCmd = `curl -f -sS -L -w "%{time_namelookup},%{time_connect},%{time_appconnect},%{time_starttransfer},%{time_total},%{http_code},%{size_download},%{speed_download},%{remote_ip},%{remote_port}" -o "${tmpFile}" --connect-timeout 5 --max-time ${timeoutSec} --retry 2 --retry-delay ${retryDelaySec} --retry-max-time ${timeoutSec} "${signedUrl}"`;
             
             log('TARGET', `[CLOUD PROBE] Executing: ${curlCmd}`, 'debug');
             

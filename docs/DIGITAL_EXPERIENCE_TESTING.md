@@ -1,6 +1,6 @@
-# Connectivity Probes: Digital Experience Monitoring (DEM)
+# Digital Experience Testing (DEM)
 
-The **Connectivity Probes** (formerly Synthetic Endpoints) provide real-time visibility into the health and performance of critical application targets by simulating user traffic patterns.
+The **Digital Experience Monitoring (DEM)** (formerly Synthetic Endpoints / Connectivity Probes) provides real-time visibility into the health and performance of critical application targets by simulating user traffic patterns.
 
 *Main DEM dashboard showing real-time health scores for all monitored applications:*
 ![Digital Experience Dashboard](screenshots/04-Performance/01-digital-experience-dashboard.png)
@@ -10,9 +10,26 @@ The **Connectivity Probes** (formerly Synthetic Endpoints) provide real-time vis
 
 ## 📡 Available Probe Types
 
-The platform supports three primary probe types, each measuring different aspects of the digital experience:
+The platform supports various probe types, each measuring different aspects of the digital experience:
 
-### 1. HTTP (Digital Experience)
+### 📋 Probe Specifications & Default Parameters
+
+| Probe Type | Protocol | Default Polling Frequency | Default Timeout | Max Retries | Retry Delay (Dynamic) | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **HTTP** | HTTP/HTTPS | 60 seconds | 5,000 ms | 2 (3 attempts total) | 1s to 5s (`timeout / 10`) | Web application response & metrics (`curl`) |
+| **HTTPS** | HTTPS | 60 seconds | 5,000 ms | 2 (3 attempts total) | 1s to 5s (`timeout / 10`) | Secure web application response & TLS metrics (`curl`) |
+| **PING** | ICMP Echo | 60 seconds | 2,000 ms | 2 (3 attempts total) | 1s to 5s (`timeout / 10`) | Network reachability & RTT (`ping`) |
+| **DNS** | DNS Query | 60 seconds | 3,000 ms | 2 (3 attempts total) | 1s to 5s (`timeout / 10`) | Domain resolution speed (`dig` to server) |
+| **TCP** | TCP Handshake | 60 seconds | 3,000 ms | 2 (3 attempts total) | 1s to 5s (`timeout / 10`) | Port reachability & handshake (`nc`) |
+| **UDP** | UDP Traffic | 60 seconds | 3,000 ms | 2 (3 attempts total) | 1s to 5s (`timeout / 10`) | Voice/real-time quality (`iperf3` client) |
+| **CLOUD** | HTTP/HTTPS | 60 seconds | 15,000 ms | 2 (3 attempts total) | 1s to 5s (`timeout / 10`) | Cloudflare POP egress & SaaS emulation (`curl`) |
+
+> [!NOTE]
+> **Dynamic Retry Delay**: The delay between retries is automatically scaled according to the probe's timeout setting:
+> $$\text{Retry Delay} = \max(1000\text{ ms}, \min(5000\text{ ms}, \lfloor\text{Timeout} / 10\rfloor))$$
+> This guarantees that probes with longer timeouts wait longer between attempts to avoid spamming the target resource, while probes with shorter timeouts retry quickly to minimize detection lag.
+
+### 1. HTTP/HTTPS (Digital Experience)
 - **Mechanism**: Orchestrates a native OS `curl` subprocess to perform HTTP/HTTPS `GET` queries.
 - **Primary Benefit**: `curl` provides military-grade precision for extracting intricate low-level execution timings out-of-the-box, allowing us to perfectly isolate DNS lookup delays, TCP Handshake times, and TLS Handshake overhead from the raw Time-To-First-Byte (TTFB).
 - **Metrics**: 

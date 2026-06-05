@@ -3747,9 +3747,9 @@ const performConnectivityCheck = async (endpoint: any): Promise<ConnectivityResu
     try {
         const execPromise = promisify(exec);
         if (endpoint.type.toLowerCase() === 'http' || endpoint.type.toLowerCase() === 'https') {
-            const iface = getInterface();
-            const ifaceFlag = (iface && iface !== 'eth0') ? `--interface ${iface}` : '';
-            const curlCmd = `${getTimeoutCmd(15)}curl -o /dev/null -s -L -w "time_namelookup=%{time_namelookup}\\ntime_connect=%{time_connect}\\ntime_appconnect=%{time_appconnect}\\ntime_starttransfer=%{time_starttransfer}\\ntime_total=%{time_total}\\nhttp_code=%{http_code}\\nremote_ip=%{remote_ip}\\nremote_port=%{remote_port}\\nsize_download=%{size_download}\\nspeed_download=%{speed_download}\\nssl_verify_result=%{ssl_verify_result}\\n" -H 'Cache-Control: no-cache, no-store' -H 'Pragma: no-cache' --max-time ${Math.floor(endpoint.timeout / 1000)} ${ifaceFlag} "${endpoint.target}"`;
+            const timeoutSec = Math.floor(endpoint.timeout / 1000) || 5;
+            const retryDelaySec = Math.max(1, Math.min(5, Math.floor(timeoutSec / 10)));
+            const curlCmd = `${getTimeoutCmd(timeoutSec + 5)}curl -o /dev/null -sS -L -w "time_namelookup=%{time_namelookup}\\ntime_connect=%{time_connect}\\ntime_appconnect=%{time_appconnect}\\ntime_starttransfer=%{time_starttransfer}\\ntime_total=%{time_total}\\nhttp_code=%{http_code}\\nremote_ip=%{remote_ip}\\nremote_port=%{remote_port}\\nsize_download=%{size_download}\\nspeed_download=%{speed_download}\\nssl_verify_result=%{ssl_verify_result}\\n" -H 'Cache-Control: no-cache, no-store' -H 'Pragma: no-cache' --connect-timeout 5 --max-time ${timeoutSec} --retry 2 --retry-delay ${retryDelaySec} --retry-max-time ${timeoutSec} ${ifaceFlag} "${endpoint.target}"`;
 
             if (DEBUG) log('CONNECTIVITY', `[DEBUG] Executing HTTP Probe: ${curlCmd}`, 'debug');
             // Use curl native retries for transient network failures (not -f: we still want to capture 4xx/5xx codes)
@@ -3794,12 +3794,14 @@ const performConnectivityCheck = async (endpoint: any): Promise<ConnectivityResu
         } else if (endpoint.type.toLowerCase() === 'ping') {
             const iface = getInterface();
             const ifaceFlag = (iface && iface !== 'eth0') ? (isMac ? `-b ${iface}` : `-I ${iface}`) : ''; // -b on mac for bind, -I on linux
-            const pingFlag = isMac ? `-W ${endpoint.timeout}` : `-W ${Math.floor(endpoint.timeout / 1000)}`; // Mac is ms, Linux is seconds
-            const pingCommand = `${getTimeoutCmd(5)}ping -c 1 ${pingFlag} ${ifaceFlag} ${endpoint.target}`;
+            const timeoutSec = Math.max(1, Math.ceil(endpoint.timeout / 1000));
+            const pingFlag = isMac ? `-W ${endpoint.timeout}` : `-W ${timeoutSec}`;
+            const pingCommand = `${getTimeoutCmd(timeoutSec + 2)}ping -c 1 ${pingFlag} ${ifaceFlag} ${endpoint.target}`;
             const pStart = Date.now();
             if (DEBUG) log('CONNECTIVITY', `[DEBUG] Executing PING: ${pingCommand}`, 'debug');
             try {
-                const { result: pingOut, retries: pingRetries } = await retryProbe(() => execPromise(pingCommand));
+                const retryDelayMs = Math.max(1000, Math.min(5000, Math.floor(endpoint.timeout / 10)));
+                const { result: pingOut, retries: pingRetries } = await retryProbe(() => execPromise(pingCommand), 2, retryDelayMs);
                 const duration = Date.now() - pStart;
                 const timeMatch = pingOut.stdout.match(/time[=<](\d+\.?\d*)/);
                 const pingTime = timeMatch ? parseFloat(timeMatch[1]) : duration;
@@ -3812,11 +3814,13 @@ const performConnectivityCheck = async (endpoint: any): Promise<ConnectivityResu
             }
         } else if (endpoint.type.toLowerCase() === 'tcp') {
             const [ip, port] = endpoint.target.split(':');
-            const ncCommand = `${getTimeoutCmd(5)}nc -zv -w ${Math.floor(endpoint.timeout / 1000)} ${ip} ${port} 2>&1`;
+            const timeoutSec = Math.max(1, Math.floor(endpoint.timeout / 1000));
+            const ncCommand = `${getTimeoutCmd(timeoutSec + 2)}nc -zv -w ${timeoutSec} ${ip} ${port} 2>&1`;
             const tStart = Date.now();
             if (DEBUG) log('CONNECTIVITY', `[DEBUG] Executing TCP Probe: ${ncCommand}`, 'debug');
             try {
-                const { retries: tcpRetries } = await retryProbe(() => execPromise(ncCommand));
+                const retryDelayMs = Math.max(1000, Math.min(5000, Math.floor(endpoint.timeout / 10)));
+                const { retries: tcpRetries } = await retryProbe(() => execPromise(ncCommand), 2, retryDelayMs);
                 result.reachable = true;
                 result.metrics.total_ms = Date.now() - tStart;
                 const baseScore = calculateDEMScore(result.endpointType, result.reachable, undefined, result.metrics);
@@ -3825,17 +3829,21 @@ const performConnectivityCheck = async (endpoint: any): Promise<ConnectivityResu
                 if (DEBUG) log('CONNECTIVITY', `[DEBUG] TCP Probe failed for ${endpoint.name} (all retries exhausted): ${e instanceof Error ? e.message : 'Unknown error'}`, 'debug');
             }
         } else if (endpoint.type.toLowerCase() === 'dns') {
-            const dnsCommand = `${getTimeoutCmd(5)}dig +short +time=${Math.floor(endpoint.timeout / 1000)} google.com @${endpoint.target}`;
+            const timeoutSec = Math.max(1, Math.floor(endpoint.timeout / 1000));
+            const dnsCommand = `${getTimeoutCmd(timeoutSec + 2)}dig +short +time=${timeoutSec} google.com @${endpoint.target}`;
             const dStart = Date.now();
             if (DEBUG) log('CONNECTIVITY', `[DEBUG] Executing DNS Probe: ${dnsCommand}`, 'debug');
             try {
+                const retryDelayMs = Math.max(1000, Math.min(5000, Math.floor(endpoint.timeout / 10)));
                 const { result: dnsOut, retries: dnsRetries } = await retryProbe(
                     async () => {
                         const r = await execPromise(dnsCommand);
                         // dig exits 0 even with SERVFAIL — treat empty stdout as failure to trigger retry
                         if (!r.stdout.trim()) throw new Error('dig returned empty response');
                         return r;
-                    }
+                    },
+                    2,
+                    retryDelayMs
                 );
                 result.reachable = true;
                 result.metrics.total_ms = Date.now() - dStart;
@@ -3848,17 +3856,21 @@ const performConnectivityCheck = async (endpoint: any): Promise<ConnectivityResu
             const parts = endpoint.target.split(':');
             const host = parts[0];
             const port = parts[1] || '5201';
-            const iperfCmd = `${getTimeoutCmd(10)}iperf3 -u -c ${host} -p ${port} -b 50k -t 1 -J`;
+            const timeoutSec = Math.max(1, Math.floor(endpoint.timeout / 1000));
+            const iperfCmd = `${getTimeoutCmd(timeoutSec + 5)}iperf3 -u -c ${host} -p ${port} -b 50k -t 1 -J`;
             const uStart = Date.now();
             if (DEBUG) log('CONNECTIVITY', `[DEBUG] Executing UDP Probe (iperf3): ${iperfCmd}`, 'debug');
             try {
+                const retryDelayMs = Math.max(1000, Math.min(5000, Math.floor(endpoint.timeout / 10)));
                 const { result: iperfOut, retries: udpRetries } = await retryProbe(
                     async () => {
                         const r = await execPromise(iperfCmd);
                         const d = JSON.parse(r.stdout);
                         if (!d.end || (!d.end.sum && !d.end.sum_received)) throw new Error('iperf3 returned no valid data');
                         return r;
-                    }
+                    },
+                    2,
+                    retryDelayMs
                 );
                 const uDuration = Date.now() - uStart;
                 const data = JSON.parse(iperfOut.stdout);
