@@ -3,6 +3,49 @@ import { Gauge, Activity, Clock, Filter, Download, Zap, Shield, Search, ChevronR
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip, ResponsiveContainer, AreaChart, Area, ReferenceLine, ReferenceArea } from 'recharts';
 import { twMerge } from 'tailwind-merge';
 
+// ── Inline SVG sparkline (no recharts dependency) ───────────────────────────
+const Sparkline = ({ data, color, width = 80, height = 20 }: { data: number[]; color: string; width?: number; height?: number }) => {
+    if (!data || data.length < 2) {
+        return <svg width={width} height={height}><line x1={0} y1={height / 2} x2={width} y2={height / 2} stroke={color} strokeWidth={1.5} strokeOpacity={0.4} strokeDasharray="3 2" /></svg>;
+    }
+    const max = Math.max(...data);
+    const min = Math.min(...data);
+    const range = max - min || 1;
+    const pts = data.map((v, i) => {
+        const x = (i / (data.length - 1)) * width;
+        const y = height - ((v - min) / range) * (height - 2) - 1;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    return (
+        <svg width={width} height={height} style={{ overflow: 'visible' }}>
+            <polyline points={pts} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+        </svg>
+    );
+};
+
+// ── Tiny donut ring (SVG arc) ────────────────────────────────────────────────
+const DonutRing = ({ pct, size = 34 }: { pct: number; size?: number }) => {
+    const color = pct >= 95 ? '#22c55e' : pct >= 80 ? '#f97316' : '#ef4444';
+    const stroke = 4;
+    const r = (size - stroke) / 2;
+    const circ = 2 * Math.PI * r;
+    const dash = (pct / 100) * circ;
+    const cx = size / 2;
+    const cy = size / 2;
+    return (
+        <svg width={size} height={size}>
+            <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeOpacity={0.15} strokeWidth={stroke} />
+            <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke}
+                strokeDasharray={`${dash.toFixed(2)} ${circ.toFixed(2)}`} strokeLinecap="round"
+                transform={`rotate(-90 ${cx} ${cy})`} />
+            <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
+                fontSize={size <= 36 ? 7 : 9} fontWeight="800" fill={color}>
+                {pct}%
+            </text>
+        </svg>
+    );
+};
+
 interface ConnectivityPerformanceProps {
     token: string;
     uiConfig?: { maxCaptures: number };
@@ -466,6 +509,10 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
             const config = endpointConfigs.get(id);
             const enabled = config?.enabled !== false; // default true
 
+            // Sparkline histories — up to 15 most recent, chronological order
+            const histSlice = endpointResults.slice(0, 15).reverse();
+            const reachableSlice = reachable.slice(0, 15).reverse();
+
             return {
                 id,
                 name: last?.endpointName || 'Unknown',
@@ -475,13 +522,17 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                 minScore: reachable.length > 0 ? Math.min(...reachable.map(r => r.score)) : 0,
                 maxScore: reachable.length > 0 ? Math.max(...reachable.map(r => r.score)) : 0,
                 avgLatency: reachable.length > 0 ? Math.round(reachable.reduce((acc, r) => acc + r.metrics.total_ms, 0) / reachable.length) : 0,
-                maxLatency: reachable.length > 0 ? reachable.reduce((max, r) => Math.max(max, r.metrics.total_ms), reachable[0].metrics.total_ms) : 0,
+                minLatency: reachable.length > 0 ? Math.round(Math.min(...reachable.map(r => r.metrics.total_ms))) : 0,
+                maxLatency: reachable.length > 0 ? Math.round(reachable.reduce((max, r) => Math.max(max, r.metrics.total_ms), reachable[0].metrics.total_ms)) : 0,
                 checks: endpointResults.length,
                 successRate: Math.round((reachable.length / endpointResults.length) * 100),
                 lastResult: last,
                 enabled,
                 source: config?.source,
-                stale: config?.stale
+                stale: config?.stale,
+                // Sparkline data arrays (chronological)
+                scoreHistory: histSlice.map(r => r.score),
+                latencyHistory: reachableSlice.map(r => Math.round(r.metrics.total_ms)),
             };
         }).filter(e => {
             if (!showDeleted && activeProbes.length > 0 && !activeProbes.includes(e.id)) return false;
@@ -910,34 +961,47 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                         {e.enabled ? "Active" : "Inactive"}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 text-center align-middle">
-                                    <div className="flex flex-col items-center justify-center">
-                                        <div className={cn(
-                                            "inline-flex items-center justify-center w-12 h-8 rounded-lg border font-black text-sm shadow-sm mb-1",
+                                {/* ── Score: single-line sparkline + badge + sub-stats ── */}
+                                <td className="px-4 py-2 text-center align-middle">
+                                    <div className="flex items-center justify-center gap-1.5">
+                                        <Sparkline
+                                            data={e.scoreHistory}
+                                            color={e.lastScore >= 80 ? '#22c55e' : e.lastScore >= 50 ? '#f97316' : '#ef4444'}
+                                            width={58}
+                                            height={14}
+                                        />
+                                        <span className={cn(
+                                            "inline-flex items-center justify-center rounded-full px-1.5 text-[10px] font-black min-w-[26px] border leading-5",
                                             getScoreColor(e.lastScore)
                                         )}>
                                             {e.lastScore}
-                                        </div>
-                                        <div className="text-[10px] text-text-muted font-bold opacity-60 uppercase tracking-tighter">
-                                            Avg: {e.avgScore} • Min: {e.minScore} • Max: {e.maxScore}
-                                        </div>
+                                        </span>
+                                        <span className="text-[8px] text-text-muted font-bold opacity-50 tracking-tight whitespace-nowrap hidden xl:inline">
+                                            {e.avgScore}·{e.minScore}·{e.maxScore}
+                                        </span>
                                     </div>
                                 </td>
-                                <td className="px-6 py-4 text-center">
-                                    <div className="flex flex-col items-center">
-                                        <span className="text-sm font-bold text-text-secondary font-mono h-8 flex items-center justify-center mb-1">{formatMs(e.avgLatency)}ms</span>
-                                        <span className="text-[10px] text-text-muted font-bold opacity-60 uppercase tracking-tighter">Max: {formatMs(e.maxLatency)}ms</span>
+                                {/* ── Latency: single-line sparkline + badge + sub-stats ── */}
+                                <td className="px-4 py-2 text-center align-middle">
+                                    <div className="flex items-center justify-center gap-1.5">
+                                        <Sparkline
+                                            data={e.latencyHistory}
+                                            color="#f59e0b"
+                                            width={58}
+                                            height={14}
+                                        />
+                                        <span className="inline-flex items-center justify-center rounded-full px-1.5 text-[10px] font-black min-w-[46px] border text-amber-500 dark:text-amber-400 bg-amber-500/10 border-amber-500/20 font-mono leading-5">
+                                            {formatMs(e.avgLatency)}ms
+                                        </span>
+                                        <span className="text-[8px] text-text-muted font-bold opacity-50 tracking-tight whitespace-nowrap hidden xl:inline">
+                                            {formatMs(e.minLatency)}·{formatMs(e.maxLatency)}ms
+                                        </span>
                                     </div>
                                 </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex flex-col items-center gap-1.5">
-                                        <div className="w-24 h-1.5 bg-card-secondary rounded-full overflow-hidden border border-border">
-                                            <div
-                                                className={cn("h-full transition-all duration-1000", e.successRate > 95 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" : e.successRate > 80 ? "bg-orange-500" : "bg-red-500")}
-                                                style={{ width: `${e.successRate}%` }}
-                                            />
-                                        </div>
-                                        <span className="text-[10px] font-bold text-text-muted uppercase tracking-tighter">{e.successRate}% Uptime</span>
+                                {/* ── Reliability: compact donut ring ── */}
+                                <td className="px-4 py-2 text-center align-middle">
+                                    <div className="flex items-center justify-center">
+                                        <DonutRing pct={e.successRate} size={28} />
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 px-8">

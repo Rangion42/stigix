@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1-patch.1] - 2026-06-05
+### Changed
+- **web-dashboard** ✨ `ConnectivityPerformance.tsx`: Redesigned DEM probe table columns (Score, Latency, Reliability) with the B2-inline visual treatment. Score and Latency columns now each feature an inline SVG sparkline (showing recent trend) alongside a colored pill badge (current value), plus whisper-quiet AVG·MIN·MAX sub-stats on the same row. Reliability replaced by a compact 28px SVG donut ring. Row height unchanged vs previous version. No new dependencies — sparkline and donut are pure inline SVG components. Added `minLatency` and `scoreHistory`/`latencyHistory` arrays to the endpoint aggregation memo.
+
 ## [v1.4.1] - 2026-06-05
 ### Changed
 - **Release** 🚀 Promoted `v1.4.0-patch.156` to stable release `v1.4.1`. Triggers multi-platform Docker image build (AMD64 + ARM64) for Raspberry Pi compatibility. Includes all fixes and improvements from the `v1.4.0` patch series.
