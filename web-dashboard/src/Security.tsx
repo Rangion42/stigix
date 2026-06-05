@@ -112,7 +112,7 @@ const SchedulerSettings = ({
 
                     <button
                         onClick={() => onUpdate(type, !schedule.enabled, schedule.interval_minutes)}
-                        className={`relative inline-flex h-4 w-7 items-center rounded-full transition-all focus:outline-none shadow-inner ${schedule.enabled ? 'bg-blue-600' : 'bg-card'}`}
+                        className={`relative inline-flex h-4 w-7 items-center rounded-full transition-all focus:outline-none shadow-inner ${schedule.enabled ? 'bg-blue-600' : 'bg-card-hover'}`}
                     >
                         <span className={`inline-block h-2 w-2 transform rounded-full bg-white transition-transform shadow-sm ${schedule.enabled ? 'translate-x-4' : 'translate-x-1'}`} />
                     </button>

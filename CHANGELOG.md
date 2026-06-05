@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.156] - 2026-06-05
+### Fixed
+- **web-dashboard** 🐛 `Security.tsx`: Fixed visibility of schedule toggle switches in light mode by using `bg-card-hover` instead of `bg-card` when disabled. This ensures the toggle track has proper contrast against the light container background, preventing the switch and its knob from blending in and appearing invisible. 🎨
+
 ## [v1.4.0-patch.155] - 2026-06-05
 ### Fixed
 - **web-dashboard** 🐛 `server.ts`: Regression fix — restored missing `iface` and `ifaceFlag` variable declarations in the HTTP/HTTPS probe block (accidentally dropped in v1.4.0-patch.154 when adding retry logic). Without these, the curl command contained an undefined `${ifaceFlag}` template literal causing the HTTP/HTTPS probes to fail on non-default network interfaces.
