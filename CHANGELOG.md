@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.0-patch.153] - 2026-06-05
+### Added
+- **web-dashboard** 🌐 `Vyos.tsx`: Added VyOS interface descriptions to the interface names inside both the History table logs (grouped/flat) and the Sequence list table. Also adjusted the CSS grid column width of the sequence list interface column from `90px` to `120px` to prevent text truncation. 🏷️
+
 ## [v1.4.0-patch.152] - 2026-06-05
 ### Fixed
 - **ci/cd** ⚙️ `.github/workflows/build-stigix-allinone.yml`: Upgraded `docker/build-push-action` from `v5` to `v6` to resolve Docker buildx layer blob exporting errors (`error writing layer blob: not_found`) when writing to the GitHub Actions cache. 🔄

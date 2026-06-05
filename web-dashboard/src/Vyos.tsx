@@ -1344,7 +1344,7 @@ export default function Vyos(props: VyosProps) {
                     <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm animate-in slide-in-from-bottom-4 duration-300">
                         {/* Table Header: Run | Name+badge | Command | Router | Interface | Params | Status | LastRun | Actions */}
                         <div className="grid items-center gap-2 px-3 py-2 border-b border-border bg-card-secondary/60 text-[9px] font-black text-text-muted uppercase tracking-widest"
-                            style={{ gridTemplateColumns: '68px 1fr 110px 100px 90px 140px 44px 60px 80px' }}>
+                            style={{ gridTemplateColumns: '68px 1fr 110px 100px 120px 140px 44px 60px 80px' }}>
                             <div />
                             <div className="cursor-pointer hover:text-text-primary flex items-center gap-1 select-none transition-colors" onClick={() => handleSort('name')}>
                                 Name {sequenceSort === 'name' && (sequenceSortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
@@ -1370,6 +1370,8 @@ export default function Vyos(props: VyosProps) {
                                 const isRunning = activeExecution?.sequenceId === seq.id;
                                 const fa = seq.actions[0]; // first action
                                 const faRouter = fa ? routers.find(r => r.id === fa.router_id) : null;
+                                const faIfaceObj = faRouter?.interfaces?.find(i => i.name === fa?.interface);
+                                const faIfaceDesc = faIfaceObj?.description;
                                 const needsIface = fa && !['deny-traffic','allow-traffic','clear-all-blocks','show-denied'].includes(fa.command);
                                 const needsIp = fa && ['deny-traffic','allow-traffic'].includes(fa.command);
                                 const isQos = fa?.command === 'set-qos';
@@ -1387,7 +1389,7 @@ export default function Vyos(props: VyosProps) {
                                             rowAccent,
                                             isRunning ? 'bg-blue-500/5' : 'hover:bg-card-secondary/25'
                                         )}
-                                        style={{ gridTemplateColumns: '68px 1fr 110px 100px 90px 140px 44px 60px 80px' }}
+                                        style={{ gridTemplateColumns: '68px 1fr 110px 100px 120px 140px 44px 60px 80px' }}
                                         onClick={() => openSeqModal(seq)}
                                         title="Click to edit"
                                     >
@@ -1436,8 +1438,15 @@ export default function Vyos(props: VyosProps) {
                                         </div>
 
                                         {/* Interface */}
-                                        <div className="text-[10px] font-mono text-text-muted truncate">
-                                            {needsIface && fa?.interface ? fa.interface : <span className="opacity-25">—</span>}
+                                        <div className="text-[10px] font-mono text-text-muted truncate" title={faIfaceDesc || undefined}>
+                                            {needsIface && fa?.interface ? (
+                                                <>
+                                                    {fa.interface}
+                                                    {faIfaceDesc && <span className="text-[8px] text-text-muted/60 ml-1 font-sans">({faIfaceDesc})</span>}
+                                                </>
+                                            ) : (
+                                                <span className="opacity-25">—</span>
+                                            )}
                                         </div>
 
                                         {/* Params */}
@@ -1604,6 +1613,9 @@ export default function Vyos(props: VyosProps) {
                                                     const cliCmds: string[] = log.cli_equivalent?.length
                                                         ? log.cli_equivalent
                                                         : generateCliEquivalent(log.command, log.interface, log.parameters);
+                                                    const targetRouter = routers.find(r => r.id === log.router_id);
+                                                    const ifaceObj = targetRouter?.interfaces?.find(i => i.name === log.interface);
+                                                    const ifaceDesc = ifaceObj?.description;
                                                     return (
                                                         <React.Fragment key={rowKey}>
                                                             <tr
@@ -1635,7 +1647,10 @@ export default function Vyos(props: VyosProps) {
                                                                     <div className="flex flex-col">
                                                                         <span className="text-text-secondary font-bold uppercase text-[10px]">{log.router_id}</span>
                                                                         {!['simple-block', 'simple-unblock', 'clear-blocks', 'get-blocks'].includes(log.command) && (
-                                                                            <span className="text-[9px] text-text-muted/60 font-mono">{log.interface || 'global'}</span>
+                                                                            <span className="text-[9px] text-text-muted/60 font-mono" title={ifaceDesc || undefined}>
+                                                                                {log.interface || 'global'}
+                                                                                {log.interface && ifaceDesc && ` (${ifaceDesc})`}
+                                                                            </span>
                                                                         )}
                                                                     </div>
                                                                 </td>
@@ -1705,6 +1720,9 @@ export default function Vyos(props: VyosProps) {
                                             ? log.cli_equivalent
                                             : generateCliEquivalent(log.command, log.interface, log.parameters);
                                         const hasCli = cliCmds.length > 0;
+                                        const targetRouter = routers.find(r => r.id === log.router_id);
+                                        const ifaceObj = targetRouter?.interfaces?.find(i => i.name === log.interface);
+                                        const ifaceDesc = ifaceObj?.description;
 
                                         return (
                                             <React.Fragment key={rowKey}>
@@ -1731,7 +1749,10 @@ export default function Vyos(props: VyosProps) {
                                                         <div className="flex items-center gap-1.5">
                                                             <span className="text-text-secondary font-medium text-[11px]">{log.router_id}</span>
                                                             {!['deny-traffic', 'allow-traffic', 'clear-all-blocks', 'show-denied', 'simple-block', 'simple-unblock', 'clear-blocks', 'get-blocks'].includes(log.command) && log.interface && (
-                                                                <span className="px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded font-mono text-[11px] border border-purple-500/20">{log.interface}</span>
+                                                                <span className="px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded font-mono text-[11px] border border-purple-500/20" title={ifaceDesc || undefined}>
+                                                                    {log.interface}
+                                                                    {ifaceDesc && <span className="opacity-70 text-[9px] ml-1">({ifaceDesc})</span>}
+                                                                </span>
                                                             )}
                                                         </div>
                                                     </td>
