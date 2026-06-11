@@ -1372,7 +1372,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
         { id: 'convergence', label: 'Failover' },
         { id: 'system', label: 'System Info' },
         ...(systemInfo?.beta ? [{ id: 'maintenance', label: 'System Maintenance', beta: true }] : []),
-        { id: 'targets', label: 'Targets' },
+        { id: 'targets', label: 'Stigix Targets' },
         { id: 'registry', label: 'Target Controller', beta: true },
         { id: 'mcp', label: 'MCP Server', beta: true },
         { id: 'prisma-api', label: 'Prisma SASE API', beta: true },

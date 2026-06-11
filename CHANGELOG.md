@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1-patch.4] - 2026-06-11
+### Changed
+- **web-dashboard** ⚙️ `Settings.tsx`: Renamed tab/menu label "Targets" to "Stigix Targets".
+
 ## [v1.4.1-patch.3] - 2026-06-05
 ### Added
 - **web-dashboard** 🕸️ `Voice.tsx`: QoS Spider Chart modal on the Per-Target QoS Statistics table. Clicking any site row opens a centered modal with a recharts RadarChart showing 4 normalized axes (Loss, RTT, MOS, Jitter, each scored 0–100). Radar color matches quality level (blue=excellent, orange=fair, red=poor). Raw metric values displayed below the chart in a 4-column card grid. Click outside or press × to dismiss. Table unchanged.
