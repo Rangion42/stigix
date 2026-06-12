@@ -1030,7 +1030,7 @@ export default function App() {
                 </div>
 
                 {/* Speed + Density pill controls */}
-                <div className="flex-1 flex items-center gap-6 bg-card-secondary/50 px-4 py-3 rounded-lg border border-border/50 shadow-inner">
+                <div className="flex-1 flex items-center justify-center gap-6 bg-card-secondary/50 px-4 py-3 rounded-lg border border-border/50 shadow-inner">
                   {/* Speed pills */}
                   <div className="flex flex-col gap-1.5">
                     <span className="text-[9px] font-black text-text-muted tracking-widest uppercase">Speed</span>
@@ -1052,7 +1052,7 @@ export default function App() {
                             className={cn(
                               'px-2.5 py-1 rounded text-[10px] font-black tracking-tight transition-all whitespace-nowrap',
                               isActive
-                                ? 'bg-blue-600 text-white shadow-sm'
+                                ? 'bg-blue-600 text-white shadow-sm ring-1 ring-blue-400/50 ring-offset-1 ring-offset-card'
                                 : 'text-text-muted hover:text-text-primary hover:bg-card-secondary/60 disabled:cursor-not-allowed'
                             )}
                           >
@@ -1061,7 +1061,7 @@ export default function App() {
                         );
                       })}
                     </div>
-                    <span className="text-[9px] font-mono text-text-muted/60">{trafficRate}s delay</span>
+                    <span className="text-[9px] font-mono text-text-muted/60">{trafficRate < 1 ? `${Math.round(trafficRate * 1000)}ms` : `${trafficRate}s`} delay</span>
                   </div>
 
                   <div className="w-px h-10 bg-border/50 self-center" />
@@ -1078,7 +1078,7 @@ export default function App() {
                           className={cn(
                             'px-2.5 py-1 rounded text-[10px] font-black tracking-tight transition-all',
                             trafficClientCount === n
-                              ? 'bg-purple-600 text-white shadow-sm'
+                              ? 'bg-purple-600 text-white shadow-sm ring-1 ring-purple-400/50 ring-offset-1 ring-offset-card'
                               : 'text-text-muted hover:text-text-primary hover:bg-card-secondary/60 disabled:cursor-not-allowed'
                           )}
                         >
@@ -1090,7 +1090,6 @@ export default function App() {
                   </div>
                 </div>
 
-
                 {/* Part 3: Action Button */}
                 <button
                   onClick={handleTrafficToggle}
@@ -1098,7 +1097,7 @@ export default function App() {
                   className={cn(
                     "px-6 py-3 rounded-lg font-black tracking-widest text-xs transition-all shadow-lg flex items-center gap-2 min-w-[170px] justify-center",
                     trafficRunning
-                      ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-500/20'
+                      ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-500/30 ring-2 ring-red-500/40 ring-offset-2 ring-offset-card animate-pulse'
                       : 'bg-green-600 hover:bg-green-500 text-white shadow-green-500/20 border-transparent disabled:bg-card-secondary disabled:text-text-muted disabled:border-border disabled:shadow-none disabled:cursor-not-allowed opacity-80 disabled:opacity-50'
                   )}
                 >
