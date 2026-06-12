@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1-patch.7] - 2026-06-12
+### Changed
+- **web-dashboard** 🧹 `Settings.tsx` Prisma SASE API tab: (1) Removed the standalone "Service Status" block — toggle now integrated inline in the section header (smaller, less intrusive); (2) Removed the "Auto-Enrich" dropdown (unused by backend); (3) Removed the "Sync from System" button from the UI (API endpoint preserved server-side).
+
 ## [v1.4.1-patch.6] - 2026-06-12
 ### Changed
 - **web-dashboard** ✨ `App.tsx`: Traffic Control panel visual polish — (1) pill groups (Speed + Density) now centered horizontally (`justify-center`); (2) active pill has a subtle glow ring (blue for speed, purple for density); (3) Stop Traffic button shows an animated pulsing ring when traffic is running; (4) delay label uses ms for sub-second values (e.g. "100ms" instead of "0.1s").

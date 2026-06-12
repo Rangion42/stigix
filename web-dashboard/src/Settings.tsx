@@ -4102,14 +4102,35 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
             {/* ─── Prisma SASE API Tab ─────────────────────────────────────── */}
             {activeTab === 'prisma-api' && (
                 <div className="bg-card border border-border rounded-2xl p-8 shadow-sm space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-600/10 rounded-lg text-blue-600 dark:text-blue-400 font-bold">
-                            <Shield size={24} />
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-600/10 rounded-lg text-blue-600 dark:text-blue-400 font-bold">
+                                <Shield size={24} />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-black text-text-primary tracking-tight">Prisma SASE API Integration</h2>
+                                <p className="text-[10px] font-bold text-text-muted tracking-widest mt-0.5 opacity-70">Global credentials for site detection, flow status, and SLS diagnostics</p>
+                            </div>
                         </div>
-                        <div>
-                            <h2 className="text-lg font-black text-text-primary tracking-tight">Prisma SASE API Integration</h2>
-                            <p className="text-[10px] font-bold text-text-muted tracking-widest mt-0.5 opacity-70">Global credentials for site detection, flow status, and SLS diagnostics</p>
-                        </div>
+                        {slsConfig && (
+                            <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-[9px] font-black text-text-muted uppercase tracking-widest">
+                                    {slsConfig.enabled ? 'Enabled' : 'Disabled'}
+                                </span>
+                                <button
+                                    onClick={() => setSlsConfig({ ...slsConfig, enabled: !slsConfig.enabled })}
+                                    className={cn(
+                                        "relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none",
+                                        slsConfig.enabled ? "bg-blue-600" : "bg-card-hover"
+                                    )}
+                                >
+                                    <span className={cn(
+                                        "inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform",
+                                        slsConfig.enabled ? "translate-x-4" : "translate-x-0.5"
+                                    )} />
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {!slsConfig ? (
@@ -4118,26 +4139,6 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <div className="space-y-6">
                                 <div className="bg-card-secondary/30 border border-border rounded-2xl p-6 space-y-6">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-blue-600/10 rounded-lg text-blue-500">
-                                                <Power size={18} />
-                                            </div>
-                                            <span className="text-xs font-black text-text-primary uppercase tracking-wider">Service Status</span>
-                                        </div>
-                                        <button
-                                            onClick={() => setSlsConfig({ ...slsConfig, enabled: !slsConfig.enabled })}
-                                            className={cn(
-                                                "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none",
-                                                slsConfig.enabled ? "bg-blue-600" : "bg-card-hover"
-                                            )}
-                                        >
-                                            <span className={cn(
-                                                "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-                                                slsConfig.enabled ? "translate-x-6" : "translate-x-1"
-                                            )} />
-                                        </button>
-                                    </div>
 
                                     <div className="grid gap-4">
                                         <div className="space-y-2">
@@ -4176,8 +4177,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                             </div>
                                         </div>
 
-                                        <div className="flex gap-4">
-                                            <div className="flex-1 space-y-2">
+                                        <div className="space-y-2">
                                                 <label className="text-[10px] font-extrabold text-text-muted uppercase tracking-widest pl-1">Region</label>
                                                 <select
                                                     value={slsConfig.region || 'americas'}
@@ -4190,43 +4190,9 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                                     <option value="stg">Staging (STG)</option>
                                                 </select>
                                             </div>
-                                            <div className="flex-1 space-y-2">
-                                                <label className="text-[10px] font-extrabold text-text-muted uppercase tracking-widest pl-1">Auto-Enrich</label>
-                                                <div 
-                                                    onClick={() => setSlsConfig({ ...slsConfig, auto_enrich: !slsConfig.auto_enrich })}
-                                                    className={cn(
-                                                        "w-full h-[46px] flex items-center justify-between px-4 border rounded-xl cursor-pointer transition-all",
-                                                        slsConfig.auto_enrich ? "bg-blue-600/10 border-blue-500/30 text-blue-500 font-black" : "bg-card border-border text-text-muted font-black"
-                                                    )}
-                                                >
-                                                    <span className="text-[10px] uppercase">Enabled</span>
-                                                    {slsConfig.auto_enrich && <CheckCircle2 size={14} />}
-                                                </div>
-                                            </div>
-                                        </div>
                                     </div>
 
                                     <div className="flex gap-4">
-                                            <button
-                                                onClick={async () => {
-                                                    try {
-                                                        const res = await fetch('/api/admin/security/defaults', { headers: authHeaders });
-                                                        const data = await res.json();
-                                                        if (data && data.sls_config) {
-                                                            setSlsConfig({
-                                                                ...data.sls_config,
-                                                                enabled: slsConfig.enabled, // Keep current toggle state
-                                                                auto_enrich: slsConfig.auto_enrich // Keep current toggle state
-                                                            });
-                                                            showSuccess('Credentials synced from system environment');
-                                                        }
-                                                    } catch (err) { setErrorMsg('Failed to sync defaults'); }
-                                                }}
-                                                className="flex-1 py-3 bg-card-hover hover:bg-card-secondary/50 text-text-primary rounded-xl text-[10px] font-black tracking-widest transition-all border border-border"
-                                            >
-                                                <RefreshCw size={14} className="inline mr-2" />
-                                                Sync from System
-                                            </button>
                                             <button
                                                 onClick={handleTestPrisma}
                                                 disabled={isTestingPrisma || !slsConfig.client_id || !slsConfig.tsg_id}
