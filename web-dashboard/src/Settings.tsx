@@ -4176,20 +4176,6 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                                 <Lock size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted opacity-40" />
                                             </div>
                                         </div>
-
-                                        <div className="space-y-2">
-                                                <label className="text-[10px] font-extrabold text-text-muted uppercase tracking-widest pl-1">Region</label>
-                                                <select
-                                                    value={slsConfig.region || 'americas'}
-                                                    onChange={e => setSlsConfig({ ...slsConfig, region: e.target.value })}
-                                                    className="w-full bg-card border border-border rounded-xl px-4 py-3 text-xs font-black tracking-widest outline-none focus:ring-1 focus:ring-blue-500 transition-all appearance-none"
-                                                >
-                                                    <option value="americas">Americas (PRD)</option>
-                                                    <option value="europe">Europe (PRD)</option>
-                                                    <option value="asia">Asia (PRD)</option>
-                                                    <option value="stg">Staging (STG)</option>
-                                                </select>
-                                            </div>
                                     </div>
 
                                     <div className="flex gap-4">

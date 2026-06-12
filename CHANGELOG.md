@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1-patch.8] - 2026-06-12
+### Changed
+- **web-dashboard** 🧹 `Settings.tsx` Prisma SASE API tab: Removed the "Region" select dropdown from the UI. Default value `'americas'` is preserved in the saved JSON; backend falls back to PRD (Americas) when absent.
+
 ## [v1.4.1-patch.7] - 2026-06-12
 ### Changed
 - **web-dashboard** 🧹 `Settings.tsx` Prisma SASE API tab: (1) Removed the standalone "Service Status" block — toggle now integrated inline in the section header (smaller, less intrusive); (2) Removed the "Auto-Enrich" dropdown (unused by backend); (3) Removed the "Sync from System" button from the UI (API endpoint preserved server-side).
