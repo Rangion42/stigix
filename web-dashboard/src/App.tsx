@@ -1029,63 +1029,67 @@ export default function App() {
                   </button>
                 </div>
 
-                <div className="flex-1 max-w-2xl grid grid-cols-1 md:grid-cols-2 gap-4 bg-card-secondary/50 p-3 rounded-lg border border-border/50 shadow-inner">
-                  {/* Part 2a: Speed Slider */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between px-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-black text-text-muted tracking-widest uppercase">Traffic Speed</span>
-                        <span className="text-[10px] font-black text-blue-700 dark:text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20 uppercase tracking-tighter">
-                          {trafficRate <= 0.5 ? '🚀 Turbo' : trafficRate <= 2 ? '⚡ Fast' : trafficRate <= 5 ? '📱 Normal' : '🐢 Slow'}
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-mono font-bold text-text-muted uppercase">{trafficRate}s delay</span>
+                {/* Speed + Density pill controls */}
+                <div className="flex-1 flex items-center gap-6 bg-card-secondary/50 px-4 py-3 rounded-lg border border-border/50 shadow-inner">
+                  {/* Speed pills */}
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[9px] font-black text-text-muted tracking-widest uppercase">Speed</span>
+                    <div className="flex items-center gap-0.5 bg-card rounded-md border border-border p-0.5">
+                      {([
+                        { label: '🚀 Turbo', value: 0.1 },
+                        { label: '⚡ Fast',  value: 0.5 },
+                        { label: '📱 Normal', value: 2 },
+                        { label: '🐢 Slow',  value: 10 },
+                      ] as const).map(({ label, value }) => {
+                        const steps = [0.1, 0.5, 2, 10];
+                        const closest = steps.reduce((a, b) => Math.abs(b - trafficRate) < Math.abs(a - trafficRate) ? b : a);
+                        const isActive = closest === value;
+                        return (
+                          <button
+                            key={value}
+                            disabled={updatingRate}
+                            onClick={() => updateTrafficSettings(value, undefined)}
+                            className={cn(
+                              'px-2.5 py-1 rounded text-[10px] font-black tracking-tight transition-all whitespace-nowrap',
+                              isActive
+                                ? 'bg-blue-600 text-white shadow-sm'
+                                : 'text-text-muted hover:text-text-primary hover:bg-card-secondary/60 disabled:cursor-not-allowed'
+                            )}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm opacity-60">🚀</span>
-                      <input
-                        type="range"
-                        min="0.1"
-                        max="10"
-                        step="0.5"
-                        value={trafficRate}
-                        disabled={updatingRate}
-                        onChange={(e) => updateTrafficSettings(parseFloat(e.target.value), undefined)}
-                        className="flex-1 h-1.5 bg-card border border-border rounded-lg appearance-none cursor-pointer accent-blue-600 dark:accent-blue-500 hover:accent-blue-500 transition-all"
-                      />
-                      <span className="text-sm opacity-60">🐢</span>
-                    </div>
+                    <span className="text-[9px] font-mono text-text-muted/60">{trafficRate}s delay</span>
                   </div>
 
-                  {/* Part 2b: Client Count Slider */}
-                  <div className="space-y-2 border-l border-border/50 pl-4">
-                    <div className="flex items-center justify-between px-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-black text-text-muted tracking-widest uppercase">Traffic Density</span>
-                        <span className="text-[10px] font-black text-purple-700 dark:text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20 uppercase tracking-tighter">
-                          {trafficClientCount} {trafficClientCount > 1 ? 'Clients' : 'Client'}
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-mono font-bold text-text-muted uppercase">x{trafficClientCount} parallel</span>
-                    </div>
+                  <div className="w-px h-10 bg-border/50 self-center" />
 
-                    <div className="flex items-center gap-2">
-                      <Monitor size={14} className="text-text-muted opacity-60" />
-                      <input
-                        type="range"
-                        min="1"
-                        max="10"
-                        step="1"
-                        value={trafficClientCount}
-                        disabled={updatingRate}
-                        onChange={(e) => updateTrafficSettings(undefined, parseInt(e.target.value))}
-                        className="flex-1 h-1.5 bg-card border border-border rounded-lg appearance-none cursor-pointer accent-purple-600 dark:accent-purple-500 hover:accent-purple-500 transition-all"
-                      />
-                      <Zap size={14} className="text-purple-500 opacity-60" />
+                  {/* Density pills */}
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[9px] font-black text-text-muted tracking-widest uppercase">Density</span>
+                    <div className="flex items-center gap-0.5 bg-card rounded-md border border-border p-0.5">
+                      {[1, 2, 3, 5, 10].map((n) => (
+                        <button
+                          key={n}
+                          disabled={updatingRate}
+                          onClick={() => updateTrafficSettings(undefined, n)}
+                          className={cn(
+                            'px-2.5 py-1 rounded text-[10px] font-black tracking-tight transition-all',
+                            trafficClientCount === n
+                              ? 'bg-purple-600 text-white shadow-sm'
+                              : 'text-text-muted hover:text-text-primary hover:bg-card-secondary/60 disabled:cursor-not-allowed'
+                          )}
+                        >
+                          {n}
+                        </button>
+                      ))}
                     </div>
+                    <span className="text-[9px] font-mono text-text-muted/60">x{trafficClientCount} parallel</span>
                   </div>
                 </div>
+
 
                 {/* Part 3: Action Button */}
                 <button

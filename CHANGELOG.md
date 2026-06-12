@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1-patch.5] - 2026-06-12
+### Changed
+- **web-dashboard** 🎛️ `App.tsx`: Replaced the two range sliders (Traffic Speed + Traffic Density) in the Traffic Control panel with compact pill button groups. Speed: Turbo (0.1s) / Fast (0.5s) / Normal (2s) / Slow (10s). Density: 1 / 2 / 3 / 5 / 10 clients. Active selection highlighted in blue (Speed) and purple (Density). Removes all slider chrome, side emojis, and redundant labels. Sub-text still shows current raw values (e.g. "0.5s delay", "x3 parallel").
+
 ## [v1.4.1-patch.4] - 2026-06-11
 ### Changed
 - **web-dashboard** ⚙️ `Settings.tsx`: Renamed tab/menu label "Targets" to "Stigix Targets".
