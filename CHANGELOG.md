@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1-patch.9] - 2026-06-14
+### Security
+- **server.ts** 🔒 Added `authenticateToken` middleware to 8 previously unauthenticated API routes (proactive fix following responsible disclosure report):
+  - `GET /api/config/cloud` — exposed masterKey and registry baseUrl
+  - `POST /api/traffic/start` and `POST /api/traffic/stop` — traffic control without auth
+  - `GET /api/config/applications/export` and `POST /api/config/applications/import` — config read/write
+  - `GET /api/config/interfaces` and `POST /api/config/interfaces` — network interface config
+  - `GET /api/logs` — raw traffic log access
+  - No functional impact: CLI (`stigix-cli.py`) and MCP server (`agent_client.py`) already send JWT Bearer tokens on all requests.
+
 ## [v1.4.1-patch.8] - 2026-06-12
 ### Changed
 - **web-dashboard** 🧹 `Settings.tsx` Prisma SASE API tab: Removed the "Region" select dropdown from the UI. Default value `'americas'` is preserved in the saved JSON; backend falls back to PRD (Americas) when absent.

@@ -2701,7 +2701,7 @@ app.post('/api/config/ui', authenticateToken, (req, res) => {
 const CLOUD_CONFIG_FILE = path.join(APP_CONFIG.configDir, 'cloud-config.json');
 
 // API: Cloud Config Status
-app.get('/api/config/cloud', (req, res) => {
+app.get('/api/config/cloud', authenticateToken, (req, res) => {
     let config: { masterKey?: string, baseUrl?: string } = {};
     try {
         if (fs.existsSync(CLOUD_CONFIG_FILE)) {
@@ -3263,7 +3263,7 @@ app.get('/api/traffic/status', (req, res) => {
 });
 
 // API: Traffic Control - Start
-app.post('/api/traffic/start', (req, res) => {
+app.post('/api/traffic/start', authenticateToken, (req, res) => {
     const defaultInterval = parseFloat(process.env.SLEEP_BETWEEN_REQUESTS || '1.0');
     let config: any = { control: { enabled: true, sleep_interval: defaultInterval }, applications: [] };
 
@@ -3281,7 +3281,7 @@ app.post('/api/traffic/start', (req, res) => {
 });
 
 // API: Traffic Control - Stop
-app.post('/api/traffic/stop', (req, res) => {
+app.post('/api/traffic/stop', authenticateToken, (req, res) => {
     const defaultInterval = parseFloat(process.env.SLEEP_BETWEEN_REQUESTS || '1.0');
     let config: any = { control: { enabled: false, sleep_interval: defaultInterval, client_count: 1 }, applications: [] };
 
@@ -5089,7 +5089,7 @@ const updateAppsWeigth = (updates: Record<string, number>, res: any) => {
 };
 
 // API: Export Applications (Download applications.txt format from JSON)
-app.get('/api/config/applications/export', (req, res) => {
+app.get('/api/config/applications/export', authenticateToken, (req, res) => {
     try {
         if (!fs.existsSync(APPLICATIONS_CONFIG_FILE)) {
             return res.status(404).json({ error: 'Applications config not found' });
@@ -5134,7 +5134,7 @@ app.get('/api/config/applications/export', (req, res) => {
 });
 
 // API: Import Applications (Upload applications.txt into JSON)
-app.post('/api/config/applications/import', (req, res) => {
+app.post('/api/config/applications/import', authenticateToken, (req, res) => {
     try {
         const { content } = req.body;
 
@@ -5208,7 +5208,7 @@ app.post('/api/config/applications/import', (req, res) => {
 });
 
 // API: Get Interfaces
-app.get('/api/config/interfaces', (req, res) => {
+app.get('/api/config/interfaces', authenticateToken, (req, res) => {
     const showAll = req.query.all === 'true';
     if (showAll) {
         const autoDetectedInterfaces = os.networkInterfaces();
@@ -5230,7 +5230,7 @@ app.get('/api/config/interfaces', (req, res) => {
 });
 
 // API: Save Interfaces
-app.post('/api/config/interfaces', (req, res) => {
+app.post('/api/config/interfaces', authenticateToken, (req, res) => {
     const { interfaces } = req.body;
     if (!Array.isArray(interfaces)) return res.status(400).json({ error: 'Invalid format' });
 
@@ -5437,7 +5437,7 @@ app.post('/api/system/auto-detect-interface', authenticateToken, async (req, res
 });
 
 // API: Tail Logs (Simple last 50 lines)
-app.get('/api/logs', (req, res) => {
+app.get('/api/logs', authenticateToken, (req, res) => {
     const logFile = path.join(APP_CONFIG.logDir, 'traffic.log');
     if (!fs.existsSync(logFile)) return res.json({ logs: [] });
 
