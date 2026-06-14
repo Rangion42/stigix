@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1-patch.10] - 2026-06-14
+### Changed
+- **web-dashboard** 🎨: Replaced visual occurrences of `CLOUD` with `STIGIX CLOUD` and `Stigix Cloud Target` with `Stigix Cloud` in the Connectivity Performance and Settings views.
+
 ## [v1.4.1-patch.9] - 2026-06-14
 ### Security
 - **server.ts** 🔒 Added `authenticateToken` middleware to 8 previously unauthenticated API routes (proactive fix following responsible disclosure report):
