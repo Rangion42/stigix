@@ -172,7 +172,7 @@ a:hover { color: #fff; }
 
 /* Giant headline — full width, not split */
 .hero__headline {
-  font-size: clamp(2.6rem, 5.5vw, 4.2rem);
+  font-size: clamp(2.2rem, 4.5vw, 3.4rem);
   font-weight: 700;
   line-height: 1.08;
   letter-spacing: -0.03em;
