@@ -676,9 +676,9 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                         </div>
                         <div className="px-6 pt-4 pb-3 flex-1 flex flex-col justify-end">
                             {loadingStats ? (
-                                <div className="h-[100px] flex items-center justify-center"><div className="w-full h-full bg-card-secondary animate-pulse rounded-xl" /></div>
+                                <div className="h-[140px] flex items-center justify-center"><div className="w-full h-full bg-card-secondary animate-pulse rounded-xl" /></div>
                             ) : (
-                                <div className="h-[100px]">
+                                <div className="h-[140px] w-full">
                                     <GlobalScoreTrendChart results={results} timeRange={timeRange} />
                                 </div>
                             )}
@@ -686,10 +686,10 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                     </div>
                 </div>
 
-                {/* 2. Flaky Endpoints */}
+                {/* 2. Flaky Probes */}
                 <div className="xl:col-span-1 bg-card border border-border p-6 rounded-2xl flex flex-col shadow-sm max-h-[200px] overflow-y-auto">
                     <div className="text-text-muted text-[10px] font-bold mb-3 tracking-widest flex items-center gap-2 sticky top-0 bg-card z-10 py-1">
-                        <Flame size={14} className="text-orange-500" /> Flaky Endpoints
+                        <Flame size={14} className="text-orange-500" /> Flaky Probes
                     </div>
                     <div className="space-y-2">
                         {loadingStats ? (
@@ -871,7 +871,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                 className="px-6 py-4 text-[11px] font-bold text-text-muted uppercase tracking-wider cursor-pointer hover:text-text-primary transition-colors"
                                 onClick={() => handleSort('name')}
                             >
-                                <div className="flex items-center">Endpoint <SortIndicator field="name" /></div>
+                                <div className="flex items-center">Probe <SortIndicator field="name" /></div>
                             </th>
                             <th
                                 className="px-6 py-4 text-[11px] font-bold text-text-muted uppercase tracking-wider text-center cursor-pointer hover:text-text-primary transition-colors"
@@ -1066,7 +1066,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                 <div ref={timingChartWrapRef} className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h4 className="text-xs font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
-                                            <Zap size={16} className="text-yellow-500" /> Timing Analysis (ms)
+                                            <Zap size={16} className="text-yellow-500" /> Probe Performance
                                         </h4>
                                         <div className="flex gap-4">
                                             <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500" /> <span className="text-[10px] text-text-muted font-bold uppercase tracking-tighter">DNS</span></div>
@@ -1118,8 +1118,8 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                 </div>
                             )}
 
-                            {/* Discovery Parameters */}
-                            {(selectedEndpoint as any).source === 'discovery' && (
+                            {/* Discovery Parameters - Hidden for Prisma SD-WAN probes */}
+                            {false && (selectedEndpoint as any).source === 'discovery' && (
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div className="bg-card-secondary/30 p-4 rounded-xl border border-border">
                                         <div className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">Site ID</div>
@@ -1142,7 +1142,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                             <div ref={scoreChartWrapRef} className="space-y-3">
                                 <div className="flex items-center justify-between">
                                     <h4 className="text-xs font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
-                                        <TrendingUp size={15} className="text-indigo-500" /> Score Over Time
+                                        <TrendingUp size={15} className="text-indigo-500" /> Score Trend
                                     </h4>
                                     <div className="flex items-center gap-2">
                                         <div className="flex items-center gap-1 text-[10px] font-bold text-text-muted">

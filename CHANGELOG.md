@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1-patch.12] - 2026-06-14
+### Changed
+- **web-dashboard** 🎨: Adjusted Connectivity Performance layout by increasing chart height, replacing "Endpoint" terminologies with "Probe", and updating modal component titles. Removed discovery parameters view from Prisma SD-WAN probes.
+
 ## [v1.4.1-patch.11] - 2026-06-14
 ### Changed
 - **web-dashboard** 🎨: Compacted the Connectivity Performance layout: merged Global Score and Trend into a single card, removed HTTP coverage widget, moved Flaky endpoints to the right, and placed Performance Trends in a single line.
