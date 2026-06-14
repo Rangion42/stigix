@@ -79,7 +79,7 @@ a:hover { color: #fff; }
   display: flex; align-items: center; gap: 10px;
   font-size: 1rem; font-weight: 600; color: var(--white);
 }
-.nav__logo img { height: 26px; width: auto; }
+.nav__logo img { height: 32px; width: auto; }
 .nav__links {
   display: flex; align-items: center;
   gap: 24px; list-style: none;
