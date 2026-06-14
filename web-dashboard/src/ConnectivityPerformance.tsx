@@ -539,7 +539,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
             if (!showInactive && !e.enabled) return false; // Filter out inactive if not showing
             
             // Filtering logic
-            if (filterType === 'PRISMA') {
+            if (filterType === 'PRISMA SDWAN') {
                 if (e.source !== 'discovery') return false;
             } else if (filterType !== 'ALL' && e.type !== filterType) {
                 return false;
@@ -773,7 +773,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                         />
                     </div>
                     <div className="flex p-1 bg-card-secondary rounded-lg border border-border">
-                        {['ALL', 'HTTP', 'HTTPS', 'PING', 'TCP', 'UDP', 'DNS', 'CLOUD', 'PRISMA'].map(t => (
+                        {['ALL', 'HTTP', 'HTTPS', 'PING', 'TCP', 'UDP', 'DNS', 'CLOUD', 'PRISMA SDWAN'].map(t => (
                             <button
                                 key={t}
                                 onClick={() => setFilterType(t)}
