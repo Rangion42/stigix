@@ -645,25 +645,29 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                 <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col xl:flex-row">
                     
                     {/* Left: Global Experience */}
-                    <div className="p-6 flex flex-col items-center justify-center text-center border-b xl:border-b-0 xl:border-r border-border bg-card-secondary/10 w-full xl:w-[250px] shrink-0">
-                        <div className="text-text-muted text-xs font-bold mb-2 tracking-wider flex items-center gap-2">
-                            <Gauge size={16} /> Global Experience
-                        </div>
-                        {loadingStats ? (
-                            <div className="h-12 w-24 bg-card-secondary animate-pulse rounded-lg mb-1" />
-                        ) : (
-                            <div className={cn("text-5xl font-black mb-1 tracking-tighter", stats?.globalHealth >= 80 ? "text-green-600 dark:text-green-400" : stats?.globalHealth >= 50 ? "text-orange-500" : "text-red-500")}>
-                                {stats?.globalHealth || 0}<span className="text-xl text-text-muted">/100</span>
+                    <div className="flex flex-col border-b xl:border-b-0 xl:border-r border-border bg-card-secondary/10 w-full xl:w-[250px] shrink-0">
+                        <div className="flex items-center justify-center px-6 py-3 border-b border-border bg-card-secondary/40 h-[49px]">
+                            <div className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
+                                <Gauge size={14} className="text-blue-500" /> Global Experience
                             </div>
-                        )}
-                        <div className="text-[10px] text-text-muted font-bold tracking-tight opacity-70 mt-1">Avg. Scoring across all probes</div>
+                        </div>
+                        <div className="flex-1 p-6 flex flex-col items-center justify-center text-center">
+                            {loadingStats ? (
+                                <div className="h-12 w-24 bg-card-secondary animate-pulse rounded-lg mb-1" />
+                            ) : (
+                                <div className={cn("text-5xl font-black mb-1 tracking-tighter", stats?.globalHealth >= 80 ? "text-green-600 dark:text-green-400" : stats?.globalHealth >= 50 ? "text-orange-500" : "text-red-500")}>
+                                    {stats?.globalHealth || 0}<span className="text-xl text-text-muted">/100</span>
+                                </div>
+                            )}
+                            <div className="text-[10px] text-text-muted font-bold tracking-tight opacity-70 mt-1">Avg. Scoring across all probes</div>
+                        </div>
                     </div>
 
                     {/* Middle: Trend Chart */}
                     <div className="flex-1 flex flex-col min-w-0 border-b xl:border-b-0 xl:border-r border-border">
                         <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card-secondary/40 h-[49px]">
-                            <div className="flex items-center gap-2 text-xs font-black text-text-muted uppercase tracking-wider">
-                                <TrendingUp size={15} className="text-indigo-500" /> Score Trend
+                            <div className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
+                                <TrendingUp size={14} className="text-indigo-500" /> Score Trend
                             </div>
                             <div className="flex p-0.5 bg-card-secondary rounded-lg border border-border">
                                 {(['15m','1h','6h','24h','7d'] as const).map(r => (
