@@ -639,12 +639,13 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Header Analytics */}
-            <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+            <div className="flex flex-col gap-4">
                 
-                {/* 1. Combined Global Score and Trend */}
-                <div className="xl:col-span-3 bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col md:flex-row">
-                    {/* Left side: Score */}
-                    <div className="p-6 flex flex-col items-center justify-center text-center border-b md:border-b-0 md:border-r border-border bg-card-secondary/10 w-full md:w-[250px] shrink-0">
+                {/* 1. Combined Top Panel (Score, Trend, Flaky) */}
+                <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col xl:flex-row">
+                    
+                    {/* Left: Global Experience */}
+                    <div className="p-6 flex flex-col items-center justify-center text-center border-b xl:border-b-0 xl:border-r border-border bg-card-secondary/10 w-full xl:w-[250px] shrink-0">
                         <div className="text-text-muted text-xs font-bold mb-2 tracking-wider flex items-center gap-2">
                             <Gauge size={16} /> Global Experience
                         </div>
@@ -658,9 +659,9 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                         <div className="text-[10px] text-text-muted font-bold tracking-tight opacity-70 mt-1">Avg. Scoring across all probes</div>
                     </div>
 
-                    {/* Right side: Trend Chart */}
-                    <div className="flex-1 flex flex-col min-w-0">
-                        <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card-secondary/40">
+                    {/* Middle: Trend Chart */}
+                    <div className="flex-1 flex flex-col min-w-0 border-b xl:border-b-0 xl:border-r border-border">
+                        <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card-secondary/40 h-[49px]">
                             <div className="flex items-center gap-2 text-xs font-black text-text-muted uppercase tracking-wider">
                                 <TrendingUp size={15} className="text-indigo-500" /> Score Trend
                             </div>
@@ -684,39 +685,41 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                             )}
                         </div>
                     </div>
-                </div>
 
-                {/* 2. Flaky Probes */}
-                <div className="xl:col-span-1 bg-card border border-border p-6 rounded-2xl flex flex-col shadow-sm max-h-[200px] overflow-y-auto">
-                    <div className="text-text-muted text-[10px] font-bold mb-3 tracking-widest flex items-center gap-2 sticky top-0 bg-card z-10 py-1">
-                        <Flame size={14} className="text-orange-500" /> Flaky Probes
-                    </div>
-                    <div className="space-y-2">
-                        {loadingStats ? (
-                            <>
-                                <div className="h-7 bg-card-secondary animate-pulse rounded" />
-                                <div className="h-7 bg-card-secondary animate-pulse rounded opacity-60" />
-                            </>
-                        ) : stats?.flakyEndpoints?.filter((e: any) => {
-                            if (showDeleted) return true;
-                            if (activeProbes.length > 0 && !activeProbes.includes(e.id)) return false;
-                            return true;
-                        }).length > 0 ? stats.flakyEndpoints
-                            .filter((e: any) => {
+                    {/* Right: Flaky Probes */}
+                    <div className="w-full xl:w-[320px] shrink-0 flex flex-col min-w-0">
+                        <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-card-secondary/40 h-[49px]">
+                            <div className="text-[10px] font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
+                                <Flame size={14} className="text-orange-500" /> Flaky Probes
+                            </div>
+                        </div>
+                        <div className="p-5 space-y-2 overflow-y-auto flex-1 max-h-[250px] xl:max-h-none bg-card-secondary/5">
+                            {loadingStats ? (
+                                <>
+                                    <div className="h-8 bg-card-secondary animate-pulse rounded border border-border" />
+                                    <div className="h-8 bg-card-secondary animate-pulse rounded border border-border opacity-60" />
+                                </>
+                            ) : stats?.flakyEndpoints?.filter((e: any) => {
                                 if (showDeleted) return true;
                                 if (activeProbes.length > 0 && !activeProbes.includes(e.id)) return false;
                                 return true;
-                            })
-                            .map((e: any) => (
-                                <div key={e.id} className="flex items-center justify-between gap-2 text-[11px] bg-red-500/5 border border-red-500/10 p-1.5 rounded">
-                                    <span className="text-text-primary font-bold min-w-0 flex-1 truncate pr-2">{e.name}</span>
-                                    <div className="flex items-center gap-2 flex-shrink-0">
-                                        <span className="text-red-600 dark:text-red-400 font-bold font-mono">{e.reliability}%</span>
+                            }).length > 0 ? stats.flakyEndpoints
+                                .filter((e: any) => {
+                                    if (showDeleted) return true;
+                                    if (activeProbes.length > 0 && !activeProbes.includes(e.id)) return false;
+                                    return true;
+                                })
+                                .map((e: any) => (
+                                    <div key={e.id} className="flex items-center justify-between gap-2 text-[11px] bg-red-500/5 border border-red-500/20 p-2 rounded-lg transition-colors hover:bg-red-500/10">
+                                        <span className="text-text-primary font-bold min-w-0 flex-1 truncate pr-2">{e.name}</span>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            <span className="text-red-600 dark:text-red-400 font-black font-mono">{e.reliability}%</span>
+                                        </div>
                                     </div>
-                                </div>
-                            )) : (
-                            <div className="text-xs text-text-muted italic py-2">All probes stable</div>
-                        )}
+                                )) : (
+                                <div className="text-xs text-text-muted italic py-4 text-center">All probes stable</div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
