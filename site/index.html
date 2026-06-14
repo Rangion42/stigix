@@ -290,21 +290,20 @@
       </div>
     </div>
 
-    <!-- 3. Bandwidth Test / BW Test -->
+    <!-- 3. Bandwidth Test -->
     <div class="caps__row" role="row">
       <div class="caps__col" role="cell">
-        <div class="caps__col-name">Bandwidth Test (BW Test)</div>
+        <div class="caps__col-name">Bandwidth Test</div>
         <div class="caps__col-category">performance</div>
       </div>
       <div class="caps__col" role="cell">
-        <div class="caps__col-desc">High-performance throughput and latency validation between Stigix instances. Real-time telemetry with searchable history. Complements iPerf3-based bandwidth testing. Suitable for sustained bandwidth measurement across SD-WAN paths in POC environments. Every instance is a BW Test responder by default.</div>
+        <div class="caps__col-desc">High-performance throughput and latency validation between Stigix instances. Real-time telemetry with searchable history. Complements iPerf3-based bandwidth testing. Suitable for sustained bandwidth measurement across SD-WAN paths in POC environments. Every instance is a bandwidth responder by default.</div>
       </div>
       <div class="caps__col" role="cell">
         <div class="caps__col-tags">
           <span class="tag">Throughput</span>
           <span class="tag">Latency</span>
           <span class="tag">iPerf3</span>
-          <span class="tag">BW Test</span>
         </div>
       </div>
     </div>
@@ -502,6 +501,25 @@
       </div>
     </div>
 
+    <!-- 12. MCP Server -->
+    <div class="caps__row" role="row">
+      <div class="caps__col" role="cell">
+        <div class="caps__col-name">MCP Server</div>
+        <div class="caps__col-category">operations · AI</div>
+      </div>
+      <div class="caps__col" role="cell">
+        <div class="caps__col-desc">Model Context Protocol (MCP) server for distributed natural language orchestration. Pilot the entire SD-WAN validation mesh (traffic generation, security testing, VyOS impairments, diagnostics) using conversational prompts. Requires an MCP client (such as Claude Desktop) to connect. Supports SSE transport on port 3100.</div>
+      </div>
+      <div class="caps__col" role="cell">
+        <div class="caps__col-tags">
+          <span class="tag">Claude Desktop</span>
+          <span class="tag">SSE (3100)</span>
+          <span class="tag">Natural Language</span>
+          <span class="tag">Any-Node Mesh</span>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /.caps__table -->
 </section>
 
@@ -560,6 +578,12 @@
         <div class="usecase__num">07</div>
         <h3 class="usecase__title">AI Security Validation <span style="font-family:var(--mono);font-size:0.6rem;font-weight:600;color:#fbbf24;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);padding:2px 6px;border-radius:3px;vertical-align:middle;letter-spacing:0.08em;">BETA</span></h3>
         <p class="usecase__desc">Simulate DLP exfiltration, Prompt Injection, exploit attempts, and EICAR uploads against live AI platforms (ChatGPT, Grok, Gemini, Perplexity). Validate that AI Security policies detect and block sensitive data leaving through AI chat interfaces — a rapidly growing attack vector in enterprise environments.</p>
+      </article>
+
+      <article class="usecase" role="listitem">
+        <div class="usecase__num">08</div>
+        <h3 class="usecase__title">SASE POC Enrichment</h3>
+        <p class="usecase__desc">Feed SASE and SD-WAN dashboards with realistic multi-application traffic and security event telemetry during Proof-of-Concept (POC) evaluations. Instead of basic ping and traceroute, generate authentic SaaS, IoT, voice, and threat vectors to validate application visibility, policy enforcement, and reporting analytics on the security console.</p>
       </article>
 
     </div>
@@ -750,7 +774,7 @@
       <div class="qs-note__icon">⚡</div>
       <div class="qs-note__body">
         <strong>Every Stigix instance is both a sender and a responder.</strong>
-        Once deployed, the instance immediately starts generating traffic <em>and</em> listening as an HTTP echo, BW Test bandwidth, voice echo, and SLA probe target — with no additional configuration. Deploy on a branch node, a hub, or a cloud VM: all instances are auto-discovered and appear in the peer list of every other instance on the same registry.
+        Once deployed, the instance immediately starts generating traffic <em>and</em> listening as an HTTP echo, bandwidth speedtest, voice echo, and SLA probe target — with no additional configuration. Deploy on a branch node, a hub, or a cloud VM: all instances are auto-discovered and appear in the peer list of every other instance on the same registry.
       </div>
     </div>
 
@@ -959,7 +983,7 @@
 
       <a href="https://github.com/jsuzanne/stigix/blob/main/docs/XFR_TESTING.md" target="_blank" rel="noopener noreferrer" class="doc-link" id="docs-xfr-link">
         <span class="doc-link__ico">🚀</span>
-        <div class="doc-link__text"><strong>BW Test Speedtest</strong><span>Bandwidth & latency testing</span></div>
+        <div class="doc-link__text"><strong>Bandwidth Speedtest</strong><span>Bandwidth & latency testing</span></div>
         <span class="doc-link__arr">→</span>
       </a>
 
