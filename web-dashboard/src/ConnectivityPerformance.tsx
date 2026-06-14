@@ -738,7 +738,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                         <EndpointTypeGraph type="PING" results={pingResults} color="#22c55e" />
                         <EndpointTypeGraph type="DNS" results={dnsResults} color="#a855f7" />
                         <EndpointTypeGraph type="UDP" results={udpResults} color="#f97316" />
-                        <EndpointTypeGraph type="CLOUD" results={cloudResults} color="#6366f1" />
+                        <EndpointTypeGraph type="STIGIX CLOUD" results={cloudResults} color="#6366f1" />
                     </div>
                 </div>
             </div>
@@ -783,7 +783,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                     filterType === t ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-text-muted hover:text-text-primary"
                                 )}
                             >
-                                {t}
+                                {t === 'CLOUD' ? 'STIGIX CLOUD' : t}
                             </button>
                         ))}
                     </div>
@@ -948,7 +948,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                                 e.type === 'CLOUD' ? "text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border-indigo-500/20" :
                                                     "text-orange-500 bg-orange-500/10 border-orange-500/20"
                                     )}>
-                                        {e.type}
+                                        {e.type === 'CLOUD' ? 'STIGIX CLOUD' : e.type}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-center align-middle">
@@ -1054,7 +1054,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                                     selectedEndpoint.type === 'CLOUD' ? "text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border-indigo-500/20" :
                                                         "text-orange-500 bg-orange-500/10 border-orange-500/20"
                                         )}>
-                                            {selectedEndpoint.type}
+                                            {selectedEndpoint.type === 'CLOUD' ? 'STIGIX CLOUD' : selectedEndpoint.type}
                                         </span>
                                     </h3>
                                     <p className="text-[10px] text-text-muted font-mono font-bold break-all max-w-[700px] mt-1">{formatDisplayUrl(selectedEndpoint)}</p>

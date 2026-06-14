@@ -969,7 +969,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
         if (!newProbe.name || !newProbe.target) return;
 
         if (newProbe.type === 'CLOUD' && !cloudConfig?.hasKey) {
-            toast.error('Stigix Cloud Target requires a Master Key. Please check system configuration.');
+            toast.error('Stigix Cloud requires a Master Key. Please check system configuration.');
             return;
         }
         let formattedTarget = newProbe.target.trim();
@@ -1572,7 +1572,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                             probeFilterType === t ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-text-muted hover:text-text-primary"
                                         )}
                                     >
-                                        {t}
+                                        {t === 'CLOUD' ? 'STIGIX CLOUD' : t}
                                     </button>
                                 ))}
                             </div>
@@ -1883,7 +1883,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                                 )}
                                             >
                                                 {active && <CheckCircle2 size={11} />}
-                                                {type}
+                                                {type === 'CLOUD' ? 'STIGIX CLOUD' : type}
                                             </button>
                                         );
                                     })}
@@ -1950,7 +1950,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                                     <option value="TCP">TCP Port</option>
                                                     <option value="DNS">DNS Query</option>
                                                     <option value="UDP">UDP Stream</option>
-                                                    <option value="CLOUD">Stigix Cloud Target</option>
+                                                    <option value="CLOUD">Stigix Cloud</option>
                                                 </select>
                                             </div>
                                             <div className="space-y-2">
