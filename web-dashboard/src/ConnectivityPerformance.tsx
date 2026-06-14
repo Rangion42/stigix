@@ -88,27 +88,27 @@ function EndpointTypeGraph({ type, results, color }: { type: string; results: an
     }
 
     return (
-        <div className="bg-card border border-border p-4 rounded-xl shadow-sm">
-            <div className="text-text-muted text-xs font-bold mb-2 uppercase tracking-wider">{type}</div>
-            <div className="flex items-center gap-4 mb-3 text-[10px] font-bold">
+        <div className="bg-card border border-border p-3 rounded-xl shadow-sm flex flex-col h-full">
+            <div className="text-text-muted text-[10px] font-bold mb-2 uppercase tracking-wider truncate" title={type}>{type}</div>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2 text-[10px] font-bold leading-none">
                 <div className="flex items-center gap-1">
-                    <span className="text-text-muted">Score:</span>
+                    <span className="text-text-muted">Scr:</span>
                     <span className={twMerge("font-black", avgScore >= 80 ? "text-green-600 dark:text-green-400" : avgScore >= 50 ? "text-orange-500" : "text-red-500")}>
                         {avgScore}
                     </span>
                 </div>
                 <div className="flex items-center gap-1">
-                    <span className="text-text-muted">Latency:</span>
+                    <span className="text-text-muted">Lat:</span>
                     <span className="text-text-primary font-mono">{avgLatency}ms</span>
                 </div>
                 <div className="flex items-center gap-1">
-                    <span className="text-text-muted">Success:</span>
+                    <span className="text-text-muted">Suc:</span>
                     <span className={twMerge("font-black", successRate >= 95 ? "text-green-600 dark:text-green-400" : successRate >= 80 ? "text-orange-500" : "text-red-500")}>
                         {successRate}%
                     </span>
                 </div>
             </div>
-            <div className="h-[80px] w-full">
+            <div className="h-[50px] w-full mt-auto">
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData}>
                         <defs>
@@ -639,37 +639,56 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Header Analytics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-card border border-border p-6 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm">
-                    <div className="text-text-muted text-xs font-bold mb-2 tracking-wider flex items-center gap-2">
-                        <Gauge size={16} /> Global Experience
-                    </div>
-                    {loadingStats ? (
-                        <div className="h-10 w-20 bg-card-secondary animate-pulse rounded-lg mb-1" />
-                    ) : (
-                        <div className={cn("text-4xl font-black mb-1 tracking-tighter", stats?.globalHealth >= 80 ? "text-green-600 dark:text-green-400" : stats?.globalHealth >= 50 ? "text-orange-500" : "text-red-500")}>
-                            {stats?.globalHealth || 0}<span className="text-lg text-text-muted">/100</span>
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+                
+                {/* 1. Combined Global Score and Trend */}
+                <div className="xl:col-span-3 bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col md:flex-row">
+                    {/* Left side: Score */}
+                    <div className="p-6 flex flex-col items-center justify-center text-center border-b md:border-b-0 md:border-r border-border bg-card-secondary/10 w-full md:w-[250px] shrink-0">
+                        <div className="text-text-muted text-xs font-bold mb-2 tracking-wider flex items-center gap-2">
+                            <Gauge size={16} /> Global Experience
                         </div>
-                    )}
-                    <div className="text-[10px] text-text-muted font-bold tracking-tight opacity-70">Avg. Scoring across all probes</div>
+                        {loadingStats ? (
+                            <div className="h-12 w-24 bg-card-secondary animate-pulse rounded-lg mb-1" />
+                        ) : (
+                            <div className={cn("text-5xl font-black mb-1 tracking-tighter", stats?.globalHealth >= 80 ? "text-green-600 dark:text-green-400" : stats?.globalHealth >= 50 ? "text-orange-500" : "text-red-500")}>
+                                {stats?.globalHealth || 0}<span className="text-xl text-text-muted">/100</span>
+                            </div>
+                        )}
+                        <div className="text-[10px] text-text-muted font-bold tracking-tight opacity-70 mt-1">Avg. Scoring across all probes</div>
+                    </div>
+
+                    {/* Right side: Trend Chart */}
+                    <div className="flex-1 flex flex-col min-w-0">
+                        <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card-secondary/40">
+                            <div className="flex items-center gap-2 text-xs font-black text-text-muted uppercase tracking-wider">
+                                <TrendingUp size={15} className="text-indigo-500" /> Score Trend
+                            </div>
+                            <div className="flex p-0.5 bg-card-secondary rounded-lg border border-border">
+                                {(['15m','1h','6h','24h','7d'] as const).map(r => (
+                                    <button key={r} onClick={() => setTimeRange(r)}
+                                        className={cn(
+                                            "px-2.5 py-1 rounded-md text-[10px] font-bold transition-all uppercase tracking-tighter",
+                                            timeRange === r ? "bg-indigo-600 text-white shadow" : "text-text-muted hover:text-text-primary"
+                                        )}>{r}</button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="px-6 pt-4 pb-3 flex-1 flex flex-col justify-end">
+                            {loadingStats ? (
+                                <div className="h-[100px] flex items-center justify-center"><div className="w-full h-full bg-card-secondary animate-pulse rounded-xl" /></div>
+                            ) : (
+                                <div className="h-[100px]">
+                                    <GlobalScoreTrendChart results={results} timeRange={timeRange} />
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
-                <div className="bg-card border border-border p-6 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm">
-                    <div className="text-text-muted text-xs font-bold mb-2 tracking-wider flex items-center gap-2">
-                        <Activity size={16} /> HTTP Coverage
-                    </div>
-                    {loadingStats ? (
-                        <div className="h-9 w-12 bg-card-secondary animate-pulse rounded-lg mb-1" />
-                    ) : (
-                        <div className="text-3xl font-black text-blue-600 dark:text-blue-400 mb-1 tracking-tighter">
-                            {stats?.httpEndpoints?.total || 0}
-                        </div>
-                    )}
-                    <div className="text-[10px] text-text-muted font-bold tracking-tight opacity-70">Active Synthetic Endpoints</div>
-                </div>
-
-                <div className="bg-card border border-border p-6 rounded-2xl flex flex-col shadow-sm">
-                    <div className="text-text-muted text-[10px] font-bold mb-3 tracking-widest flex items-center gap-2">
+                {/* 2. Flaky Endpoints */}
+                <div className="xl:col-span-1 bg-card border border-border p-6 rounded-2xl flex flex-col shadow-sm max-h-[200px] overflow-y-auto">
+                    <div className="text-text-muted text-[10px] font-bold mb-3 tracking-widest flex items-center gap-2 sticky top-0 bg-card z-10 py-1">
                         <Flame size={14} className="text-orange-500" /> Flaky Endpoints
                     </div>
                     <div className="space-y-2">
@@ -690,11 +709,9 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                             })
                             .map((e: any) => (
                                 <div key={e.id} className="flex items-center justify-between gap-2 text-[11px] bg-red-500/5 border border-red-500/10 p-1.5 rounded">
-                                    <span className="text-text-primary font-bold min-w-0 flex-1">{e.name}</span>
+                                    <span className="text-text-primary font-bold min-w-0 flex-1 truncate pr-2">{e.name}</span>
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                         <span className="text-red-600 dark:text-red-400 font-bold font-mono">{e.reliability}%</span>
-                                        <div className="w-1 h-1 rounded-full bg-border" />
-                                        <span className="text-text-muted font-mono">{e.avgScore}</span>
                                     </div>
                                 </div>
                             )) : (
@@ -703,37 +720,12 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                     </div>
                 </div>
 
-                {/* Global Score Over Time */}
-                <div className="md:col-span-4 bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
-                    <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card-secondary/40">
-                        <div className="flex items-center gap-2 text-xs font-black text-text-muted uppercase tracking-wider">
-                            <TrendingUp size={15} className="text-indigo-500" /> Global Experience Over Time
-                        </div>
-                        <div className="flex p-0.5 bg-card-secondary rounded-lg border border-border">
-                            {(['15m','1h','6h','24h','7d'] as const).map(r => (
-                                <button key={r} onClick={() => setTimeRange(r)}
-                                    className={cn(
-                                        "px-2.5 py-1 rounded-md text-[10px] font-bold transition-all uppercase tracking-tighter",
-                                        timeRange === r ? "bg-indigo-600 text-white shadow" : "text-text-muted hover:text-text-primary"
-                                    )}>{r}</button>
-                            ))}
-                        </div>
+                {/* 3. Performance Trends by Endpoint Type */}
+                <div className="xl:col-span-4 bg-card-secondary/30 border border-border p-5 rounded-2xl shadow-sm">
+                    <div className="text-text-muted text-xs font-bold tracking-wider flex items-center gap-2 mb-4">
+                        <BarChart3 size={16} /> Performance Trends by Type
                     </div>
-                    <div className="px-6 pt-4 pb-3">
-                        {loadingStats ? (
-                            <div className="h-[130px] flex items-center justify-center"><div className="w-full h-full bg-card-secondary animate-pulse rounded-xl" /></div>
-                        ) : (
-                            <GlobalScoreTrendChart results={results} timeRange={timeRange} />
-                        )}
-                    </div>
-                </div>
-
-                {/* Performance Trends by Endpoint Type */}
-                <div className="md:col-span-4 bg-card-secondary/30 border border-border p-6 rounded-2xl shadow-sm">
-                    <div className="text-text-muted text-xs font-bold tracking-wider flex items-center gap-2">
-                            <BarChart3 size={16} /> Performance Trends by Type
-                        </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                         <EndpointTypeGraph type="HTTP/HTTPS" results={httpResults} color="#3b82f6" />
                         <EndpointTypeGraph type="PING" results={pingResults} color="#22c55e" />
                         <EndpointTypeGraph type="DNS" results={dnsResults} color="#a855f7" />

@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1-patch.11] - 2026-06-14
+### Changed
+- **web-dashboard** 🎨: Compacted the Connectivity Performance layout: merged Global Score and Trend into a single card, removed HTTP coverage widget, moved Flaky endpoints to the right, and placed Performance Trends in a single line.
+
 ## [v1.4.1-patch.10] - 2026-06-14
 ### Changed
 - **web-dashboard** 🎨: Replaced visual occurrences of `CLOUD` with `STIGIX CLOUD` and `Stigix Cloud Target` with `Stigix Cloud` in the Connectivity Performance and Settings views.
