@@ -301,6 +301,64 @@ a:hover { color: #fff; }
 .disclaimer strong { color: var(--mid); }
 
 /* ─────────────────────────────────────────────
+   ARCHITECTURE DIAGRAM SECTION
+───────────────────────────────────────────── */
+.arch {
+  padding: 80px 0 96px;
+  border-bottom: 1px solid var(--stroke);
+  background: var(--bg-raised);
+}
+.arch__header {
+  max-width: 680px;
+  margin-bottom: 40px;
+}
+.arch__title {
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--white);
+  line-height: 1.2;
+  margin-bottom: 12px;
+}
+.arch__sub {
+  font-size: 0.93rem;
+  color: var(--mid);
+  line-height: 1.75;
+}
+.arch__frame {
+  border: 1px solid var(--stroke-hi);
+  border-radius: var(--rl);
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 20px 70px rgba(0,0,0,0.55), 0 0 0 1px var(--stroke);
+}
+.arch__bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--stroke);
+}
+.arch__bar-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--stroke-hi);
+}
+.arch__bar-dot:nth-child(1) { background: #e05252; }
+.arch__bar-dot:nth-child(2) { background: #e0a852; }
+.arch__bar-dot:nth-child(3) { background: #52c452; }
+.arch__bar-label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--muted);
+  margin-left: 8px;
+}
+.arch__frame img {
+  width: 100%;
+  display: block;
+}
+
+/* ─────────────────────────────────────────────
    WHY  — editorial pull-quote layout
 ───────────────────────────────────────────── */
 .why { padding: 96px 0; }
