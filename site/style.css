@@ -331,6 +331,8 @@ a:hover { color: #fff; }
   overflow: hidden;
   background: #ffffff;
   box-shadow: 0 20px 70px rgba(0,0,0,0.55), 0 0 0 1px var(--stroke);
+  max-width: 880px;
+  margin: 0 auto;
 }
 .arch__bar {
   display: flex;
