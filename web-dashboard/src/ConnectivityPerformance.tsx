@@ -306,8 +306,6 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
     const [selectedEndpoint, setSelectedEndpoint] = useState<any>(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [activeProbes, setActiveProbes] = useState<string[]>([]); // List of active endpoint IDs
-    const [showDeleted, setShowDeleted] = useState(false);
-    const [showInactive, setShowInactive] = useState(false);
     const [endpointConfigs, setEndpointConfigs] = useState<Map<string, any>>(new Map());
     const [cloudScenarios, setCloudScenarios] = useState<any[]>([]);
 
@@ -343,10 +341,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
     // Sorting state
     const [sortField, setSortField] = useState<string>('name');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-    const [isSyncing, setIsSyncing] = useState(false);
     const [probeChartRange, setProbeChartRange] = useState('1h');
-    const [syncResult, setSyncResult] = useState<any>(null);
-    const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
 
     // Crosshair sync: refs to measure DOM positions for connecting line
     const timingChartWrapRef  = useRef<HTMLDivElement>(null); // outer section wrapping timing chart
@@ -384,17 +379,10 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
             }
             const configMap = new Map();
             if (Array.isArray(configsData)) {
-                let latestSync: number | null = null;
                 configsData.forEach((config: any) => {
                     const id = config.name.toLowerCase().replace(/\s+/g, '-');
                     configMap.set(id, config);
-                    if (config.source === 'discovery' && config.created) {
-                        if (!latestSync || config.created > latestSync) {
-                            latestSync = config.created;
-                        }
-                    }
                 });
-                if (latestSync) setLastSyncTime(latestSync);
             }
             setEndpointConfigs(configMap);
         } catch (e) {
@@ -457,22 +445,6 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
         }
     };
 
-    const syncDiscovery = async () => {
-        setIsSyncing(true);
-        setSyncResult(null);
-        try {
-            const res = await fetch('/api/probes/discovery/sync', { method: 'POST', headers: authHeaders() });
-            const data = await res.json();
-            setSyncResult(data);
-            setLastSyncTime(Date.now());
-            fetchData();
-            setTimeout(() => setSyncResult(null), 5000);
-        } catch (e) {
-            console.error("Sync failed", e);
-        } finally {
-            setIsSyncing(false);
-        }
-    };
 
     useEffect(() => {
         fetchProbesConfig();           // Phase 1: immediate
@@ -535,8 +507,8 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                 latencyHistory: reachableSlice.map(r => Math.round(r.metrics.total_ms)),
             };
         }).filter(e => {
-            if (!showDeleted && activeProbes.length > 0 && !activeProbes.includes(e.id)) return false;
-            if (!showInactive && !e.enabled) return false; // Filter out inactive if not showing
+            if (activeProbes.length > 0 && !activeProbes.includes(e.id)) return false;
+            if (!e.enabled) return false; // Filter out inactive if not showing
             
             // Filtering logic
             if (filterType === 'PRISMA SDWAN') {
@@ -572,7 +544,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
             if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
             return 0;
         });
-    }, [results, showDeleted, activeProbes, filterType, searchQuery, sortField, sortDirection, endpointConfigs, showInactive]);
+    }, [results, activeProbes, filterType, searchQuery, sortField, sortDirection, endpointConfigs]);
 
     const handleSort = (field: string) => {
         if (sortField === field) {
@@ -704,12 +676,10 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                     <div className="h-8 bg-card-secondary animate-pulse rounded border border-border opacity-60" />
                                 </>
                             ) : stats?.flakyEndpoints?.filter((e: any) => {
-                                if (showDeleted) return true;
                                 if (activeProbes.length > 0 && !activeProbes.includes(e.id)) return false;
                                 return true;
                             }).length > 0 ? stats.flakyEndpoints
                                 .filter((e: any) => {
-                                    if (showDeleted) return true;
                                     if (activeProbes.length > 0 && !activeProbes.includes(e.id)) return false;
                                     return true;
                                 })
@@ -786,30 +756,6 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                             </button>
                         ))}
                     </div>
-                    <button
-                        onClick={() => setShowDeleted(!showDeleted)}
-                        className={cn(
-                            "px-3 py-2 rounded-lg text-[11px] font-bold border transition-all flex items-center gap-2 uppercase tracking-tight",
-                            showDeleted
-                                ? "bg-card-secondary text-text-primary border-border"
-                                : "bg-card/40 text-text-muted border-border hover:border-text-muted/20"
-                        )}
-                    >
-                        <Clock size={14} className={showDeleted ? "text-blue-600 dark:text-blue-400" : ""} />
-                        {showDeleted ? "Hide Deleted" : "Show Deleted"}
-                    </button>
-                    <button
-                        onClick={() => setShowInactive(!showInactive)}
-                        className={cn(
-                            "px-3 py-2 rounded-lg text-[11px] font-bold border transition-all flex items-center gap-2 uppercase tracking-tight",
-                            showInactive
-                                ? "bg-orange-500/10 text-orange-600 border-orange-500/20"
-                                : "bg-card/40 text-text-muted border-border hover:border-text-muted/20"
-                        )}
-                    >
-                        <XCircle size={14} className={showInactive ? "text-orange-600 dark:text-orange-400" : ""} />
-                        {showInactive ? "Hide Inactive" : "Show Inactive"}
-                    </button>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -828,26 +774,6 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                         </select>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={syncDiscovery}
-                            disabled={isSyncing}
-                            className={cn(
-                                "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all border",
-                                isSyncing
-                                    ? "bg-card-secondary text-text-muted border-border cursor-not-allowed"
-                                    : "bg-card/40 text-blue-600 dark:text-blue-400 border-blue-500/20 hover:bg-blue-500/10 shadow-sm"
-                            )}
-                        >
-                            <RefreshCw size={14} className={cn(isSyncing && "animate-spin")} />
-                            {isSyncing ? "Syncing..." : "Sync Prisma SD-WAN"}
-                        </button>
-                        {lastSyncTime && (
-                           <div className="flex items-center gap-1.5 px-3 py-2 bg-card/40 border border-border rounded-lg shadow-sm">
-                               <span className="text-[10px] text-text-muted font-bold tracking-tight">Active Since: {new Date(lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                           </div>
-                        )}
-                    </div>
 
                     {onManage && (
                         <button
@@ -860,14 +786,6 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                 </div>
             </div>
 
-            {syncResult && (
-                <div className="bg-green-500/10 border border-green-500/20 p-3 rounded-xl flex items-center justify-between animate-in slide-in-from-top-2 duration-300">
-                    <div className="flex items-center gap-3 text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-tight">
-                        <Zap size={16} />
-                        Discovery Sync Complete: {syncResult.created} created, {syncResult.updated} updated, {syncResult.staleMarked} stale.
-                    </div>
-                </div>
-            )}
 
             {/* Metrics Table */}
             <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xl shadow-black/5">

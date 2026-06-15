@@ -376,6 +376,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
     const [newProbe, setNewProbe] = useState<CustomProbe>({ name: '', type: 'HTTP', target: '', timeout: 5000, frequency: 60 });
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [isProbeModalOpen, setIsProbeModalOpen] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
 
     // Maintenance State (from System.tsx)
     const [status, setStatus] = useState<MaintenanceStatus | null>(null);
@@ -1053,6 +1054,34 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
         } catch (e) { alert('Import failed: ' + (e as Error).message); }
     };
 
+    const syncDiscovery = async () => {
+        setIsSyncing(true);
+        try {
+            const res = await fetch('/api/probes/discovery/sync', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (res.ok) {
+                toast.success(`Discovery Sync Complete: ${data.created || 0} created, ${data.updated || 0} updated, ${data.staleMarked || 0} stale.`);
+                const probesRes = await fetch('/api/connectivity/custom', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (probesRes.ok) {
+                    const probesData = await probesRes.json();
+                    setCustomProbes(probesData || []);
+                }
+            } else {
+                toast.error(data.error || 'Sync failed');
+            }
+        } catch (e) {
+            console.error("Sync failed", e);
+            toast.error('Sync failed');
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     const handleExportTargets = () => {
         try {
             const dataToExport = targets.map(t => ({
@@ -1531,6 +1560,19 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                 </div>
                             </div>
                             <div className="flex gap-2">
+                                <button
+                                    onClick={syncDiscovery}
+                                    disabled={isSyncing}
+                                    className={cn(
+                                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 border",
+                                        isSyncing
+                                            ? "bg-card-secondary text-text-muted border-border cursor-not-allowed"
+                                            : "bg-card/40 text-blue-600 dark:text-blue-400 border-blue-500/20 hover:bg-blue-500/10 shadow-sm"
+                                    )}
+                                >
+                                    <RefreshCw size={14} className={cn(isSyncing && "animate-spin")} />
+                                    {isSyncing ? "Syncing..." : "Sync Prisma SD-WAN"}
+                                </button>
                                 <button
                                     onClick={handleExportProbes}
                                     className="px-4 py-2 bg-card-secondary hover:bg-card-hover border border-border rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2"
