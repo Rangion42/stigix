@@ -4232,30 +4232,13 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                         <h3 className="text-xs font-black uppercase tracking-widest">About Prisma SASE Integration</h3>
                                     </div>
                                     <p className="text-[11px] font-bold text-text-secondary leading-relaxed">
-                                        Prisma SASE APls provide deep insights into network traffic, security threats, and site health across Prisma Access and Prisma SD-WAN.
+                                        Prisma SASE APIs provide deep integration with your SD-WAN environment, enabling auto-discovery and advanced path analysis.
                                     </p>
                                     <ul className="text-[10px] font-bold text-text-muted space-y-2 pl-4">
-                                        <li className="list-disc">Automatically queries traffic logs after each security test.</li>
-                                        <li className="list-disc">Identifies specific security rules and profiles applied to the flow.</li>
-                                        <li className="list-disc">Provides detailed reasons for blocked or allowed traffic (e.g. App-ID, Threat ID).</li>
-                                        <li className="list-disc">Enriches the Telemetry Diagnostic view in the Security dashboard.</li>
+                                        <li className="list-disc">Automatically detects the Site on which Stigix is running.</li>
+                                        <li className="list-disc">Builds the network topology of Prisma SD-WAN devices.</li>
+                                        <li className="list-disc">Checks flow paths for failover convergence tests.</li>
                                     </ul>
-                                    <div className="pt-2">
-                                        <p className="text-[9px] text-text-muted italic opacity-60 font-black">
-                                            Requires an OAuth2 Client with <code className="bg-card px-1 rounded">logging_service:read</code> scope.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="bg-card-secondary/20 border border-border rounded-2xl p-6 flex items-center justify-between">
-                                    <div className="flex items-center gap-3 font-black">
-                                        <Shield size={24} className="text-blue-500" />
-                                        <div>
-                                            <div className="text-[10px] text-text-primary uppercase tracking-widest">Global Security Context</div>
-                                            <p className="text-[11px] text-text-muted">Managed by TSG: <span className="font-mono text-text-secondary">{slsConfig.tsg_id || 'unconfigured'}</span></p>
-                                        </div>
-                                    </div>
-                                    <ShieldAlert size={24} className="opacity-10" />
                                 </div>
                             </div>
                         </div>
