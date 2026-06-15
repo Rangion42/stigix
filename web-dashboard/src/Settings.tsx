@@ -377,6 +377,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [isProbeModalOpen, setIsProbeModalOpen] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [showOverview, setShowOverview] = useState(true);
 
     // Maintenance State (from System.tsx)
     const [status, setStatus] = useState<MaintenanceStatus | null>(null);
@@ -1635,21 +1636,6 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
 
                         <div className="space-y-4">
                             <div className="flex flex-col gap-4">
-                                {/* Probe Icons Legend */}
-                                <div className="flex flex-wrap items-center gap-6 px-6 py-3 bg-card-secondary/30 border border-border rounded-xl">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded-lg bg-purple-600/10 text-purple-600 flex items-center justify-center"><Globe size={14} /></div>
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Cloud Scenario</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded-lg bg-indigo-600/10 text-indigo-600 flex items-center justify-center"><Shield size={14} /></div>
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Prisma SD-WAN Peer</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded-lg bg-amber-600/10 text-amber-600 flex items-center justify-center"><Activity size={14} /></div>
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Manual Probe</span>
-                                    </div>
-                                </div>
 
                                 <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                                     {/* Action Card: Add New */}
@@ -2325,12 +2311,21 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
 
                             return (
                                 <div className="bg-card-secondary/30 border border-border rounded-2xl p-5 space-y-1.5">
-                                    <div className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                                    <div
+                                        className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em] mb-3 flex items-center gap-2 cursor-pointer select-none hover:text-text-primary transition-colors"
+                                        onClick={() => setShowOverview(!showOverview)}
+                                    >
+                                        <div className={cn(
+                                            "transition-transform duration-200",
+                                            showOverview ? "rotate-0" : "-rotate-90"
+                                        )}>
+                                            <ChevronDown size={12} className="text-text-muted" />
+                                        </div>
                                         <BarChart3 size={12} className="text-blue-500" />
                                         Distribution Overview
                                         <span className="ml-auto text-[8px] font-semibold text-text-muted/60 normal-case tracking-normal">◀ weight · apps ▶</span>
                                     </div>
-                                    {(() => {
+                                    {showOverview && (() => {
                                         const maxCatPct = Math.max(...categories.map(c =>
                                             Math.round((c.apps.reduce((s, a) => s + a.weight, 0) / totalWeight) * 100)
                                         )) || 1;
@@ -2340,7 +2335,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                             const gaugeWidth = Math.round((catPct / maxCatPct) * 100);
                                             let colorIdx = 0;
                                             return (
-                                                <div key={category.name} className="flex items-center gap-2 group">
+                                                <div key={category.name} className="flex items-center gap-2 group animate-in fade-in duration-200">
                                                     {/* Name label — narrower, no % (shown in gauge) */}
                                                     <div className="w-28 flex-shrink-0">
                                                         <span className="text-[9px] font-black text-text-primary truncate tracking-tight leading-tight block">{category.name}</span>

@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1-patch.21] - 2026-06-15
+### Changed
+- **web-dashboard** 🎨: Made the "Distribution Overview" panel collapsible in the Traffic Distribution tab of Settings to save vertical space.
+- **web-dashboard** 🎨: Removed the "Probe Icons Legend" widget from the Probes tab in Settings to declutter the dashboard.
+
 ## [v1.4.1-patch.20] - 2026-06-15
 ### Refactored
 - **web-dashboard** 🎨: Simplified the Connectivity Performance UI by removing "Show Deleted" and "Show Inactive" filters.
