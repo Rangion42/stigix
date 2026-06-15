@@ -4095,6 +4095,27 @@ app.get('/api/connectivity/test', authenticateToken, async (req, res) => {
 
 app.get('/api/connectivity/public-ip', authenticateToken, async (req, res) => {
     try {
+        // 1. Attempt Cloudflare Target Probe first (robust, no rate limits, authenticates TSG)
+        if (targetManager) {
+            try {
+                const probeResult = await targetManager.runProbe('egress-info', 5000);
+                if (probeResult.success && probeResult.data && probeResult.data.ip) {
+                    return res.json({
+                        ip: probeResult.data.ip,
+                        countryCode: probeResult.data.country || null,
+                        country: probeResult.data.country || null,
+                        city: probeResult.data.city || null,
+                        pop: probeResult.data.pop || null,
+                        source: 'cloudflare'
+                    });
+                }
+                log('API', '[Public IP] Cloudflare probe failed or missing data, falling back to ipapi.co', 'debug');
+            } catch (err: any) {
+                log('API', `[Public IP] Cloudflare probe exception: ${err.message}, falling back to ipapi.co`, 'debug');
+            }
+        }
+
+        // 2. Fallback to ipapi.co
         // ipapi.co returns JSON with ip, country_code, city — free, no key required (1k req/day)
         const response = await fetch('https://ipapi.co/json/', {
             headers: { 'User-Agent': 'stigix-dem-monitor/1.0' }
@@ -4105,10 +4126,11 @@ app.get('/api/connectivity/public-ip', authenticateToken, async (req, res) => {
                 ip: data.ip,
                 countryCode: data.country_code || null,
                 country: data.country_name || null,
-                city: data.city || null
+                city: data.city || null,
+                source: 'ipapi'
             });
         } else {
-            res.status(500).json({ error: 'Failed to fetch public IP' });
+            res.status(500).json({ error: 'Failed to fetch public IP from fallback' });
         }
     } catch (e: any) {
         res.status(500).json({ error: e.message });
