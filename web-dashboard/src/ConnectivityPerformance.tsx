@@ -1146,7 +1146,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                             )}
 
                             {/* Score Over Time Chart */}
-                            <div ref={scoreChartWrapRef} className="space-y-3">
+                            <div ref={scoreChartWrapRef} className="space-y-3 mt-10">
                                 <div className="flex items-center justify-between">
                                     <h4 className="text-xs font-black text-text-muted uppercase tracking-widest flex items-center gap-2">
                                         <TrendingUp size={15} className="text-indigo-500" /> Score Trend

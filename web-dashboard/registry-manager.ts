@@ -223,7 +223,20 @@ export class RegistryManager {
         this.detectedRole = identity.role;
         this.isBranchGateway = identity.isBg;
 
-        let mode = process.env.STIGIX_REGISTRY_MODE || 'auto';
+        let sysMode = 'auto';
+        try {
+            const sysSettingsFile = path.join(this.configDir, 'system-settings.json');
+            if (fs.existsSync(sysSettingsFile)) {
+                const sysSettings = JSON.parse(fs.readFileSync(sysSettingsFile, 'utf8'));
+                if (sysSettings.registry_mode) {
+                    sysMode = sysSettings.registry_mode;
+                }
+            }
+        } catch (e) {
+            log('REGISTRY', `Failed to read system-settings for registry mode: ${e}`, 'warn');
+        }
+
+        let mode = sysMode !== 'auto' ? sysMode : (process.env.STIGIX_REGISTRY_MODE || 'auto');
 
         if (mode === 'auto') {
             // Logic: Hub OR Branch Gateway => Potential Leader

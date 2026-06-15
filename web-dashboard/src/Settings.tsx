@@ -3,7 +3,7 @@ import {
     RefreshCw, Download, AlertCircle, CheckCircle, Clock, Shield, Globe, Lock, Terminal,
     Network, Sliders, ChevronDown, ChevronRight, Server, CheckCircle2, Upload, Power,
     Settings as SettingsIcon, Database, Activity, Cpu, Plus, Edit2, Trash2, MapPin, Zap, Info, XCircle, ShieldAlert, Layers,
-    Clipboard, ExternalLink, BarChart3, AlertTriangle, Gauge, Bug, TrendingUp, Search
+    Clipboard, ExternalLink, BarChart3, AlertTriangle, Gauge, Bug, TrendingUp, Search, Users
 } from 'lucide-react';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
@@ -495,7 +495,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
     const ALL_PROBE_TYPES = ['HTTP', 'HTTPS', 'PING', 'DNS', 'UDP', 'TCP', 'CLOUD'];
     const [globalScoreTypes, setGlobalScoreTypes] = useState<string[]>(uiConfig?.globalScoreTypes || ALL_PROBE_TYPES);
     // System startup behaviour
-    const [systemSettings, setSystemSettings] = useState({ auto_restart_iot: false, auto_restart_voice: false, auto_restart_traffic: true, auto_restart_probes: true });
+    const [systemSettings, setSystemSettings] = useState<any>({ auto_restart_iot: false, auto_restart_voice: false, auto_restart_traffic: true, auto_restart_probes: true, registry_mode: 'auto' });
     const [savingSystemSettings, setSavingSystemSettings] = useState(false);
     // Config validity for startup behaviour guards
     const [iotHasConfig, setIotHasConfig] = useState<boolean | null>(null);  // null = loading
@@ -705,19 +705,20 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
         // system-settings.json for probes/iot/voice
         fetch('/api/config/system-settings', { headers: authHeaders })
             .then(r => r.json())
-            .then(data => setSystemSettings(prev => ({
+            .then(data => setSystemSettings((prev: any) => ({
                 ...prev,
                 auto_restart_iot: !!data.auto_restart_iot,
                 auto_restart_voice: !!data.auto_restart_voice,
                 auto_restart_probes: data.auto_restart_probes !== false, // default true
                 auto_restart_traffic: data.auto_restart_traffic !== false, // default true
+                registry_mode: data.registry_mode || 'auto',
             })))
             .catch(() => {});
 
         // traffic status comes from applications-config.json via /api/traffic/status
         fetch('/api/traffic/status', { headers: authHeaders })
             .then(r => r.json())
-            .then(data => setSystemSettings(prev => ({ ...prev, auto_restart_traffic: !!data.running })))
+            .then(data => setSystemSettings((prev: any) => ({ ...prev, auto_restart_traffic: !!data.running })))
             .catch(() => {});
 
         // Check if IoT has at least 1 enabled device
@@ -1203,7 +1204,7 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
 
     if (loading) return <div className="p-8 text-center text-text-muted animate-pulse font-bold tracking-widest text-xs">Loading Settings...</div>;
 
-    const saveSystemSetting = async (key: 'auto_restart_iot' | 'auto_restart_voice' | 'auto_restart_traffic' | 'auto_restart_probes', value: boolean) => {
+    const saveSystemSetting = async (key: 'auto_restart_iot' | 'auto_restart_voice' | 'auto_restart_traffic' | 'auto_restart_probes' | 'registry_mode', value: any) => {
         const next = { ...systemSettings, [key]: value };
         setSystemSettings(next);
         setSavingSystemSettings(true);
@@ -3201,6 +3202,47 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                 <Activity size={24} className="text-emerald-500 opacity-20" />
                             </div>
                         )}
+
+                        {/* Registry Mode Override */}
+                        <div className="mt-4 p-5 bg-card-secondary/30 border border-border rounded-xl">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1.5 bg-indigo-500/10 rounded text-indigo-500">
+                                        <Server size={16} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xs font-black text-text-primary uppercase tracking-wider">Registry Role Override</h3>
+                                        <p className="text-[9px] text-text-muted mt-0.5">Force this node's discovery role. Bypasses .env configuration.</p>
+                                    </div>
+                                </div>
+                                {savingSystemSettings && <RefreshCw size={14} className="text-blue-500 animate-spin" />}
+                            </div>
+                            <div className="flex bg-card p-1 rounded-lg border border-border shadow-sm">
+                                {['auto', 'leader', 'peer'].map((mode) => (
+                                    <button
+                                        key={mode}
+                                        onClick={async () => {
+                                            if (mode === 'leader') {
+                                                const confirmed = window.confirm("Are you sure you want to manually force this instance to be the Leader? Normally this is auto-detected.\n\nIf another active Leader exists, this instance will be blocked from taking over.");
+                                                if (!confirmed) return;
+                                            }
+                                            await saveSystemSetting('registry_mode', mode);
+                                        }}
+                                        className={cn(
+                                            "flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-md transition-all flex justify-center items-center gap-1.5",
+                                            (systemSettings.registry_mode || 'auto') === mode
+                                                ? "bg-indigo-500/10 text-indigo-500 shadow-sm border border-indigo-500/20"
+                                                : "text-text-muted hover:text-text-primary hover:bg-card-hover border border-transparent"
+                                        )}
+                                    >
+                                        {mode === 'auto' && <RefreshCw size={12} />}
+                                        {mode === 'leader' && <Globe size={12} />}
+                                        {mode === 'peer' && <Users size={12} />}
+                                        {mode === 'auto' ? 'Auto-Detect' : `Force ${mode}`}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
 
 
@@ -3471,6 +3513,29 @@ export default function Settings({ token, uiConfig, onUpdateUIConfig, initialTab
                                                 )}
                                             </tbody>
                                         </table>
+                                    ) : registryStatus?.registry_url === registryStatus?.remote_url ? (
+                                        <div className="h-full flex flex-col items-center justify-center space-y-8 py-10">
+                                            <div className="relative">
+                                                <div className="absolute inset-0 bg-amber-500/20 blur-3xl rounded-full animate-pulse" />
+                                                <Globe size={64} className="text-amber-500 relative" />
+                                                <div className="absolute -top-2 -right-2 p-1 bg-amber-500 rounded-full border-4 border-card shadow-lg">
+                                                    <AlertTriangle size={16} className="text-white" />
+                                                </div>
+                                            </div>
+
+                                            <div className="text-center space-y-5 max-w-sm">
+                                                <div className="space-y-1">
+                                                    <p className="text-[12px] font-black text-amber-500/70 uppercase tracking-[0.3em]">Fallback Mode</p>
+                                                    <h4 className="text-2xl font-black text-text-primary tracking-tight">
+                                                        No Local Leader
+                                                    </h4>
+                                                </div>
+
+                                                <p className="text-[10px] text-text-muted font-bold leading-relaxed opacity-60">
+                                                    This node is communicating directly with Cloudflare for discovery. To save Cloudflare Worker quota, configure a local leader or let autodiscovery elect one.
+                                                </p>
+                                            </div>
+                                        </div>
                                     ) : (
                                         <div className="h-full flex flex-col items-center justify-center space-y-8 py-10">
                                             <div className="relative">

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1-patch.18] - 2026-06-15
+### Added
+- **web-dashboard** ✨: Added a new "Registry Role Override" UI in the Target Controller Dashboard to force a node's discovery role without needing to restart containers or edit `.env`.
+### Documentation
+- **docs** 📖 `HYBRID_REGISTRY.md`: Updated step-by-step implementation guide to reflect the new UI-driven approach for configuring registry roles.
+
+## [v1.4.1-patch.17] - 2026-06-15
+### Changed
+- **web-dashboard** 🎨: Added a top margin to the Score Trend chart section in the modal for better visual spacing.
+
 ## [v1.4.1-patch.16] - 2026-06-15
 ### Changed
 - **web-dashboard** 🎨: Updated Prisma SASE Integration settings to reflect SD-WAN capabilities and removed the Global Security Context block.

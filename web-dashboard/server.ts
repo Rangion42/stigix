@@ -438,12 +438,14 @@ interface SystemSettings {
     auto_restart_voice: boolean;
     auto_restart_traffic: boolean;
     auto_restart_probes: boolean;
+    registry_mode?: 'auto' | 'leader' | 'peer';
 }
 const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
     auto_restart_iot: false,
     auto_restart_voice: false,
     auto_restart_traffic: true,   // retrocompat: traffic was always auto-starting
     auto_restart_probes: true,    // retrocompat: probes were always auto-starting
+    registry_mode: 'auto',
 };
 function getSystemSettings(): SystemSettings {
     try {
@@ -10412,14 +10414,25 @@ app.get('/api/config/system-settings', authenticateToken, (_req, res) => {
     res.json(getSystemSettings());
 });
 
-app.post('/api/config/system-settings', authenticateToken, (req, res) => {
+app.post('/api/config/system-settings', authenticateToken, async (req, res) => {
     try {
-        const { auto_restart_iot, auto_restart_voice } = req.body;
+        const { auto_restart_iot, auto_restart_voice, registry_mode } = req.body;
         const patch: Partial<SystemSettings> = {};
         if (typeof auto_restart_iot === 'boolean') patch.auto_restart_iot = auto_restart_iot;
         if (typeof auto_restart_voice === 'boolean') patch.auto_restart_voice = auto_restart_voice;
+        if (registry_mode === 'auto' || registry_mode === 'leader' || registry_mode === 'peer') {
+            patch.registry_mode = registry_mode;
+        }
+
         const saved = saveSystemSettings(patch);
         log('SYSTEM', `System settings updated: ${JSON.stringify(saved)}`);
+
+        // If registry mode was updated, hot-reload the registry orchestration
+        if (patch.registry_mode) {
+            log('REGISTRY', `Registry mode changed via UI to ${patch.registry_mode}. Reinitializing...`);
+            await registryManager.reinitialize();
+        }
+
         res.json({ success: true, settings: saved });
     } catch (e: any) {
         res.status(500).json({ error: 'Failed to save system settings', detail: e.message });
