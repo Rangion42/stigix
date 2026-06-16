@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1-patch.24] - 2026-06-16
+### Fixed
+- **web-dashboard** 🎨: Added `whitespace-nowrap` class to the Time column in the probe captures table inside Connectivity Performance view to prevent dates/times from wrapping to two lines.
+
 ## [v1.4.1-patch.23] - 2026-06-16
 ### Changed
 - **web-dashboard** 🚀: Updated the "Target / Params" column in the Speedtest history table to display additional test parameters (bitrate, duration, parallel streams, and client source port) if set.

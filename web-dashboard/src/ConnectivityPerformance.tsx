@@ -1124,7 +1124,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                     <table className="w-full text-left text-xs">
                                         <thead className="bg-card-secondary/50 border-b border-border">
                                             <tr>
-                                                <th className="px-4 py-3 text-text-muted font-bold tracking-tight">Time</th>
+                                                <th className="px-4 py-3 text-text-muted font-bold tracking-tight whitespace-nowrap">Time</th>
                                                 <th className="px-4 py-3 text-text-muted font-bold tracking-tight text-center">Score</th>
                                                 {(selectedEndpoint.type.includes('HTTP') || selectedEndpoint.type === 'CLOUD') && (
                                                     <>
@@ -1144,7 +1144,7 @@ export default function ConnectivityPerformance({ token, uiConfig, onManage }: C
                                         <tbody className="divide-y divide-border">
                                             {selectedEndpointResults.slice(0, maxCaptures).map((r, i) => (
                                                 <tr key={i} className="hover:bg-card-secondary transition-colors">
-                                                    <td className="px-4 py-3 text-text-primary font-bold uppercase tracking-tighter">{formatTimestamp(r.timestamp)}</td>
+                                                    <td className="px-4 py-3 text-text-primary font-bold uppercase tracking-tighter whitespace-nowrap">{formatTimestamp(r.timestamp)}</td>
                                                     <td className="px-4 py-3 text-center">
                                                         <span className={cn("font-black px-2 py-0.5 rounded text-[11px]", r.score >= 80 ? "text-green-600 dark:text-green-400" : "text-red-500")}>
                                                             {r.score}
