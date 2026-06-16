@@ -412,9 +412,17 @@ async def run_security_probe(agent_id: str, probe_type: str, target: str) -> dic
 async def list_vyos_routers(agent_id: str) -> List[dict]:
     """
     List all VyOS routers managed by a specific Stigix node.
-    
+
+    Use this to discover which Stigix node is the VyOS controller — i.e., which node
+    manages the most routers or the central underlay router. Call this on several nodes
+    (from list_endpoints) when it is not yet known which node controls VyOS.
+
+    The node that returns the most routers (or the router whose interfaces match the
+    user's intent) is the correct controller to use for subsequent vyos_execute_action calls.
+
     Args:
-        agent_id: ID of the Stigix node managing the VyOS routers (e.g., 'Raspi4-Ubuntu').
+        agent_id: ID of the Stigix node to query. Do NOT assume a specific node — derive
+                  the correct agent_id from list_endpoints() and user context.
     """
     return await orchestrator.list_vyos_routers(agent_id)
 
@@ -423,9 +431,10 @@ async def list_vyos_routers(agent_id: str) -> List[dict]:
 async def list_vyos_scenarios(agent_id: str) -> List[dict]:
     """
     List available VyOS configuration sequences (scenarios) on a specific Stigix node.
-    
+
     Args:
-        agent_id: ID of the Stigix node (e.g., 'BR1-Ubuntu').
+        agent_id: ID of the Stigix node. Use the VyOS controller node identified via
+                  list_vyos_routers(), not the branch node for the site being configured.
     """
     return await orchestrator.list_vyos_sequences(agent_id)
 
@@ -489,6 +498,33 @@ async def get_vyos_interfaces(agent_id: str, router_id: Optional[str] = None) ->
       - Warn the user before applying an action on a 'down' interface
       - Diagnose connectivity issues without executing any command
 
+    ⚠️  CRITICAL — CONTROLLER DISCOVERY (read before choosing agent_id):
+    ──────────────────────────────────────────────────────────────────────
+    The mesh typically has ONE central Stigix node that manages the underlay VyOS router
+    (the router that carries WAN interfaces for ALL branches: BR1-INET-*, BR2-MPLS-*, etc.).
+    Branch Stigix nodes (BR1-Ubuntu, BR2-Ubuntu …) may also manage a LOCAL VyOS router
+    for their own site — but that local router does NOT have the WAN interfaces for other sites.
+
+    NEVER assume that "BR1 internet" means calling this tool with agent_id="BR1-Ubuntu".
+    The interface labelled "BR1-INET-*" is on the central underlay router managed by
+    the CONTROLLER node (often a different node, e.g., BR8-Ubuntu or Raspi4-Ubuntu).
+
+    HOW TO FIND THE RIGHT CONTROLLER NODE:
+    ──────────────────────────────────────
+    1. If the user has already stated which Stigix node to use → use that node.
+    2. If the user previously established a controller node (e.g., "control via BR8") → use it.
+    3. If no controller is known yet:
+       a. Call list_endpoints() to get all available Stigix node IDs.
+       b. Call list_vyos_routers(agent_id) on 1–3 candidate nodes (prefer nodes whose
+          name does NOT match the site being targeted, as a branch node rarely manages
+          other branches' WAN interfaces).
+       c. The node that returns the most VyOS routers, OR whose router interfaces contain
+          descriptions matching the user's intent (e.g. "BR1-INET") → that is the controller.
+       d. Announce which controller you are using: "I will use <NODE_ID> as the VyOS
+          controller." Then proceed with this node for all subsequent VyOS actions.
+    4. If still ambiguous, ASK the user: "Which Stigix node should I use as the VyOS
+       controller? (e.g. BR8, Raspi4-Ubuntu, DC1...)" — do NOT guess.
+
     ⚠️  CRITICAL — SITE NAME RESOLUTION:
     ─────────────────────────────────────
     Site/router names mentioned by the user (e.g. "BR1", "BR2", "DC1", "HQ") are NOT
@@ -499,10 +535,12 @@ async def get_vyos_interfaces(agent_id: str, router_id: Optional[str] = None) ->
     keywords matching the user's intent (e.g. "BR1" matches description "BR1-MPLS-197").
 
     The correct flow when the user says "Add latency on BR1 MPLS":
-      1. Call get_vyos_interfaces(agent_id) → receive all routers + interfaces
-      2. Search descriptions for "BR1" AND "MPLS" → find eth1 "BR1-MPLS-197" on vyosrouter
-      3. Propose: "I found eth1 (BR1-MPLS-197) on vyosrouter. Shall I apply latency? (yes/no)"
-      4. On confirmation → call vyos_execute_action
+      1. Identify the controller node (see CONTROLLER DISCOVERY above)
+      2. Call get_vyos_interfaces(agent_id=<controller>) → receive all routers + interfaces
+      3. Search descriptions for "BR1" AND "MPLS" → find eth1 "BR1-MPLS-197" on vyosrouter
+      4. Propose: "I found eth1 (BR1-MPLS-197) on vyosrouter (via <controller>).
+                   Shall I apply latency? (yes/no)"
+      5. On confirmation → call vyos_execute_action
 
     ALWAYS CALL THIS FIRST before any vyos_execute_action.
 
@@ -545,7 +583,8 @@ async def get_vyos_interfaces(agent_id: str, router_id: Optional[str] = None) ->
        Without descriptions no action can be performed via this tool.
 
     Args:
-        agent_id: ID of the Stigix node managing the VyOS routers.
+        agent_id: ID of the Stigix controller node managing the VyOS routers.
+                  Derive this from CONTROLLER DISCOVERY above — do NOT assume.
         router_id: Optional. Filter to a specific router ID. If omitted, returns all routers.
     """
     results = await orchestrator.get_vyos_interfaces(agent_id, router_id)

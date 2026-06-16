@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1-patch.22] - 2026-06-16
+### Fixed
+- **MCP / VyOS** 🤖: Fixed Claude picking wrong Stigix node as VyOS controller. Removed hardcoded `Raspi4-Ubuntu` example from `list_vyos_routers` docstring that caused Claude to default to that node. Removed misleading `BR1-Ubuntu` example from `list_vyos_scenarios`. Added a `CONTROLLER DISCOVERY` section to `get_vyos_interfaces` explaining the central-controller topology (one Stigix node manages the underlay VyOS router with all-branch WAN interfaces) and the step-by-step discovery workflow Claude must follow before acting.
+- **MCP / VyOS** 🤖: Updated correct workflow in `get_vyos_interfaces` to require controller identification before calling the tool, with clear precedence rules (user-stated > session-established > auto-discover via `list_vyos_routers` on candidates > ask user).
+
+### Added
+- **Testing** 🧪: New targeted test plan `mcp-server/Exemple/VyOS_Controller_Discovery_Test.md` with 10 specific test cases validating the VyOS controller discovery fix and regression coverage.
+
 ## [v1.4.1-patch.21] - 2026-06-15
 ### Changed
 - **web-dashboard** 🎨: Made the "Distribution Overview" panel collapsible in the Traffic Distribution tab of Settings to save vertical space.
