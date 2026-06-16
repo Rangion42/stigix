@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.4.1-patch.23] - 2026-06-16
+### Changed
+- **web-dashboard** 🚀: Updated the "Target / Params" column in the Speedtest history table to display additional test parameters (bitrate, duration, parallel streams, and client source port) if set.
+
 ## [v1.4.1-patch.22] - 2026-06-16
 ### Fixed
 - **MCP / VyOS** 🤖: Fixed Claude picking wrong Stigix node as VyOS controller. Removed hardcoded `Raspi4-Ubuntu` example from `list_vyos_routers` docstring that caused Claude to default to that node. Removed misleading `BR1-Ubuntu` example from `list_vyos_scenarios`. Added a `CONTROLLER DISCOVERY` section to `get_vyos_interfaces` explaining the central-controller topology (one Stigix node manages the underlay VyOS router with all-branch WAN interfaces) and the step-by-step discovery workflow Claude must follow before acting.

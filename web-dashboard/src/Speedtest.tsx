@@ -907,6 +907,10 @@ export default function Speedtest({ token }: Props) {
                                                         <div className="text-xs font-black text-text-primary">{job.params.host}:{job.params.port}</div>
                                                         <div className="text-[9px] text-text-muted font-bold opacity-60">
                                                             {job.params.protocol.toUpperCase()} • {job.params.direction.replace(/-/g, ' ')}
+                                                            {job.params.bitrate && ` • ${job.params.bitrate}`}
+                                                            {job.params.duration_sec && ` • ${job.params.duration_sec}s`}
+                                                            {job.params.parallel_streams && ` • ${job.params.parallel_streams} stream${job.params.parallel_streams > 1 ? 's' : ''}`}
+                                                            {job.params.cport && ` • Port ${job.params.cport}`}
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-4 text-center">
