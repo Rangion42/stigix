@@ -28,20 +28,26 @@ The format is `vX.Y.Z-patch.NNN`. You MUST strictly increment NNN by exactly +1 
 
 ### 2 — Bump VERSION files and README badge
 
+> [!IMPORTANT]
+> All four items below are MANDATORY. Run them as a single block — do NOT skip the README line.
+
 ```bash
-NEW_VER="v1.2.1-patch.NNN"   # replace NNN
+NEW_VER="v1.2.1-patch.NNN"   # replace NNN with the next sequential number
 echo "$NEW_VER" > VERSION
 echo "$NEW_VER" > web-dashboard/VERSION
 echo "$NEW_VER" > engines/VERSION
+
+# README badge — MUST be updated in the same step, not after
+# Note the double dash (--) before patch in the shields.io URL
+sed -i '' "s|Version-[0-9][^-]*--patch\.[0-9]*|Version-1.2.1--patch.NNN|g" README.md
 ```
 
-All three files must always stay in sync.
-
-**Also update the Version badge in `README.md`** (usually around line 5) to match the new version:
-```markdown
-[![Version](https://img.shields.io/badge/Version-1.2.1--patch.NNN-blue.svg)](https://github.com/jsuzanne/stigix/releases)
+Verify all four files are in sync before proceeding:
+```bash
+cat VERSION && cat web-dashboard/VERSION && cat engines/VERSION
+grep "img.shields.io/badge/Version" README.md
 ```
-*(Note the double dash `--` before `patch` in the shields.io URL format)*
+All four must show the same `NNN`.
 
 ### 2bis — Update CHANGELOG.md
 
